@@ -5,7 +5,7 @@ description = "Lightweight AI collaboration spec for solo/small projects"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
-authors = [{ name = "Your Name", email = "you@example.com" }]
+authors = [{ name = "frostime", email = "frostime@foxmail.com" }]
 keywords = ["ai", "spec", "collaboration", "agent", "llm"]
 classifiers = [
     "Development Status :: 3 - Alpha",

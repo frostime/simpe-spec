@@ -25,7 +25,7 @@ def main(ctx: click.Context) -> None:
 
 main.add_command(init.init)
 main.add_command(new.new)
-main.add_command(list_cmd.list_changes, name="list")
+main.add_command(list_cmd.list_changes_cmd, name="list")
 main.add_command(status.status)
 main.add_command(archive.archive)
 main.add_command(prompt.prompt)

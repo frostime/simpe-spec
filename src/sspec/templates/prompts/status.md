@@ -1,36 +1,59 @@
 # /status
 
-Summarize current state.
+Report current state summary.
 
-## Task
+## Arguments
 
-Provide a concise status report covering:
+`/status` for overview, `/status <change-name>` for specific change.
 
-1. **Current Change**: Name and brief description
-2. **Status**: PLANNING / IN_PROGRESS / BLOCKED / REVIEW / DONE
-3. **Progress**: X/Y tasks completed
-4. **Recent**: What was done in recent work
-5. **Next**: Immediate next step
-6. **Blockers**: Anything blocking progress (if any)
-7. **Pivots**: Recent direction changes (if any)
+## Workflow
 
-## Format
+1. **Read** current state from:
+   - `changes/<n>/tasks.md` for status, progress, blockers
+   - `changes/<n>/proposal.md` for context if needed
 
+2. **Calculate** progress:
+   - Count completed tasks `[x]` vs total `[ ]`
+   - Note any blockers or pivots
+
+3. **Output** concise status report
+
+## Output Format
+
+### For specific change:
 ```
 ## Status: [change-name]
 
-**State**: [STATUS] | Progress: [X/Y]
+**State**: [STATUS] | **Progress**: [X/Y tasks]
 
 **Recent**:
-- [latest accomplishment]
+- [latest accomplishment from Progress section]
 
-**Next**: [immediate next action]
+**Next**: [immediate next action from Plan]
 
-**Blockers**: [none / list]
+**Blockers**: None / [list blockers]
+
+**Pivots**: None / [recent direction changes]
 ```
 
-## Source
+### For overview (no name given):
+```
+## sspec Status
 
-Read from:
-- `changes/<n>/tasks.md` for current state
-- `changes/<n>/proposal.md` for context if needed
+### Active Changes
+- [change-1]: [STATUS] [X/Y] — [one line summary]
+- [change-2]: [STATUS] [X/Y] — [one line summary]
+
+### Recently Archived
+- [archived-1] (YYYY-MM-DD)
+
+### Global Notes
+[any cross-cutting concerns from global handover.md]
+```
+
+## Guidelines
+
+- Be concise — this is a quick check, not a report
+- Highlight blockers prominently
+- Include pivot indicator if direction changed recently
+- Don't include full task lists — just progress count

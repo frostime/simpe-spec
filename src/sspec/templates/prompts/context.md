@@ -1,39 +1,57 @@
 # /context
 
-Re-read project context and current state.
+Reload project context and current state.
 
-## Task
+## When to Use
 
-Read and internalize:
+- Starting a new session
+- After a long tangent or context switch
+- Before making significant decisions
+- When feeling lost about project state
 
-1. **Project Knowledge**
-   - `.sspec/knowledge/index.md` — Project overview
+## Workflow
+
+1. **Read project knowledge**
+   - `.sspec/knowledge/index.md` — project overview, tech stack, conventions
    - Other `.sspec/knowledge/*.md` files as relevant
 
-2. **Current Work**
-   - `.sspec/changes/` — Active changes
-   - Current change's `proposal.md` and `tasks.md`
+2. **Check active work**
+   - `.sspec/changes/` — list active changes
+   - Identify which change is current focus
 
-3. **Continuity**
-   - Current change's `handover.md`
-   - `.sspec/handover.md` for global state
+3. **Load current change context**
+   - `proposal.md` — why and what
+   - `tasks.md` — plan, progress, current state
+   - `handover.md` — previous session state
 
-## After Reading
+4. **Check global state**
+   - `.sspec/handover.md` — cross-change context
+
+## Output
 
 Provide a brief confirmation:
 
 ```
 ## Context Loaded
 
-**Project**: [name/description]
+**Project**: [name] — [one-line description]
 **Tech**: [key technologies]
-**Active Change**: [name] ([status])
-**Current Task**: [what's in progress]
+**Conventions**: [critical conventions to follow]
+
+**Active Change**: [name] ([STATUS])
+**Progress**: [X/Y] tasks
+**Current Task**: [what's in progress or next]
+
+**Key Constraints**:
+- [important constraint 1]
+- [important constraint 2]
+
+Ready to continue.
 ```
 
-## When to Use
+## Guidelines
 
-- Starting a new session
-- After a long tangent
-- When feeling lost about project context
-- Before making significant decisions
+- Keep confirmation brief — user knows their project
+- Highlight anything that might be easy to forget
+- Note any blockers or pivots from previous session
+- Don't dump entire file contents — summarize

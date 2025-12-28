@@ -1,26 +1,57 @@
 # Memo: {{CHANGE_NAME}}
 
-## Research Notes
-
-<!-- Record findings from code exploration, file relationships, etc. -->
-
-## Code Snippets
-
-<!-- Useful code examples discovered during research -->
-
-## Ideas & Thoughts
-
-<!-- Random ideas, potential approaches, considerations -->
-
-## References
-
-<!-- Links, documentation, related files -->
+A scratchpad for exploration. No strict format required.
 
 ---
 
-## Usage Guidelines
+## Research Notes
 
-- **Free-form notes**: Use this as a scratchpad for research and ideas
-- **No strict format**: Organize content as needed for the change
-- **Transfer knowledge**: Move important findings to `tasks.md` or `knowledge/` when solidified
-- **Session continuity**: Review previous memos in `handover.md` for context
+<!-- 
+Findings from code exploration, documentation review, experiments.
+File relationships, undocumented behaviors, gotchas discovered.
+-->
+
+## Code Snippets
+
+<!-- 
+Useful code examples found or created during research.
+Patterns to reuse, reference implementations.
+-->
+
+## Ideas & Thoughts
+
+<!-- 
+Half-formed ideas, potential approaches, trade-offs being considered.
+Questions to investigate, alternatives to explore.
+-->
+
+## References
+
+<!-- 
+Links, documentation, related files, Stack Overflow answers.
+Anything that might be useful later.
+-->
+
+---
+
+<!--
+USAGE GUIDELINES:
+
+Purpose: Unstructured exploration space. Use freely.
+
+What belongs here:
+- Research findings before they're confirmed
+- Code snippets you might need later
+- Random ideas and considerations
+- Links and references
+
+What doesn't belong here:
+- Finalized decisions (→ tasks.md Decisions)
+- Current blockers (→ tasks.md Blockers)
+- Progress updates (→ tasks.md Progress)
+
+Transfer process:
+- When an idea solidifies → tasks.md or knowledge/
+- When research concludes → summarize in tasks.md Decisions
+- At session end → review and transfer anything important
+-->

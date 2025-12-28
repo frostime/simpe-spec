@@ -1,23 +1,49 @@
 # Global Handover
 
-Cross-change state. Use when switching between changes or summarizing overall progress.
+Cross-change state and context. Use when switching between changes or for overall project state.
 
-Updated: —
+**Updated**: —
+
+---
 
 ## Active Changes
 
-| Change | Status | Summary |
-|--------|--------|---------|
-| — | — | — |
+| Change | Status | Progress | Summary |
+|--------|--------|----------|---------|
+| — | — | — | — |
 
 ## Recently Completed
 
-<!-- Last few archived changes -->
+<!-- Last few archived changes with dates and outcomes -->
 
-## Pending Decisions
+| Change | Archived | Outcome |
+|--------|----------|---------|
+| — | — | — |
 
-<!-- Cross-cutting decisions not tied to specific change -->
+## Pending Work
 
-## Notes
+<!-- Work identified but not yet started as a change -->
 
-<!-- Global observations, patterns noticed -->
+- 
+
+## Cross-Cutting Concerns
+
+<!-- Issues or decisions that affect multiple changes or the project as a whole -->
+
+- 
+
+## Session Notes
+
+<!-- Observations, patterns noticed, context that doesn't fit elsewhere -->
+
+- 
+
+---
+
+<!--
+UPDATE TRIGGERS:
+- When starting/completing a change
+- When discovering cross-cutting issues
+- At end of significant work sessions
+- When handing off to another person/session
+-->

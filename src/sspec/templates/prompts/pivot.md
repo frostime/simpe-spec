@@ -1,35 +1,60 @@
 # /pivot
 
-Record an intent change and update the plan.
+Record a direction change when user changes their mind.
 
-## Context
+## Triggers
 
-I'm changing direction on what we're working on.
+User says things like:
+- "wait", "actually", "hold on"
+- "change of plans", "let's do X instead"
+- "forget that, let's..."
+- "I changed my mind"
 
-## Task
+## Workflow
 
-1. **Acknowledge** the change of direction
-2. **Clarify** if needed: "You want to [new direction], correct?"
-3. **Record** the pivot in `tasks.md`:
+1. **Stop** current work immediately
+   - Don't continue with the old plan
+   - Don't try to "finish this first"
 
-```markdown
-## Pivot
+2. **Confirm** new intent
+   - "You want to [new direction], correct?"
+   - Ask clarifying questions if new direction is vague
+   - Ensure you understand WHY the change
 
-### [timestamp]
-- Previous: [what was planned]
-- New: [new direction]  
-- Reason: [why changing]
-```
+3. **Record** in `tasks.md` under `## Pivot`:
+   ```markdown
+   ### YYYY-MM-DD HH:MM
+   - Previous: [what was planned]
+   - New: [new direction]
+   - Reason: [user's reasoning]
+   ```
 
 4. **Update** the Plan section:
    - Mark abandoned items with `~~strikethrough~~` or remove
    - Add new items for the new direction
-   - Reorder priorities if needed
+   - Reorder priorities as needed
 
-5. **Update** Status if appropriate (e.g., back to `PLANNING` if major pivot)
+5. **Adjust** Status if appropriate:
+   - Major pivot → may need to go back to `PLANNING`
+   - Minor adjustment → stay in `IN_PROGRESS`
+
+6. **Acknowledge** the change:
+   ```
+   Recorded pivot from [old] to [new].
+   Updated plan with [N] new tasks.
+   Ready to proceed with [first new task]?
+   ```
 
 ## Guidelines
 
-- Don't delete history - pivots are valuable context
-- Ask clarifying questions if the new direction is vague
-- Consider impact on other related work
+- **Don't delete history** — pivots are valuable context for future understanding
+- **Don't judge** — users change their minds for good reasons
+- **Ask questions** if the new direction seems incomplete
+- **Consider impact** on other related work or dependencies
+
+## Anti-patterns
+
+❌ Continuing with old plan while "noting" the change
+❌ Merging old and new approaches without explicit decision
+❌ Deleting the pivot record after completing new direction
+❌ Not confirming understanding before proceeding

@@ -1,65 +1,88 @@
 # Knowledge Index
 
-Project knowledge base. AI should read this before starting any work.
+Project knowledge base. AI assistants should read this before starting any work.
+
+---
 
 ## Project Overview
 
 <!-- 
-A concise description of the project's purpose and goals. 
+Concise description of the project's purpose and goals.
 Example: "sspec is a lightweight AI collaboration spec for solo/small projects."
 -->
 
-## Core Values (Vibe)
+## Core Values
 
 <!-- 
-What defines the 'vibe' of this project? 
-Example: "Speed over formality", "Minimalist code", "Heavy AI collaboration".
+What defines this project's character?
+Examples:
+- "Simplicity over features"
+- "Type safety is non-negotiable"
+- "Heavy AI collaboration expected"
 -->
 
 ## Tech Stack
 
-- Language: 
-- Framework: 
-- Key Dependencies: 
-- Build Tool: 
+- **Language**: 
+- **Framework**: 
+- **Key Dependencies**: 
+- **Build Tool**: 
+- **Test Framework**: 
 
 ## Conventions
 
 <!-- 
-Crucial for AI consistency. 
-- Naming: camelCase, snake_case?
-- Style: Functional, OOP?
-- Directory structure patterns.
+Critical for AI consistency. Be explicit.
+
+Naming:
+- Variables: camelCase / snake_case
+- Files: kebab-case / PascalCase
+- Constants: UPPER_SNAKE_CASE
+
+Style:
+- Functional / OOP / Mixed
+- Error handling pattern
+- Logging approach
+
+Structure:
+- Directory organization patterns
+- Module boundaries
 -->
 
 ## Quick Context
 
-<!-- 3-5 most critical points an agent must know to not break things -->
+<!-- 3-5 most critical points an agent must know to avoid breaking things -->
 
 1. 
 2. 
 3. 
 
-## Knowledge Files
+## Constraints
 
-<!-- 
-Map of specialized knowledge. 
-Keep it flat if possible, but document here.
+<!-- Technical, business, or regulatory limits -->
+
+<!-- Examples:
+- Must run on Python 3.9+
+- No external network calls in core module
+- All user data encrypted at rest
+- Response time < 200ms p95
 -->
 
-<!-- Example -->
-<!-- | File | Content |
+## Knowledge Files
+
+<!-- Map of specialized knowledge documents -->
+
+| File | Content |
 |------|---------|
+| `index.md` | This file - project overview |
+<!-- 
 | `architecture.md` | System design, module structure |
 | `conventions.md` | Detailed coding standards |
 | `decisions.md` | Historical decisions (ADRs) |
 | `domain.md` | Business domain, terminology |
-| `setup.md` | Development environment and secrets | -->
-
-## Constraints
-
-<!-- Technical, business, or regulatory constraints (e.g., "Must run on Python 3.9+", "No external APIs") -->
+-->
 
 ## External References
 
-<!-- Links to docs, APIs, design specs -->
+<!-- Links to docs, APIs, design specs, related repos -->
+

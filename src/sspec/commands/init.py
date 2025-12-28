@@ -10,21 +10,38 @@ from sspec.core import SSPEC_DIR, copy_template, find_sspec_root, get_template_d
 console = Console()
 
 
-ROOT_AGENT_PROMPMT = """
+ROOT_AGENT_PROMPT = """
 <!-- SSPEC:START -->
 # Simple-Spec Instructions
 
 These instructions are for AI assistants working in this project.
 
-Always open `@/.sspec/AGENTS.md` when the request:
-- Mentions planning or proposals (words like proposal, spec, change, plan)
-- Introduces new capabilities, breaking changes, architecture shifts, or big performance/security work
-- Sounds ambiguous and you need the authoritative spec before coding
+## When to Read `.sspec/AGENTS.md`
 
-Use `@/.sspec/AGENTS.md` to learn:
-- How to create and apply change proposals
-- Spec format and conventions
-- Project structure and guidelines
+Open `.sspec/AGENTS.md` when the request:
+- Involves planning, proposals, or multi-step changes
+- Introduces new features, architecture changes, or breaking changes
+- Seems ambiguous and you need authoritative context before coding
+- Mentions "change", "proposal", "spec", "plan", or "handover"
+
+## Quick Commands
+
+| Command | Purpose |
+|---------|---------|
+| `/propose <n>` | Create new change proposal |
+| `/status` | Report current state |
+| `/pivot` | Record direction change |
+| `/handover` | Generate session handover |
+| `/context` | Reload project context |
+| `/archive` | Archive completed change |
+
+## First Session?
+
+1. Read `.sspec/knowledge/index.md` for project context
+2. Check `.sspec/changes/` for active work
+3. Read relevant `handover.md` for previous state
+
+Keep this block so `sspec update` can refresh instructions.
 <!-- SSPEC:END -->
 """.strip()
 
@@ -63,16 +80,15 @@ def init(force: bool) -> None:
     # Create .gitkeep
     (sspec_path / "changes" / "archive" / ".gitkeep").touch()
 
-    # Root Agents.md
-    rounded_prompt_path = Path.cwd() / "AGENTS.md"
-    if not rounded_prompt_path.exists():
-        rounded_prompt_path.write_text(ROOT_AGENT_PROMPMT, encoding="utf-8")
+    # Root AGENTS.md
+    root_agents_path = Path.cwd() / "AGENTS.md"
+    if not root_agents_path.exists():
+        root_agents_path.write_text(ROOT_AGENT_PROMPT, encoding="utf-8")
     else:
-        with open(rounded_prompt_path, "a+", encoding="utf-8") as f:
-            # Append the root agent prompt if not already present
-            content = f.read()
-            if ROOT_AGENT_PROMPMT not in content:
-                f.write("\n\n" + ROOT_AGENT_PROMPMT)
+        content = root_agents_path.read_text(encoding="utf-8")
+        if "<!-- SSPEC:START -->" not in content:
+            with open(root_agents_path, "a", encoding="utf-8") as f:
+                f.write("\n\n" + ROOT_AGENT_PROMPT)
 
     console.print(f"[green]✓[/green] Initialized {SSPEC_DIR}")
     console.print()
@@ -83,10 +99,10 @@ def init(force: bool) -> None:
     console.print("  │   └── index.md        # Project context")
     console.print("  ├── changes/")
     console.print("  │   └── archive/")
-    console.print("  ├── prompts/            # Slash command definitions")
+    console.print("  ├── prompts/            # Command definitions")
     console.print("  └── handover.md         # Global handover")
     console.print()
     console.print("[yellow]Next steps:[/yellow]")
     console.print("  1. Edit .sspec/knowledge/index.md with project info")
-    console.print("  2. sspec new <change-name>")
-    console.print('  3. Tell AI: "Read .sspec/AGENTS.md first"')
+    console.print("  2. Run: sspec new <change-name>")
+    console.print('  3. Tell AI: "Read .sspec/AGENTS.md"')

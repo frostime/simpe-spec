@@ -1,39 +1,61 @@
 # Handover: {{CHANGE_NAME}}
 
-Updated: —
+**Updated**: —
+
+---
 
 ## Summary
 
-<!-- One sentence: what's the current state -->
+<!-- One sentence: current state of this change -->
 
 ## Done
 
+<!-- What's been completed. Be specific: files modified, features working. -->
+
 - 
 
-## Next
+## Current State
+
+<!-- What works, what doesn't. Include specifics. -->
+
+**Working**:
+- 
+
+**Not working / Incomplete**:
+- 
+
+## Next Steps
+
+<!-- Concrete actions in priority order. The next session should start here. -->
 
 1. 
+2. 
+3. 
+
+## Key Files
+
+<!-- Files modified or most relevant to current work -->
+
+- 
+
+## Watch Out
+
+<!-- Gotchas, risks, things that might break, non-obvious dependencies -->
+
+- 
 
 ## Open Questions
 
-- 
-
-## Context
-
-### Key Files
-
-<!-- Files modified or relevant -->
+<!-- Unresolved questions that need answers before proceeding -->
 
 - 
 
-### Recent Decisions
+---
 
-<!-- Decisions made this session -->
-
-- 
-
-### Watch Out
-
-<!-- Gotchas, risks, things to remember -->
-
-- 
+<!--
+HANDOVER QUALITY CHECKLIST:
+- [ ] Could another AI continue from this without asking questions?
+- [ ] Are file paths and function names specific?
+- [ ] Are Next Steps actionable (not vague)?
+- [ ] Are gotchas documented?
+-->

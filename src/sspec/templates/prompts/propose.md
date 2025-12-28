@@ -20,7 +20,11 @@ Create a new change proposal.
    - Break down into small, verifiable steps
    - Order by dependency
    - Include validation/testing steps
-6. **Review** with user before starting implementation
+6. **Note** about `memo.md`:
+   - Use for research notes, code snippets, and ideas
+   - Record findings during code exploration
+   - Transfer important insights to `tasks.md` when ready
+7. **Review** with user before starting implementation
 
 ## Guidelines
 
@@ -28,6 +32,8 @@ Create a new change proposal.
 - If scope is large, suggest splitting into multiple changes
 - Ask clarifying questions for vague requirements
 - Don't start implementation until proposal is approved
+- Use `memo.md` for research notes, code snippets, and ideas during exploration
+- Transfer important findings from `memo.md` to `tasks.md` or `knowledge/` when solidified
 
 ## Skip Proposal For
 

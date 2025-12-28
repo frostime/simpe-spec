@@ -31,7 +31,8 @@ changes/<n>/handover.md → Previous session state
 | Step completed | Update `tasks.md` Progress section |
 | User changes mind | Record in `tasks.md` Pivot section |
 | Important decision | Add to `tasks.md` Decisions section |
-| New knowledge discovered | Consider adding to `knowledge/` |
+| Research findings/Code snippets/Preliminary Ideas | Record in `memo.md` Research Notes |
+| Stable knowledge discovered | Consider adding to `knowledge/` |
 
 ### Ending a Session
 
@@ -49,6 +50,7 @@ Update the current change's `handover.md` with:
 | `knowledge/*.md` | Domain knowledge, architecture | As needed |
 | `changes/<n>/proposal.md` | Why and what to change | At creation |
 | `changes/<n>/tasks.md` | Plan, progress, decisions, pivots | Real-time |
+| `changes/<n>/memo.md` | Research notes, ideas, code snippets; as agent's free draft note | During work |
 | `changes/<n>/handover.md` | Session continuity | End of session |
 | `handover.md` | Cross-change global state | Periodically |
 
@@ -97,6 +99,7 @@ When user says "wait", "change of plans", "let's do X instead":
 │   └── <current>/
 │       ├── proposal.md ← Why we're doing this
 │       ├── tasks.md    ← What to do, current state
+│       ├── memo.md     ← Research notes, ideas; as draft note
 │       └── handover.md ← Session continuity
 ├── prompts/            ← Slash command definitions
 └── handover.md         ← Global cross-change state

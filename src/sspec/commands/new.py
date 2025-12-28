@@ -27,6 +27,7 @@ def new(name: str) -> None:
     console.print(f"  {rel_path}/")
     console.print("  ├── proposal.md   # Why and what")
     console.print("  ├── tasks.md      # Plan, progress, decisions")
+    console.print("  ├── memo.md       # Research notes and ideas")
     console.print("  └── handover.md   # Session handover")
     console.print()
     console.print("[yellow]Next:[/yellow] Edit proposal.md and tasks.md")

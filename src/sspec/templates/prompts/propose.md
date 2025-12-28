@@ -8,7 +8,14 @@ Create a new change proposal.
 
 ## Workflow
 
-1. **Understand** what the user wants to accomplish
+1. **Check requests**
+   - Look for open requests in `.sspec/requests/`
+   - Create new change proposal or attach to existing changs.
+   - If creating proposal from a request, link them:
+     - Update request frontmatter: `changes: [<change-name>]`
+     - Update request status: `in-progress`
+
+2. **Understand** what the user wants to accomplish
    - Ask clarifying questions if requirements are vague
    - Identify scope boundaries early
 

@@ -62,6 +62,7 @@ def init(force: bool) -> None:
     (sspec_path / "knowledge").mkdir(exist_ok=True)
     (sspec_path / "changes").mkdir(exist_ok=True)
     (sspec_path / "changes" / "archive").mkdir(exist_ok=True)
+    (sspec_path / "requests").mkdir(exist_ok=True)
     (sspec_path / "prompts").mkdir(exist_ok=True)
 
     # Copy templates
@@ -79,6 +80,7 @@ def init(force: bool) -> None:
 
     # Create .gitkeep
     (sspec_path / "changes" / "archive" / ".gitkeep").touch()
+    (sspec_path / "requests" / ".gitkeep").touch()
 
     # Root AGENTS.md
     root_agents_path = Path.cwd() / "AGENTS.md"

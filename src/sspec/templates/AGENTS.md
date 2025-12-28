@@ -65,6 +65,19 @@ Create a new change proposal.
 
 ---
 
+### /requests
+
+Review open user requests.
+
+**Purpose**: Process user-written requests in `.sspec/requests/`
+
+**Actions per request**:
+- Create new change (`/propose`) OR Link to existing change
+- Ask for clarification
+- Mark as done/invalid
+
+---
+
 ### /status
 
 Report current state.
@@ -166,6 +179,7 @@ Archive a completed change.
 | `changes/<n>/memo.md` | Research notes, code snippets, ideas (scratchpad) | During work |
 | `changes/<n>/handover.md` | Session continuity | End of session |
 | `handover.md` | Cross-change global state | Periodically |
+| `requests/*.md` | User-written feature requests | User creates |
 
 ### File Responsibility Boundaries
 

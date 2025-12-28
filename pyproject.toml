@@ -1,6 +1,6 @@
 [project]
 name = "sspec"
-version = "0.2.0"
+version = "0.3.0"
 description = "Lightweight AI collaboration spec for solo/small projects"
 readme = "README.md"
 license = { text = "MIT" }
@@ -23,6 +23,7 @@ dependencies = [
     "click>=8.0",
     "rich>=13.0",
     "pyyaml>=6.0",
+    "python-dotenv>=1.0.0",
 ]
 
 [project.optional-dependencies]

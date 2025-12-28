@@ -17,9 +17,7 @@ def init(force: bool) -> None:
     sspec_path = Path.cwd() / SSPEC_DIR
 
     if sspec_path.exists() and not force:
-        raise click.ClickException(
-            f"{SSPEC_DIR} already exists. Use --force to reinitialize."
-        )
+        raise click.ClickException(f"{SSPEC_DIR} already exists. Use --force to reinitialize.")
 
     template_dir = get_template_dir()
 

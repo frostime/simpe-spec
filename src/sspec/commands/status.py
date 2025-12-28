@@ -43,7 +43,7 @@ def _show_overview(sspec_root) -> None:
         for change in active:
             status = change["status"]
             progress = change["progress"]
-            
+
             status_icon = {
                 "PLANNING": "📝",
                 "IN_PROGRESS": "🔄",
@@ -103,10 +103,12 @@ def _show_change_detail(change_path) -> None:
                 break
 
     console.print()
-    console.print(Panel(
-        f"[bold]{change['name']}[/bold]\n"
-        f"Status: {change['status']}\n"
-        f"Progress: {change['progress']['done']}/{change['progress']['total']}\n"
-        f"{proposal_summary}",
-        title="Change Details",
-    ))
+    console.print(
+        Panel(
+            f"[bold]{change['name']}[/bold]\n"
+            f"Status: {change['status']}\n"
+            f"Progress: {change['progress']['done']}/{change['progress']['total']}\n"
+            f"{proposal_summary}",
+            title="Change Details",
+        )
+    )

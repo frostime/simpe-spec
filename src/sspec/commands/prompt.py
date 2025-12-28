@@ -16,7 +16,7 @@ console = Console()
 @click.option("--raw", is_flag=True, help="Output raw content without formatting")
 def prompt(command: str, list_prompts: bool, raw: bool) -> None:
     """Show or list slash command prompts.
-    
+
     Examples:
         sspec prompt --list
         sspec prompt handover
@@ -66,10 +66,12 @@ def prompt(command: str, list_prompts: bool, raw: bool) -> None:
         click.echo(content)
     else:
         console.print()
-        console.print(Panel(
-            Markdown(content),
-            title=f"/{command}",
-            border_style="cyan",
-        ))
+        console.print(
+            Panel(
+                Markdown(content),
+                title=f"/{command}",
+                border_style="cyan",
+            )
+        )
         console.print()
         console.print("[dim]Use --raw to copy this prompt[/dim]")

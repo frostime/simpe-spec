@@ -27,9 +27,7 @@ def get_sspec_root() -> Path:
     """Get .sspec directory or raise error."""
     root = find_sspec_root()
     if root is None:
-        raise click.ClickException(
-            f"Not a sspec project. Run 'sspec init' first."
-        )
+        raise click.ClickException(f"Not a sspec project. Run 'sspec init' first.")
     return root
 
 

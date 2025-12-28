@@ -31,8 +31,8 @@ def test_copy_template_with_replacements():
     with tempfile.TemporaryDirectory() as tmpdir:
         src = Path(tmpdir) / "src.md"
         src.write_text("Hello {{NAME}}!")
-        
+
         dest = Path(tmpdir) / "dest.md"
         copy_template(src, dest, {"NAME": "World"})
-        
+
         assert dest.read_text() == "Hello World!"

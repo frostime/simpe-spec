@@ -1,11 +1,17 @@
+<!-- SSPEC:START -->
 # sspec Instructions
 
 Entry point for AI assistants. Read this file first when starting a session.
 
+## Metaphysics
+
+SSEPC is designed to work with AI coding agents like GitHub Copilot, Claude Code, Cursor, etc., steadly **across sessions**.
+
+
 ## Quick Start
 
 1. Read `knowledge/index.md` for project context
-2. Check `changes/` for active work
+2. Check `changes/<name>` for active work
 3. Read relevant `handover.md` for session continuity
 
 ## Workflow
@@ -50,10 +56,10 @@ Update the current change's `handover.md` with:
 
 Predefined prompts in `prompts/` directory. User can invoke with:
 
-- `/handover` — Generate session handover
+- `/propose` — Create new change
 - `/pivot` — Record intent change
 - `/status` — Summarize current state
-- `/propose` — Create new change
+- `/handover` — Generate session handover
 - `/archive` — Archive completed change
 
 Read `prompts/<command>.md` for full prompt content.
@@ -95,3 +101,5 @@ When user says "wait", "change of plans", "let's do X instead":
 ├── prompts/            ← Slash command definitions
 └── handover.md         ← Global cross-change state
 ```
+<!-- SSPEC:END -->
+

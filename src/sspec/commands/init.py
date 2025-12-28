@@ -10,6 +10,25 @@ from sspec.core import SSPEC_DIR, copy_template, find_sspec_root, get_template_d
 console = Console()
 
 
+ROOT_AGENT_PROMPMT = """
+<!-- SSPEC:START -->
+# Simple-Spec Instructions
+
+These instructions are for AI assistants working in this project.
+
+Always open `@/.sspec/AGENTS.md` when the request:
+- Mentions planning or proposals (words like proposal, spec, change, plan)
+- Introduces new capabilities, breaking changes, architecture shifts, or big performance/security work
+- Sounds ambiguous and you need the authoritative spec before coding
+
+Use `@/.sspec/AGENTS.md` to learn:
+- How to create and apply change proposals
+- Spec format and conventions
+- Project structure and guidelines
+<!-- SSPEC:END -->
+""".strip()
+
+
 @click.command()
 @click.option("--force", is_flag=True, help="Overwrite existing .sspec directory")
 def init(force: bool) -> None:
@@ -43,6 +62,17 @@ def init(force: bool) -> None:
 
     # Create .gitkeep
     (sspec_path / "changes" / "archive" / ".gitkeep").touch()
+
+    # Root Agents.md
+    rounded_prompt_path = Path.cwd() / "AGENTS.md"
+    if not rounded_prompt_path.exists():
+        rounded_prompt_path.write_text(ROOT_AGENT_PROMPMT, encoding="utf-8")
+    else:
+        with open(rounded_prompt_path, "a+", encoding="utf-8") as f:
+            # Append the root agent prompt if not already present
+            content = f.read()
+            if ROOT_AGENT_PROMPMT not in content:
+                f.write("\n\n" + ROOT_AGENT_PROMPMT)
 
     console.print(f"[green]✓[/green] Initialized {SSPEC_DIR}")
     console.print()

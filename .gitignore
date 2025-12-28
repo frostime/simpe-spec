@@ -20,6 +20,8 @@ wheels/
 .installed.cfg
 *.egg
 
+.sspec
+
 # Virtual environments
 .venv/
 venv/

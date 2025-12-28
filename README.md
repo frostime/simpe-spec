@@ -1,151 +1,240 @@
 # sspec
 
-Lightweight AI collaboration spec for solo/small projects.
+[中文文档](./README_zh-CN.md)
 
-## Philosophy
+**Lightweight specification workflow for AI coding assistants.**
 
-**sspec** is a simplified alternative to [OpenSpec](https://openspec.dev/) designed for:
+sspec solves a simple problem: AI assistants forget everything when a conversation ends. Your carefully explained context, decisions, and progress—all gone.
 
-- Solo developers or small teams
-- Projects that don't need formal spec validation
-- Quick iteration with AI assistants
+sspec gives AI a persistent memory through structured files that survive across sessions.
 
-### Compared to OpenSpec
+---
 
-| Aspect | OpenSpec | sspec |
-|--------|----------|-------|
-| Change structure | `changes/<id>/specs/<cap>/` nested | `changes/<name>/` flat |
-| Knowledge | Scattered in `project.md` | `knowledge/` with index |
-| Spec validation | `openspec validate --strict` | None (trust the human) |
-| Delta semantics | ADDED/MODIFIED/REMOVED formal | Plain description |
-| Archive | Updates `specs/` directory | Just moves to `archive/` |
-| Handover | User writes manually | Built-in per change |
-| Slash commands | Via `.github/prompts/` | Built-in `/handover`, `/pivot`, etc. |
+## How It Works
 
-## Installation
-
-```bash
-# Using uv (recommended)
-uv tool install sspec
-
-# Using pip
-pip install sspec
-
-# From source
-git clone https://github.com/yourname/sspec
-cd sspec
-uv sync
 ```
+You: "Add user authentication"
+AI: reads .sspec/AGENTS.md → understands the workflow
+AI: creates proposal, breaks into tasks, tracks progress
+... conversation ends ...
+
+New session:
+You: "Continue where we left off"
+AI: reads handover.md → knows exactly what was done and what's next
+```
+
+---
 
 ## Quick Start
 
+### Install
+
 ```bash
-# Initialize in your project
-sspec init
-
-# Create a new change
-sspec new add-user-auth
-
-# List changes
-sspec list
-
-# Archive completed change
-sspec archive add-user-auth
+pip install sspec
 ```
 
-## Directory Structure
+### Initialize
 
-After `sspec init`:
+```bash
+cd your-project
+sspec init
+```
 
+This creates:
 ```
 .sspec/
-├── AGENTS.md                 # Entry point for AI (read first)
-├── knowledge/                # Stable project knowledge
-│   ├── index.md             # Required: project overview
-│   ├── architecture.md      # Optional: system design
-│   ├── conventions.md       # Optional: coding standards
-│   └── decisions.md         # Optional: ADRs
-├── changes/                  # Active changes
-│   ├── <change-name>/
-│   │   ├── proposal.md      # Why and what
-│   │   ├── tasks.md         # Plan, progress, decisions, pivots
-│   │   └── handover.md      # Session continuity
-│   └── archive/             # Completed changes
-├── prompts/                  # Slash command definitions
-│   ├── handover.md
-│   ├── pivot.md
-│   ├── status.md
-│   └── ...
-└── handover.md              # Global cross-change handover
+├── AGENTS.md           # AI reads this first
+├── knowledge/
+│   └── index.md        # Your project context
+├── changes/            # Active work
+├── prompts/            # Command definitions
+└── handover.md         # Cross-session state
 ```
 
-## Slash Commands
+### Configure
 
-sspec includes predefined prompts for common workflows. Tell your AI assistant:
+Edit `.sspec/knowledge/index.md` with your project info:
+- Tech stack
+- Coding conventions
+- Key constraints
 
-| Command | Purpose |
-|---------|---------|
-| `/handover` | Generate handover document for session continuity |
-| `/pivot` | Record intent change and update plan |
-| `/status` | Summarize current state |
+This is the context AI will always have access to.
+
+---
+
+## Daily Workflow
+
+### Starting a Feature
+
+Tell your AI:
+```
+/propose add-user-auth
+```
+
+AI will:
+1. Create `changes/add-user-auth/` with proposal, tasks, memo, handover
+2. Help you define what and why
+3. Break work into small, verifiable steps
+
+### During Work
+
+AI automatically tracks:
+- **Progress**: What's done, what's next
+- **Decisions**: Why you chose X over Y
+- **Pivots**: When you change direction
+
+You can check status anytime:
+```
+/status
+```
+
+### Ending a Session
+
+Before closing the conversation:
+```
+/handover
+```
+
+AI writes a handover document capturing:
+- What was accomplished
+- Current state
+- Exact next steps
+- Gotchas to remember
+
+### Next Session
+
+Start with:
+```
+/context
+```
+
+AI reloads everything and continues seamlessly.
+
+---
+
+## Commands
+
+| Command | What it does |
+|---------|--------------|
 | `/propose <name>` | Create new change proposal |
-| `/archive <name>` | Archive completed change |
+| `/status` | Show current state |
+| `/pivot` | Record when you change direction |
+| `/handover` | Generate session handover |
+| `/context` | Reload project context |
+| `/archive` | Archive completed change |
 
-These are defined in `.sspec/prompts/` and can be customized.
+These work in any AI tool that reads AGENTS.md (Claude Code, Cursor, etc.)
 
-## Workflow
+---
 
-### 1. Start Session
-
-Tell AI: "Read `.sspec/AGENTS.md` first"
-
-The agent will:
-1. Read `knowledge/index.md` for project context
-2. Check `changes/` for active work
-3. Read relevant `handover.md` for continuity
-
-### 2. During Work
-
-- Agent updates `tasks.md` progress in real-time
-- On intent change → agent records in `## Pivot` section
-- Important decisions → recorded in `## Decisions`
-
-### 3. End Session
-
-Use `/handover` or tell AI "I'm leaving, update handover"
-
-### 4. Complete Change
+## CLI Commands
 
 ```bash
-sspec archive <change-name>
+sspec init              # Initialize .sspec in current directory
+sspec new <name>        # Create new change
+sspec list              # List all changes
+sspec status            # Show status overview
+sspec archive <name>    # Archive completed change
+sspec prompt --list     # List available prompts
 ```
 
-## CLI Reference
+---
 
-```bash
-sspec init [--force]           # Initialize .sspec directory
-sspec new <name>               # Create new change
-sspec list [--all]             # List changes (--all includes archived)
-sspec status [<name>]          # Show status summary
-sspec archive <name> [--yes]   # Archive completed change
-sspec prompt <command>         # Show prompt content
-sspec help                     # Show help
+## File Structure Explained
+
+### For the Project
+
+| File | Purpose | You edit? |
+|------|---------|-----------|
+| `knowledge/index.md` | Project context, tech stack, conventions | Yes, initially |
+| `knowledge/*.md` | Domain knowledge, architecture docs | As needed |
+| `handover.md` | Global cross-change state | AI updates |
+
+### For Each Change
+
+| File | Purpose | You edit? |
+|------|---------|-----------|
+| `proposal.md` | Why and what to change | Review & approve |
+| `tasks.md` | Plan, progress, decisions | AI updates |
+| `memo.md` | Research notes, code snippets | AI's scratchpad |
+| `handover.md` | Session continuity | AI updates |
+
+---
+
+## Example Session
+
+**Session 1:**
+```
+You: Let's add dark mode to the app. /propose dark-mode
+
+AI: Created change: dark-mode
+    - Proposal: Add dark mode toggle with system preference detection
+    - Tasks: 5 steps identified
+    Ready to review?
+
+You: Looks good, let's start.
+
+AI: [implements first 3 tasks, updates progress]
+
+You: I need to go. /handover
+
+AI: Handover saved. 
+    Done: Theme provider, toggle component, CSS variables
+    Next: Persist preference, add to settings page
 ```
 
-## Configuration
-
-Optional `.sspec/config.yaml`:
-
-```yaml
-# Default language for templates
-language: en  # or zh
-
-# Auto-archive after N days of DONE status
-auto_archive_days: 7
-
-# Custom prompt directory
-prompts_dir: .sspec/prompts
+**Session 2:**
 ```
+You: /context
+
+AI: Context loaded.
+    Project: my-app (React + TypeScript)
+    Active: dark-mode (IN_PROGRESS, 3/5 tasks)
+    Next: Persist user preference to localStorage
+    
+    Continuing from where we left off...
+```
+
+---
+
+## Tips
+
+### For Best Results
+
+1. **Start with good context**: Fill `knowledge/index.md` thoroughly
+2. **Review proposals**: Don't let AI guess requirements
+3. **Use `/handover` religiously**: It's the bridge between sessions
+4. **Keep changes small**: One feature = one change
+
+### When to Skip sspec
+
+- Quick bug fixes
+- Typos and formatting
+- Simple config changes
+
+Just do these directly—no proposal needed.
+
+---
+
+## FAQ
+
+**Q: Does this work with [my AI tool]?**
+
+Any tool that reads AGENTS.md files: Claude Code, Cursor, Windsurf, GitHub Copilot, etc.
+
+**Q: What if AI doesn't follow the workflow?**
+
+Tell it: "Read .sspec/AGENTS.md first"
+
+**Q: Can I customize the prompts?**
+
+Yes. Edit files in `.sspec/prompts/` to match your preferences.
+
+**Q: How is this different from just chatting?**
+
+Chat context disappears. sspec files persist. You never re-explain your project.
+
+---
 
 ## License
 

@@ -1,4 +1,4 @@
-# /context
+# sspec/context
 
 Reload project context and current state.
 

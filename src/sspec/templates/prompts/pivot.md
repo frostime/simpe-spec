@@ -1,4 +1,4 @@
-# /pivot
+# sspec/pivot
 
 Record a direction change when user changes their mind.
 

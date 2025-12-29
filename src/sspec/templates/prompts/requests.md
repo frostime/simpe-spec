@@ -1,40 +1,62 @@
-# /requests
+# sspec/request
 
-Review open user requests and propose actions.
+Process a user-submitted request.
+
+## Purpose
+
+The user has written a structured request and is asking you to read it.
+
+**Important**: You do NOT proactively scan the requests folder. The user will tell you when they have a request.
+
+## When User Says
+
+- "看一下我写的 request"
+- "Read my request about X"
+- "处理一下 requests/xxx"
+- "I wrote a request for the dark mode feature"
 
 ## Workflow
 
-1. **List** open requests:
-   ```bash
-   sspec request --list
-   ```
+1. **Read** the specified request
+   - If user names it: `.sspec/requests/<name>.md`
+   - If unclear, ask: "Which request should I read?"
 
-2. **Read** each open request in `.sspec/requests/`
+2. **Understand** the request
+   - What does the user want?
+   - Are there ambiguities to clarify?
 
-3. **For each request**, suggest one of:
-   - Create a new change: `/propose <name>`
-   - Link to existing change: Update request frontmatter
+3. **Decide** action:
+   - Create new change → `sspec/propose <name>`
+   - Link to existing change
    - Ask clarifying questions
-   - Mark as duplicate/invalid
+   - Mark as invalid (explain why)
 
-4. **Update** request status as you process them
+4. **Link** if creating change:
+   - In `proposal.md` References: link to the request
+   - Update request frontmatter: `status: in-progress`, `change: <name>`
+
+## What requests/ Is For
+
+requests/ is an **input channel**, not a **status hub**:
+- User writes structured feature requests (like GitHub issue templates)
+- User edits in their preferred editor with good UX
+- User explicitly submits to agent when ready
+- Agent processes and creates change, referencing the request
+
+**Not a queue to check** — user drives when requests are processed.
 
 ## Output
 
 ```
-## Open Requests Review
+## Request: <name>
 
-### 1. add-dark-mode (2025-01-15)
-Summary: User wants dark mode with system preference detection
-Recommendation: Create new change
-Action: /propose dark-mode
+**Summary**: [one sentence]
+**My Understanding**: [what you think user wants]
 
-### 2. fix-login-bug (2025-01-14)
-Summary: Login fails with special characters in password
-Recommendation: Link to existing change `auth-improvements`
-Action: Update request, add to existing tasks
+**Questions** (if any):
+- [clarification needed]
 
-### 3. improve-performance (2025-01-13)
-Summary: [NEEDS CLARIFICATION] Which pages? What metrics?
-Action: Ask user for specifics
+**Action**: Create change `sspec/propose <suggested-name>`
+
+Proceed?
 ```

@@ -1,4 +1,4 @@
-# /handover
+# sspec/handover
 
 Generate a session handover document for continuity.
 

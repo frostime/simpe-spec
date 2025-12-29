@@ -1,10 +1,10 @@
-# /archive
+# sspec/archive
 
 Archive a completed change.
 
 ## Arguments
 
-`/archive <change-name>` or `/archive` to select interactively.
+`sspec/archive <change-name>` or `sspec/archive` to select interactively.
 
 ## Prerequisites
 
@@ -66,7 +66,7 @@ Issues:
 - [ ] [specific issue 1]
 - [ ] [specific issue 2]
 
-Resolve these first, then run /archive again.
+Resolve these first, then run sspec/archive again.
 ```
 
 ## Anti-patterns

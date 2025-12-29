@@ -15,7 +15,7 @@ PROMPTS_DIR = "prompts"
 # Schema version - increment when template structure changes
 # Major: breaking changes requiring manual migration
 # Minor: additive changes (new files, new sections)
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.5"
 
 # File categories for tracking and updates
 UPDATABLE_FILES = [

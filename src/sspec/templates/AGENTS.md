@@ -7,29 +7,35 @@ Lightweight specification workflow for AI coding assistants. Read this file to b
 
 ## Quick Decision
 
-When user makes a request, determine the action:
+When user makes a request:
 
 ```
 Is it a quick fix (bug, typo, config)?
 → Do it directly, no proposal needed
 
+Is user giving you a request to read?
+→ User says: "看下我写的 request" / "Read my request about X"
+→ Read the specified request file
+→ `sspec/propose` from it, linking the request
+
 Is it a new feature or change?
-→ Check `.sspec/requests/` first
-→ If matching request exists: `/propose` from it
-→ If no request: `/propose` new
+→ `sspec/propose` new
 
 Is user asking about current state?
-→ `/status`
+→ `sspec/status`
 
 Is user changing direction mid-work?
-→ `/pivot`
+→ `sspec/pivot`
 
 Is session ending?
-→ `/handover`
+→ `sspec/handover`
 
 Uncertain what to do?
-→ Ask user: "Should I create a proposal for this, or handle it directly?"
+→ Ask: "Should I create a proposal for this, or handle it directly?"
 ```
+
+**Key insight**: You do NOT proactively check `requests/`.
+User will tell you when they have a request for you to read.
 
 ---
 
@@ -49,14 +55,14 @@ changes/                → List active changes
 changes/<n>/handover.md → Previous session state
 ```
 
-**First action**: Run `/context` or manually read the files above.
+**First action**: Run `sspec/context` or manually read the files above.
 
 ### During Work
 
 | Event | Action |
 |-------|--------|
 | Step completed | Update `tasks.md` Progress section |
-| User changes direction | Execute `/pivot` |
+| User changes direction | Execute `sspec/pivot` |
 | Important decision made | Record in `tasks.md` Decisions section |
 | Research findings, code snippets | Record in `memo.md` |
 | Stable knowledge discovered | Add to `knowledge/` |
@@ -77,16 +83,17 @@ Update the current change's `handover.md` with:
 
 Invoke these in conversation. Full definitions in `prompts/<command>.md`.
 
-| Command | Purpose | Prerequisites |
-|---------|---------|---------------|
-| `/propose` | Create change | Check `/requests` first |
-| `/status` | Report state | None |
-| `/pivot` | Direction change | Active change exists |
-| `/handover` | End session | None |
-| `/context` | Load context | None |
-| `/archive` | Archive change | Status is DONE/REVIEW |
+| Command | Purpose | When to Use |
+|---------|---------|-------------|
+| `sspec/propose <name>` | Create new change | New feature or structured work |
+| `sspec/status` | Report state | Check progress |
+| `sspec/pivot` | Direction change | User changes mind |
+| `sspec/handover` | Session end | Before closing conversation |
+| `sspec/context` | Reload context | Starting session, feeling lost |
+| `sspec/archive` | Archive change | Work is DONE |
+| `sspec/request` | Process request | User says "read my request" |
 
-### /propose [name]
+### sspec/propose [name]
 
 Create a new change proposal.
 
@@ -102,20 +109,20 @@ Create a new change proposal.
 
 ---
 
-### /requests
+### sspec/request
 
-Review open user requests.
+Process a user-submitted request.
 
 **Purpose**: Process user-written requests in `.sspec/requests/`
 
 **Actions per request**:
-- Create new change (`/propose`) OR Link to existing change
+- Create new change (`sspec/propose`) OR Link to existing change
 - Ask for clarification
 - Mark as done/invalid
 
 ---
 
-### /status
+### sspec/status
 
 Report current state.
 
@@ -133,7 +140,7 @@ Blockers: [none / list]
 
 ---
 
-### /pivot
+### sspec/pivot
 
 Record direction change when user changes their mind.
 
@@ -156,7 +163,7 @@ Record direction change when user changes their mind.
 
 ---
 
-### /handover
+### sspec/handover
 
 Generate session handover document.
 
@@ -173,7 +180,7 @@ Generate session handover document.
 
 ---
 
-### /context
+### sspec/context
 
 Reload project context.
 
@@ -188,7 +195,7 @@ Reload project context.
 
 ---
 
-### /archive
+### sspec/archive
 
 Archive a completed change.
 

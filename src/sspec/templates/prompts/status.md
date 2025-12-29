@@ -1,10 +1,10 @@
-# /status
+# sspec/status
 
 Report current state summary.
 
 ## Arguments
 
-`/status` for overview, `/status <change-name>` for specific change.
+`sspec/status` for overview, `sspec/status <change-name>` for specific change.
 
 ## Workflow
 

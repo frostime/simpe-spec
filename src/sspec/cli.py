@@ -3,7 +3,7 @@
 import click
 from rich.console import Console
 
-from sspec.commands import archive, init, list_cmd, new, prompt, request, status
+from sspec.commands import archive, init, list_cmd, new, prompt, request, status, update
 
 console = Console()
 
@@ -25,6 +25,7 @@ def main(ctx: click.Context) -> None:
 
 main.add_command(init.init)
 main.add_command(new.new)
+main.add_command(update.update)
 main.add_command(request.request)
 main.add_command(list_cmd.list_changes_cmd, name="list")
 main.add_command(status.status)

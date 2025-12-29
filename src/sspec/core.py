@@ -12,6 +12,11 @@ CHANGES_DIR = "changes"
 ARCHIVE_DIR = "archive"
 PROMPTS_DIR = "prompts"
 
+# Schema version - increment when template structure changes
+# Major: breaking changes requiring manual migration
+# Minor: additive changes (new files, new sections)
+SCHEMA_VERSION = '1.0'
+
 
 def find_sspec_root(start: Optional[Path] = None) -> Optional[Path]:
     """Find .sspec directory by walking up from start path."""

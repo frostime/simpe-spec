@@ -4,7 +4,7 @@ import click
 from rich.console import Console
 from rich.table import Table
 
-from sspec.core import get_sspec_root, list_changes
+from sspec.core import SspecNotFoundError, get_sspec_root, list_changes
 
 console = Console()
 
@@ -22,7 +22,10 @@ STATUS_COLORS = {
 @click.option("--all", "include_all", is_flag=True, help="Include archived changes")
 def list_changes_cmd(include_all: bool) -> None:
     """List all changes."""
-    sspec_root = get_sspec_root()
+    try:
+        sspec_root = get_sspec_root()
+    except SspecNotFoundError:
+        raise click.ClickException("Not a sspec project. Run 'sspec init' first.")
     changes = list_changes(sspec_root, include_archived=include_all)
 
     if not changes:

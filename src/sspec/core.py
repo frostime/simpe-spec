@@ -17,6 +17,28 @@ PROMPTS_DIR = "prompts"
 # Minor: additive changes (new files, new sections)
 SCHEMA_VERSION = '1.0'
 
+# File categories for tracking and updates
+UPDATABLE_FILES = [
+    'AGENTS.md',
+    'prompts/archive.md',
+    'prompts/context.md',
+    'prompts/handover.md',
+    'prompts/pivot.md',
+    'prompts/propose.md',
+    'prompts/requests.md',
+    'prompts/status.md',
+]
+
+USER_FILES = ['knowledge/index.md', 'handover.md']
+
+# Files that should never be touched during update
+PROTECTED_PATTERNS = ['changes/*', 'requests/*']
+
+
+class SspecNotFoundError(Exception):
+    """Raised when sspec project is not found."""
+    pass
+
 
 def find_sspec_root(start: Optional[Path] = None) -> Optional[Path]:
     """Find .sspec directory by walking up from start path."""
@@ -32,7 +54,7 @@ def get_sspec_root() -> Path:
     """Get .sspec directory or raise error."""
     root = find_sspec_root()
     if root is None:
-        raise click.ClickException(f"Not a sspec project. Run 'sspec init' first.")
+        raise SspecNotFoundError("Not a sspec project")
     return root
 
 
@@ -92,8 +114,12 @@ def parse_change(change_path: Path, archived: bool = False) -> dict:
     if tasks_file.exists():
         content = tasks_file.read_text(encoding="utf-8")
 
-        # Extract status
-        status_match = re.search(r"`([A-Z_]+)`", content)
+        # Extract status - try HTML comment format first, then fallback to backticks
+        # status_match = re.search(r"<!--\s*STATUS:\s*([A-Z_]+)\s*-->", content)
+        # if not status_match:
+        #     status_match = re.search(r"`([A-Z_]+)`", content)
+
+        status_match = re.search(r"\s*STATUS::([A-Z_]+)\s*", content)
         if status_match:
             status = status_match.group(1)
 
@@ -159,7 +185,3 @@ def archive_change(sspec_root: Path, name: str) -> Path:
 
     shutil.move(str(change_path), str(archive_path))
     return archive_path
-
-
-# Import click here to avoid circular import
-import click

@@ -11,29 +11,21 @@ from rich.console import Console
 from rich.table import Table
 
 from sspec import __version__
-from sspec.core import SCHEMA_VERSION, copy_template, get_sspec_root, get_template_dir
+from sspec.core import (
+    PROTECTED_PATTERNS,
+    SCHEMA_VERSION,
+    UPDATABLE_FILES,
+    USER_FILES,
+    SspecNotFoundError,
+    copy_template,
+    get_sspec_root,
+    get_template_dir,
+)
 
 console = Console()
 
 
 META_FILE = '.meta.json'
-
-# File categories for update decisions
-UPDATABLE_FILES = [
-    'AGENTS.md',
-    'prompts/archive.md',
-    'prompts/context.md',
-    'prompts/handover.md',
-    'prompts/pivot.md',
-    'prompts/propose.md',
-    'prompts/requests.md',
-    'prompts/status.md',
-]
-
-USER_FILES = ['knowledge/index.md', 'handover.md']
-
-# Files that should never be touched during update
-PROTECTED_PATTERNS = ['changes/*', 'requests/*']
 
 
 def compute_hash(content: str) -> str:
@@ -122,7 +114,11 @@ def update(dry_run: bool, force: bool, init_meta: bool) -> None:
     Only updates files that haven't been modified by the user.
     User content (knowledge/, changes/, requests/) is never touched.
     """
-    sspec_root = get_sspec_root()
+    try:
+        sspec_root = get_sspec_root()
+    except SspecNotFoundError:
+        raise click.ClickException("Not a sspec project. Run 'sspec init' first.")
+    
     template_dir = get_template_dir()
 
     meta = load_meta(sspec_root)
@@ -278,11 +274,15 @@ def update(dry_run: bool, force: bool, init_meta: bool) -> None:
     meta['files'].update(updated_files)
     save_meta(sspec_root, meta)
 
+    # Update root AGENTS.md block
+    if update_root_agents_block():
+        console.print(f'  [green]✓[/green] Updated root AGENTS.md block')
+
     console.print()
     console.print(f'[green]✓[/green] Updated to schema {SCHEMA_VERSION}')
 
 
-def update_root_agents_block(force: bool = False) -> bool:
+def update_root_agents_block() -> bool:
     """Update the SSPEC block in root AGENTS.md.
 
     Returns True if updated, False if skipped.

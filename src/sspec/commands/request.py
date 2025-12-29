@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from rich.console import Console
 from rich.table import Table
 
-from sspec.core import get_sspec_root
+from sspec.core import SspecNotFoundError, get_sspec_root
 
 console = Console()
 
@@ -113,7 +113,10 @@ def request(
         sspec request --list              # List open requests
         sspec request --show <name>       # Show request content
     """
-    sspec_root = get_sspec_root()
+    try:
+        sspec_root = get_sspec_root()
+    except SspecNotFoundError:
+        raise click.ClickException("Not a sspec project. Run 'sspec init' first.")
     requests_dir = sspec_root / 'requests'
     requests_dir.mkdir(exist_ok=True)
 

@@ -19,37 +19,37 @@ Create a new change proposal.
    - Ask clarifying questions if requirements are vague
    - Identify scope boundaries early
 
-2. **Check** for conflicts
+3. **Check** for conflicts
    ```bash
    sspec list
    ```
    - Ensure no overlapping active changes
    - Consider dependencies on other work
 
-3. **Create** the change directory
+4. **Create** the change directory
    ```bash
    sspec new <name>
    ```
 
-4. **Fill** `proposal.md`
+5. **Fill** `proposal.md`
    - **Why**: Problem or opportunity (1-2 sentences)
    - **What**: Specific changes (concrete bullet list)
    - **Success Criteria**: How we know it's done
    - **Impact**: Affected areas, breaking changes
    - **Out of Scope**: What we're explicitly not doing
 
-5. **Draft** `tasks.md`
+6. **Draft** `tasks.md`
    - Break into small, verifiable steps
    - Order by dependency
    - Include validation/testing steps
    - Mark parallelizable tasks with `[P]`
 
-6. **Handle ambiguity**
+7. **Handle ambiguity**
    - Mark unclear requirements: `[NEEDS CLARIFICATION: specific question]`
    - Do NOT guess or make assumptions
    - List open questions in proposal.md
 
-7. **Review** with user before starting implementation
+8. **Review** with user before starting implementation
 
 ## Skip Proposal For
 

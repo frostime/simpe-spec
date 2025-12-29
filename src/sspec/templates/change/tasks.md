@@ -1,10 +1,7 @@
 # Tasks: {{CHANGE_NAME}}
 
-## Status
-
-`PLANNING`
-
-<!-- Values: PLANNING | IN_PROGRESS | BLOCKED | REVIEW | DONE -->
+STATUS::PLANNING
+<!-- STATUS Values: PLANNING | IN_PROGRESS | BLOCKED | REVIEW | DONE -->
 
 ## Plan
 

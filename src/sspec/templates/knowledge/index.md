@@ -6,6 +6,9 @@ Project knowledge base. AI assistants should read this before starting any work.
 
 ## Project Overview
 
+**Name**: [project-name]
+**Description**: [one-line description]
+
 <!-- 
 Concise description of the project's purpose and goals.
 Example: "sspec is a lightweight AI collaboration spec for solo/small projects."

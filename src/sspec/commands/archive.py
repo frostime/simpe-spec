@@ -3,7 +3,7 @@
 import click
 from rich.console import Console
 
-from sspec.core import archive_change, get_sspec_root, list_changes
+from sspec.core import SspecNotFoundError, archive_change, get_sspec_root, list_changes
 
 console = Console()
 
@@ -13,7 +13,10 @@ console = Console()
 @click.option("--yes", "-y", is_flag=True, help="Skip confirmation")
 def archive(name: str, yes: bool) -> None:
     """Archive a completed change."""
-    sspec_root = get_sspec_root()
+    try:
+        sspec_root = get_sspec_root()
+    except SspecNotFoundError:
+        raise click.ClickException("Not a sspec project. Run 'sspec init' first.")
 
     # If no name provided, try to auto-select
     if not name:

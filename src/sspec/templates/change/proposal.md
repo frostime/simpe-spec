@@ -19,11 +19,11 @@ Be concrete: files, modules, behaviors.
 ## Success Criteria
 
 <!-- 
-How do we know this is done?
-Measurable outcomes, not vague goals.
+How do we know this is done? Be measurable.
+Example: "User can toggle dark mode and preference persists across sessions"
 -->
 
-- [ ] 
+- 
 
 ## Impact
 

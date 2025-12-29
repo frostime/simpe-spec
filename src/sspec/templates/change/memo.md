@@ -1,24 +1,24 @@
 # Memo: {{CHANGE_NAME}}
 
-A scratchpad for exploration. No strict format required.
+Exploration scratchpad. Sections below are optional — use what helps, or change whatever you like.
 
 ---
 
-## Research Notes
+## Notes
 
 <!-- 
 Findings from code exploration, documentation review, experiments.
 File relationships, undocumented behaviors, gotchas discovered.
 -->
 
-## Code Snippets
+## Snippets
 
 <!-- 
 Useful code examples found or created during research.
 Patterns to reuse, reference implementations.
 -->
 
-## Ideas & Thoughts
+## Ideas
 
 <!-- 
 Half-formed ideas, potential approaches, trade-offs being considered.

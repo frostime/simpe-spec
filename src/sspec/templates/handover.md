@@ -10,6 +10,7 @@ Cross-change state and context. Use when switching between changes or for overal
 
 | Change | Status | Progress | Summary |
 |--------|--------|----------|---------|
+| **→ [current-focus]** | [STATUS] | [X/Y] | Current focus |
 | — | — | — | — |
 
 ## Recently Completed
@@ -39,6 +40,15 @@ Cross-change state and context. Use when switching between changes or for overal
 - 
 
 ---
+
+## Quality Check (verify before finishing)
+
+- [ ] Could another AI continue without asking questions?
+- [ ] Are file paths and function names specific?
+- [ ] Are Next Steps actionable (not vague)?
+- [ ] Are gotchas documented?
+
+Delete this section after verification.
 
 <!--
 UPDATE TRIGGERS:

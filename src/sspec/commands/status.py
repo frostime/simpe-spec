@@ -6,7 +6,7 @@ import click
 from rich.console import Console
 from rich.panel import Panel
 
-from sspec.core import get_sspec_root, list_changes, parse_change
+from sspec.core import SspecNotFoundError, get_sspec_root, list_changes, parse_change
 
 console = Console()
 
@@ -15,7 +15,10 @@ console = Console()
 @click.argument("name", required=False)
 def status(name: Optional[str] = None) -> None:
     """Show status summary."""
-    sspec_root = get_sspec_root()
+    try:
+        sspec_root = get_sspec_root()
+    except SspecNotFoundError:
+        raise click.ClickException("Not a sspec project. Run 'sspec init' first.")
 
     if name:
         # Show specific change status

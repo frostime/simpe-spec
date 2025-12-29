@@ -5,6 +5,34 @@ Lightweight specification workflow for AI coding assistants. Read this file to b
 
 ---
 
+## Quick Decision
+
+When user makes a request, determine the action:
+
+```
+Is it a quick fix (bug, typo, config)?
+→ Do it directly, no proposal needed
+
+Is it a new feature or change?
+→ Check `.sspec/requests/` first
+→ If matching request exists: `/propose` from it
+→ If no request: `/propose` new
+
+Is user asking about current state?
+→ `/status`
+
+Is user changing direction mid-work?
+→ `/pivot`
+
+Is session ending?
+→ `/handover`
+
+Uncertain what to do?
+→ Ask user: "Should I create a proposal for this, or handle it directly?"
+```
+
+---
+
 ## Purpose
 
 sspec enables **cross-session collaboration** by persisting context, plans, and decisions in structured files. It prevents context loss when conversations reset.
@@ -48,6 +76,15 @@ Update the current change's `handover.md` with:
 ## Commands
 
 Invoke these in conversation. Full definitions in `prompts/<command>.md`.
+
+| Command | Purpose | Prerequisites |
+|---------|---------|---------------|
+| `/propose` | Create change | Check `/requests` first |
+| `/status` | Report state | None |
+| `/pivot` | Direction change | Active change exists |
+| `/handover` | End session | None |
+| `/context` | Load context | None |
+| `/archive` | Archive change | Status is DONE/REVIEW |
 
 ### /propose [name]
 
@@ -201,6 +238,19 @@ Archive a completed change.
 ### Status Values
 
 `PLANNING` → `IN_PROGRESS` → `BLOCKED` | `REVIEW` → `DONE`
+
+---
+
+## Error Recovery
+
+| Situation | Action |
+|-----------|--------|
+| `tasks.md` has invalid status | Ask user to fix, or default to `PLANNING` |
+| Multiple active changes, unclear which | Ask: "Which change should I work on?" |
+| File missing but referenced | Note the issue, suggest running `sspec new` or check path |
+| Unclear user intent | Ask clarifying question before proceeding |
+
+**Principle**: When uncertain, ask. Don't guess silently.
 
 ---
 

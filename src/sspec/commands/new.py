@@ -3,7 +3,7 @@
 import click
 from rich.console import Console
 
-from sspec.core import create_change, get_sspec_root
+from sspec.core import SspecNotFoundError, create_change, get_sspec_root
 
 console = Console()
 
@@ -12,7 +12,10 @@ console = Console()
 @click.argument("name")
 def new(name: str) -> None:
     """Create a new change proposal."""
-    sspec_root = get_sspec_root()
+    try:
+        sspec_root = get_sspec_root()
+    except SspecNotFoundError:
+        raise click.ClickException("Not a sspec project. Run 'sspec init' first.")
 
     try:
         change_path = create_change(sspec_root, name)

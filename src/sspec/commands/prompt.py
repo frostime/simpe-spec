@@ -5,7 +5,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
-from sspec.core import get_sspec_root
+from sspec.core import SspecNotFoundError, get_sspec_root
 
 console = Console()
 
@@ -22,7 +22,10 @@ def prompt(command: str, list_prompts: bool, raw: bool) -> None:
         sspec prompt handover
         sspec prompt pivot --raw
     """
-    sspec_root = get_sspec_root()
+    try:
+        sspec_root = get_sspec_root()
+    except SspecNotFoundError:
+        raise click.ClickException("Not a sspec project. Run 'sspec init' first.")
     prompts_dir = sspec_root / "prompts"
 
     if not prompts_dir.exists():

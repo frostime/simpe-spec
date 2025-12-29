@@ -23,11 +23,13 @@ User says things like:
 
 3. **Record** in `tasks.md` under `## Pivot`:
    ```markdown
-   ### YYYY-MM-DD HH:MM
+   ### [timestamp]
    - Previous: [what was planned]
    - New: [new direction]
    - Reason: [user's reasoning]
    ```
+   
+   Use current timestamp if available, otherwise use "[date unknown]".
 
 4. **Update** the Plan section:
    - Mark abandoned items with `~~strikethrough~~` or remove

@@ -8,6 +8,8 @@ from rich.console import Console
 from sspec.core import (
     SCHEMA_VERSION,
     SSPEC_DIR,
+    UPDATABLE_FILES,
+    USER_FILES,
     copy_template,
     find_sspec_root,
     get_template_dir,
@@ -137,19 +139,8 @@ def _create_meta(sspec_root: Path) -> None:
         content = path.read_text(encoding='utf-8')
         return hashlib.sha256(content.encode('utf-8')).hexdigest()[:16]
 
-    # Files to track
-    tracked_files = [
-        'AGENTS.md',
-        'prompts/archive.md',
-        'prompts/context.md',
-        'prompts/handover.md',
-        'prompts/pivot.md',
-        'prompts/propose.md',
-        'prompts/requests.md',
-        'prompts/status.md',
-        'knowledge/index.md',
-        'handover.md',
-    ]
+    # Files to track (combine updatable and user files)
+    tracked_files = UPDATABLE_FILES + USER_FILES
 
     files = {}
     for rel_path in tracked_files:

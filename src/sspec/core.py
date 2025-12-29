@@ -15,28 +15,29 @@ PROMPTS_DIR = "prompts"
 # Schema version - increment when template structure changes
 # Major: breaking changes requiring manual migration
 # Minor: additive changes (new files, new sections)
-SCHEMA_VERSION = '1.0'
+SCHEMA_VERSION = "1.0"
 
 # File categories for tracking and updates
 UPDATABLE_FILES = [
-    'AGENTS.md',
-    'prompts/archive.md',
-    'prompts/context.md',
-    'prompts/handover.md',
-    'prompts/pivot.md',
-    'prompts/propose.md',
-    'prompts/requests.md',
-    'prompts/status.md',
+    "AGENTS.md",
+    "prompts/archive.md",
+    "prompts/context.md",
+    "prompts/handover.md",
+    "prompts/pivot.md",
+    "prompts/propose.md",
+    "prompts/requests.md",
+    "prompts/status.md",
 ]
 
-USER_FILES = ['knowledge/index.md', 'handover.md']
+USER_FILES = ["knowledge/index.md", "handover.md"]
 
 # Files that should never be touched during update
-PROTECTED_PATTERNS = ['changes/*', 'requests/*']
+PROTECTED_PATTERNS = ["changes/*", "requests/*"]
 
 
 class SspecNotFoundError(Exception):
     """Raised when sspec project is not found."""
+
     pass
 
 

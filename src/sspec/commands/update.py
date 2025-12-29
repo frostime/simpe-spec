@@ -12,7 +12,6 @@ from rich.table import Table
 
 from sspec import __version__
 from sspec.core import (
-    PROTECTED_PATTERNS,
     SCHEMA_VERSION,
     UPDATABLE_FILES,
     USER_FILES,
@@ -25,19 +24,19 @@ from sspec.core import (
 console = Console()
 
 
-META_FILE = '.meta.json'
+META_FILE = ".meta.json"
 
 
 def compute_hash(content: str) -> str:
     """Compute SHA256 hash of content."""
-    return hashlib.sha256(content.encode('utf-8')).hexdigest()[:16]
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
 
 
 def compute_file_hash(path: Path) -> Optional[str]:
     """Compute hash of file content."""
     if not path.exists():
         return None
-    return compute_hash(path.read_text(encoding='utf-8'))
+    return compute_hash(path.read_text(encoding="utf-8"))
 
 
 def load_meta(sspec_root: Path) -> Optional[dict]:
@@ -46,7 +45,7 @@ def load_meta(sspec_root: Path) -> Optional[dict]:
     if not meta_path.exists():
         return None
     try:
-        return json.loads(meta_path.read_text(encoding='utf-8'))
+        return json.loads(meta_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         return None
 
@@ -54,7 +53,7 @@ def load_meta(sspec_root: Path) -> Optional[dict]:
 def save_meta(sspec_root: Path, meta: dict) -> None:
     """Save metadata to .meta.json."""
     meta_path = sspec_root / META_FILE
-    meta_path.write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding='utf-8')
+    meta_path.write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
 def create_initial_meta(sspec_root: Path) -> dict:
@@ -66,17 +65,17 @@ def create_initial_meta(sspec_root: Path) -> dict:
             files[rel_path] = compute_file_hash(file_path)
 
     return {
-        'schema_version': SCHEMA_VERSION,
-        'package_version': __version__,
-        'initialized_at': datetime.now().isoformat(timespec='seconds'),
-        'files': files,
+        "schema_version": SCHEMA_VERSION,
+        "package_version": __version__,
+        "initialized_at": datetime.now().isoformat(timespec="seconds"),
+        "files": files,
     }
 
 
 def check_file_modified(sspec_root: Path, rel_path: str, meta: dict) -> bool:
     """Check if file was modified since initialization."""
     current_hash = compute_file_hash(sspec_root / rel_path)
-    recorded_hash = meta.get('files', {}).get(rel_path)
+    recorded_hash = meta.get("files", {}).get(rel_path)
 
     if recorded_hash is None:
         # File didn't exist at init, consider it "new" (not modified)
@@ -96,17 +95,13 @@ def get_template_hash(template_dir: Path, rel_path: str) -> Optional[str]:
 
 
 @click.command()
+@click.option("--dry-run", is_flag=True, help="Show what would be updated without making changes")
+@click.option("--force", is_flag=True, help="Update even modified files (creates .backup)")
 @click.option(
-    '--dry-run', is_flag=True, help='Show what would be updated without making changes'
-)
-@click.option(
-    '--force', is_flag=True, help='Update even modified files (creates .backup)'
-)
-@click.option(
-    '--init-meta',
+    "--init-meta",
     is_flag=True,
     hidden=True,
-    help='Initialize metadata for existing install',
+    help="Initialize metadata for existing install",
 )
 def update(dry_run: bool, force: bool, init_meta: bool) -> None:
     """Update sspec templates to latest version.
@@ -118,7 +113,7 @@ def update(dry_run: bool, force: bool, init_meta: bool) -> None:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
         raise click.ClickException("Not a sspec project. Run 'sspec init' first.")
-    
+
     template_dir = get_template_dir()
 
     meta = load_meta(sspec_root)
@@ -126,41 +121,37 @@ def update(dry_run: bool, force: bool, init_meta: bool) -> None:
     # Handle missing metadata
     if meta is None:
         if init_meta:
-            console.print(
-                '[yellow]Creating metadata for existing installation...[/yellow]'
-            )
+            console.print("[yellow]Creating metadata for existing installation...[/yellow]")
             meta = create_initial_meta(sspec_root)
             save_meta(sspec_root, meta)
-            console.print(f'[green]✓[/green] Created {META_FILE}')
+            console.print(f"[green]✓[/green] Created {META_FILE}")
             console.print("[dim]Run 'sspec update' again to check for updates.[/dim]")
             return
         else:
-            console.print('[yellow]No metadata found.[/yellow]')
+            console.print("[yellow]No metadata found.[/yellow]")
             console.print()
-            console.print('This installation predates the update feature.')
-            console.print(
-                'Run [cyan]sspec update --init-meta[/cyan] to initialize tracking,'
-            )
-            console.print('then run [cyan]sspec update[/cyan] to update.')
+            console.print("This installation predates the update feature.")
+            console.print("Run [cyan]sspec update --init-meta[/cyan] to initialize tracking,")
+            console.print("then run [cyan]sspec update[/cyan] to update.")
             return
 
-    current_schema = meta.get('schema_version', '0.0')
+    current_schema = meta.get("schema_version", "0.0")
 
     console.print()
-    console.print(f'[bold]sspec update[/bold]')
-    console.print(f'  Current schema: {current_schema}')
-    console.print(f'  Latest schema:  {SCHEMA_VERSION}')
+    console.print("[bold]sspec update[/bold]")
+    console.print(f"  Current schema: {current_schema}")
+    console.print(f"  Latest schema:  {SCHEMA_VERSION}")
     console.print()
 
     # Compare versions
     if current_schema == SCHEMA_VERSION:
-        console.print('[green]✓[/green] Already at latest schema version.')
+        console.print("[green]✓[/green] Already at latest schema version.")
         console.print()
-        console.print('[dim]Checking for minor template updates...[/dim]')
+        console.print("[dim]Checking for minor template updates...[/dim]")
 
     # Analyze files
     updates = []
-    skipped = []
+    # skipped = []
     conflicts = []
     new_files = []
 
@@ -173,7 +164,7 @@ def update(dry_run: bool, force: bool, init_meta: bool) -> None:
 
         template_hash = compute_file_hash(template_path)
         current_hash = compute_file_hash(file_path)
-        recorded_hash = meta.get('files', {}).get(rel_path)
+        recorded_hash = meta.get("files", {}).get(rel_path)
 
         if not file_path.exists():
             # New file in template
@@ -183,44 +174,42 @@ def update(dry_run: bool, force: bool, init_meta: bool) -> None:
             pass
         elif recorded_hash is None:
             # No record - can't determine if modified
-            conflicts.append((rel_path, 'no baseline'))
+            conflicts.append((rel_path, "no baseline"))
         elif current_hash == recorded_hash:
             # Not modified by user - safe to update
             updates.append(rel_path)
         else:
             # Modified by user
-            conflicts.append((rel_path, 'user modified'))
+            conflicts.append((rel_path, "user modified"))
 
     # Report findings
     if updates or new_files:
-        console.print('[cyan]Updates available:[/cyan]')
-        table = Table(show_header=True, header_style='bold')
-        table.add_column('File')
-        table.add_column('Action')
+        console.print("[cyan]Updates available:[/cyan]")
+        table = Table(show_header=True, header_style="bold")
+        table.add_column("File")
+        table.add_column("Action")
 
         for f in updates:
-            table.add_row(f, '[green]update[/green]')
+            table.add_row(f, "[green]update[/green]")
         for f in new_files:
-            table.add_row(f, '[blue]create[/blue]')
+            table.add_row(f, "[blue]create[/blue]")
 
         console.print(table)
     else:
-        console.print('[dim]No updates needed for unmodified files.[/dim]')
+        console.print("[dim]No updates needed for unmodified files.[/dim]")
 
     if conflicts:
         console.print()
-        console.print('[yellow]Skipped (user modified):[/yellow]')
+        console.print("[yellow]Skipped (user modified):[/yellow]")
         for f, reason in conflicts:
-            console.print(f'  [dim]•[/dim] {f}')
+            console.print(f"  [dim]•[/dim] {f}")
         if not force:
             console.print()
-            console.print(
-                '[dim]Use --force to update these (creates .backup files)[/dim]'
-            )
+            console.print("[dim]Use --force to update these (creates .backup files)[/dim]")
 
     if dry_run:
         console.print()
-        console.print('[dim]Dry run - no changes made.[/dim]')
+        console.print("[dim]Dry run - no changes made.[/dim]")
         return
 
     if not updates and not new_files and not (force and conflicts):
@@ -236,7 +225,7 @@ def update(dry_run: bool, force: bool, init_meta: bool) -> None:
         dest_path = sspec_root / rel_path
         copy_template(template_path, dest_path)
         updated_files[rel_path] = compute_file_hash(dest_path)
-        console.print(f'  [green]✓[/green] Updated {rel_path}')
+        console.print(f"  [green]✓[/green] Updated {rel_path}")
 
     for rel_path in new_files:
         template_path = template_dir / rel_path
@@ -244,7 +233,7 @@ def update(dry_run: bool, force: bool, init_meta: bool) -> None:
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         copy_template(template_path, dest_path)
         updated_files[rel_path] = compute_file_hash(dest_path)
-        console.print(f'  [blue]✓[/blue] Created {rel_path}')
+        console.print(f"  [blue]✓[/blue] Created {rel_path}")
 
     if force:
         for rel_path, reason in conflicts:
@@ -253,33 +242,31 @@ def update(dry_run: bool, force: bool, init_meta: bool) -> None:
 
             if dest_path.exists():
                 # Create backup
-                backup_path = dest_path.with_suffix(dest_path.suffix + '.backup')
+                backup_path = dest_path.with_suffix(dest_path.suffix + ".backup")
                 counter = 1
                 while backup_path.exists():
-                    backup_path = dest_path.with_suffix(
-                        f'{dest_path.suffix}.backup.{counter}'
-                    )
+                    backup_path = dest_path.with_suffix(f"{dest_path.suffix}.backup.{counter}")
                     counter += 1
                 dest_path.rename(backup_path)
-                console.print(f'  [yellow]→[/yellow] Backed up {rel_path}')
+                console.print(f"  [yellow]→[/yellow] Backed up {rel_path}")
 
             copy_template(template_path, dest_path)
             updated_files[rel_path] = compute_file_hash(dest_path)
-            console.print(f'  [green]✓[/green] Force updated {rel_path}')
+            console.print(f"  [green]✓[/green] Force updated {rel_path}")
 
     # Update metadata
-    meta['schema_version'] = SCHEMA_VERSION
-    meta['package_version'] = __version__
-    meta['updated_at'] = datetime.now().isoformat(timespec='seconds')
-    meta['files'].update(updated_files)
+    meta["schema_version"] = SCHEMA_VERSION
+    meta["package_version"] = __version__
+    meta["updated_at"] = datetime.now().isoformat(timespec="seconds")
+    meta["files"].update(updated_files)
     save_meta(sspec_root, meta)
 
     # Update root AGENTS.md block
     if update_root_agents_block():
-        console.print(f'  [green]✓[/green] Updated root AGENTS.md block')
+        console.print("  [green]✓[/green] Updated root AGENTS.md block")
 
     console.print()
-    console.print(f'[green]✓[/green] Updated to schema {SCHEMA_VERSION}')
+    console.print(f"[green]✓[/green] Updated to schema {SCHEMA_VERSION}")
 
 
 def update_root_agents_block() -> bool:
@@ -289,33 +276,31 @@ def update_root_agents_block() -> bool:
     """
     from sspec.commands.init import ROOT_AGENT_PROMPT
 
-    root_agents = Path.cwd() / 'AGENTS.md'
+    root_agents = Path.cwd() / "AGENTS.md"
     if not root_agents.exists():
-        root_agents.write_text(ROOT_AGENT_PROMPT, encoding='utf-8')
+        root_agents.write_text(ROOT_AGENT_PROMPT, encoding="utf-8")
         return True
 
-    content = root_agents.read_text(encoding='utf-8')
+    content = root_agents.read_text(encoding="utf-8")
 
-    start_marker = '<!-- SSPEC:START -->'
-    end_marker = '<!-- SSPEC:END -->'
+    start_marker = "<!-- SSPEC:START -->"
+    end_marker = "<!-- SSPEC:END -->"
 
     if start_marker not in content:
         # No SSPEC block - append
-        with open(root_agents, 'a', encoding='utf-8') as f:
-            f.write('\n\n' + ROOT_AGENT_PROMPT)
+        with open(root_agents, "a", encoding="utf-8") as f:
+            f.write("\n\n" + ROOT_AGENT_PROMPT)
         return True
 
     # Replace existing block
     import re
 
-    pattern = re.compile(
-        rf'{re.escape(start_marker)}.*?{re.escape(end_marker)}', re.DOTALL
-    )
+    pattern = re.compile(rf"{re.escape(start_marker)}.*?{re.escape(end_marker)}", re.DOTALL)
 
     new_content = pattern.sub(ROOT_AGENT_PROMPT, content)
 
     if new_content != content:
-        root_agents.write_text(new_content, encoding='utf-8')
+        root_agents.write_text(new_content, encoding="utf-8")
         return True
 
     return False

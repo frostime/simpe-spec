@@ -88,10 +88,10 @@ def _show_change_detail(change_path) -> None:
     change = parse_change(change_path)
 
     # Read tasks.md for details
-    tasks_file = change_path / "tasks.md"
-    tasks_content = ""
-    if tasks_file.exists():
-        tasks_content = tasks_file.read_text(encoding="utf-8")
+    # tasks_file = change_path / "tasks.md"
+    # tasks_content = ""
+    # if tasks_file.exists():
+    #     tasks_content = tasks_file.read_text(encoding="utf-8")
 
     # Read proposal.md for summary
     proposal_file = change_path / "proposal.md"

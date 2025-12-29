@@ -135,12 +135,15 @@ def request(name: str | None, list_requests: bool, show_name: str | None, show_a
     if not name:
         raise click.ClickException("Invalid request name")
 
-    request_path = requests_dir / f"{name}.md"
+    now = datetime.now()
+    timestamp = now.isoformat(timespec="seconds")
+
+    timeprefix = now.strftime("%y%m%d%H%M%S")
+    request_path = requests_dir / f"{timeprefix}-{name}.md"
     if request_path.exists():
         raise click.ClickException(f"Request '{name}' already exists")
 
     # Create file
-    timestamp = datetime.now().isoformat(timespec="seconds")
     content = REQUEST_TEMPLATE.format(timestamp=timestamp, name=name)
     request_path.write_text(content, encoding="utf-8")
 

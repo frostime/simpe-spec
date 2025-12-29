@@ -1,13 +1,14 @@
-"""sspec - Lightweight AI collaboration spec for solo/small projects."""
+"""
+sspec - Lightweight AI collaboration spec
+"""
 
-# src/sspec/__init__.py
+from importlib.metadata import version as _get_version
+
 try:
-    # build 时候自动生成
-    from ._version import __version__  # type: ignore
-except ImportError:
-    # 如果没安装或在开发环境中未生成 _version.py
-    from importlib.metadata import PackageNotFoundError, version
-    try:
-        __version__ = version("sspec")
-    except PackageNotFoundError:
-        __version__ = "unknown"
+    __version__ = _get_version("sspec")
+except Exception:
+    # 开发模式下（未安装）的回退方案
+    __version__ = "0.0.0+dev"
+
+# 导出版本号
+__all__ = ["__version__"]

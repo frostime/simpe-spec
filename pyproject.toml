@@ -46,9 +46,6 @@ packages = ["src/sspec"]
 [tool.hatch.version]
 source = "vcs"
 
-[tool.hatch.build.hooks.vcs]
-version-file = "src/sspec/_version.py" # 构建时自动生成包含版本号的文件
-
 [tool.ruff]
 line-length = 100
 target-version = "py310"

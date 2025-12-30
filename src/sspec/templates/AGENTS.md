@@ -1,291 +1,219 @@
-<!-- SSPEC:START -->
 # sspec Instructions
 
-Lightweight specification workflow for AI coding assistants. Read this file to begin.
+Instructions for AI assistants using sspec for collaboration.
 
----
+## TL;DR
 
-## Quick Decision
+### Quick Decision Tree
 
-When user makes a request:
-
-```
-Is it a quick fix (bug, typo, config)?
-→ Do it directly, no proposal needed
-
-Is user giving you a request to read?
-→ User says: "看下我写的 request" / "Read my request about X"
-→ Read the specified request file
-→ `sspec/propose` from it, linking the request
-
-Is it a new feature or change?
-→ `sspec/propose` new
-
-Is user asking about current state?
-→ `sspec/status`
-
-Is user changing direction mid-work?
-→ `sspec/pivot`
-
-Is session ending?
-→ `sspec/handover`
-
-Uncertain what to do?
-→ Ask: "Should I create a proposal for this, or handle it directly?"
-```
-
-**Key insight**: You do NOT proactively check `requests/`.
-User will tell you when they have a request for you to read.
-
----
-
-## Purpose
-
-sspec enables **cross-session collaboration** by persisting context, plans, and decisions in structured files. It prevents context loss when conversations reset.
-
----
-
-## Session Lifecycle
-
-### Starting a Session
+**User input → Your action:**
 
 ```
-knowledge/index.md      → Project background, tech stack, conventions
-changes/                → List active changes
-changes/<n>/handover.md → Previous session state
+"@context" / "load context"
+  → Read: knowledge/index.md + changes/<n>/handover.md + spec.md
+  → Output: "Loaded <name>, status X, progress Y/Z"
+
+"@new <name>" / "new feature"
+  → Run bash: sspec new <name>
+  → Fill spec.md (Why: 1-2 sentences, What: bullet list, Tasks: ordered steps)
+  → Output: "Created <name>, please review spec.md"
+
+User says "wait" / "actually" / "change of plans"
+  → STOP current task immediately
+  → Confirm new intent: "You want to [new direction], correct?"
+  → Record PIVOT in spec.md Decisions
+  → Update Tasks (strikethrough old, add new)
+
+"@handover" / "end session"
+  → Write handover.md (Done / Current State / Next Steps / Gotchas)
+  → Self-check: Can another AI continue seamlessly?
+
+"@status"
+  → Read spec.md STATUS:: and progress
+  → Output brief status report
 ```
 
-**First action**: Run `sspec/context` or manually read the files above.
+### Session Lifecycle
 
-### During Work
+**Session start:**
+- [ ] Read `knowledge/index.md` for project context
+- [ ] Run `sspec list` to see active changes
+- [ ] Read current change's `handover.md` for previous session state
+- [ ] Read current change's `spec.md` for plan and progress
 
-| Event | Action |
-|-------|--------|
-| Step completed | Update `tasks.md` Progress section |
-| User changes direction | Execute `sspec/pivot` |
-| Important decision made | Record in `tasks.md` Decisions section |
-| Research findings, code snippets | Record in `memo.md` |
-| Stable knowledge discovered | Add to `knowledge/` |
+**During work:**
+- [ ] Update `spec.md` Progress after completing steps
+- [ ] Record important decisions in `spec.md` Decisions
+- [ ] If user changes direction, record PIVOT in Decisions immediately
 
-### Ending a Session
+**Session end:**
+- [ ] Write to `handover.md`: Done, Current State, Next Steps, Gotchas
+- [ ] Update timestamp in handover.md
 
-Update the current change's `handover.md` with:
-- Progress summary
-- Unfinished items
-- Concrete next steps
-- Key context for continuation
+**Creating new change:**
+1. Run `sspec new <name>`
+2. Fill `spec.md`: Why (1-2 sentences), What (bullets), Tasks (ordered steps)
+3. Review with user before implementation
 
-**Critical**: Always update handover before session ends. This is the bridge to the next session.
 
----
+## Three-Stage Pattern
 
-## Commands
+### Stage 1: Context Loading
+User says: `@context`, "load context", or starts new session
 
-Invoke these in conversation. Full definitions in `prompts/<command>.md`.
+**Workflow:**
+1. Read `knowledge/index.md`
+2. List active changes with `sspec list`
+3. Read `changes/<name>/handover.md` — where previous session left off
+4. Read `changes/<name>/spec.md` — current plan and state
+5. Output: "Loaded context for <name>. Status: <STATUS>, Progress: <X/Y>. Last session: [brief summary from handover]."
 
-| Command | Purpose | When to Use |
-|---------|---------|-------------|
-| `sspec/propose <name>` | Create new change | New feature or structured work |
-| `sspec/status` | Report state | Check progress |
-| `sspec/pivot` | Direction change | User changes mind |
-| `sspec/handover` | Session end | Before closing conversation |
-| `sspec/context` | Reload context | Starting session, feeling lost |
-| `sspec/archive` | Archive change | Work is DONE |
-| `sspec/request` | Process request | User says "read my request" |
+### Stage 2: Working
+During active work, track progress in files:
 
-### sspec/propose [name]
+**When user requests new feature/change** --> `@new`
+- Simple fix (bug, typo, config)? → Do directly
+- Structural change? Create proposal with `sspec new`
 
-Create a new change proposal.
+**When user changes direction** --> `@pivot`
+- User says: "wait", "actually", "change plans"
+- Stop immediately, confirm new intent
+- Record in `spec.md` Decisions:
+  ```
+  [YYYY-MM-DD] PIVOT
+  - From: [old plan]
+  - To: [new direction]
+  - Reason: [why]
+  - Tried: [what didn't work, if applicable]
+  ```
+- Update Tasks section (strike through abandoned: `~~- [ ] old~~`, add new)
 
-**Steps**:
-1. Run `sspec new <name>` to scaffold files
-2. Fill `proposal.md`: Why (1-2 sentences), What (bullet list), Impact, Out of Scope
-3. Draft `tasks.md`: Break into small, verifiable steps ordered by dependency
-4. Review with user before implementation
+**Recording decisions:**
+- Format: `[YYYY-MM-DD] Decision — Rationale`
+- Example: `[2025-01-01] Use SQLite over Postgres — Simpler for MVP, can migrate later`
 
-**Skip for**: Bug fixes, typos, config tweaks, adding tests. Do these directly.
+**Recording progress:**
+- Format: `[YYYY-MM-DD] What was done`
+- Reverse chronological (latest on top)
+- Be specific: files modified, features working
 
-**Key principle**: Mark unclear requirements with `[NEEDS CLARIFICATION: question]`. Do not guess.
+### Stage 3: Handover
+User says: `@handover`, "end session", "I'm leaving"
 
----
+**Workflow:**
+1. Write to `changes/<name>/handover.md`:
+```markdown
+# Handover: <name>
 
-### sspec/request
+**Updated**: [current timestamp]
 
-Process a user-submitted request.
+## Done
+- [Specific files modified]
+- [Features implemented]
+- [Tests passing]
 
-**Purpose**: Process user-written requests in `.sspec/requests/`
+## Current State
+**Working**: [what functions correctly]
+**Not working**: [what's broken/incomplete]
 
-**Actions per request**:
-- Create new change (`sspec/propose`) OR Link to existing change
-- Ask for clarification
-- Mark as done/invalid
+## Next Steps
+1. [First concrete action — file path, function name, exact command]
+2. [Second action]
+3. [Third action]
 
----
-
-### sspec/status
-
-Report current state.
-
-**Output format**:
+## Gotchas
+- [Non-obvious issues next session should know]
+- [Failed approaches to avoid]
 ```
-## Status: [change-name]
-State: [STATUS] | Progress: [X/Y]
+2. Verify: Could another AI continue without asking questions?
 
-Recent: [latest accomplishment]
-Next: [immediate next action]
-Blockers: [none / list]
-```
-
-**Data source**: `changes/<n>/tasks.md`
-
----
-
-### sspec/pivot
-
-Record direction change when user changes their mind.
-
-**Triggers**: User says "wait", "actually", "change of plans", "let's do X instead"
-
-**Steps**:
-1. **Stop** current work immediately
-2. **Confirm** new intent: "You want to [new direction], correct?"
-3. **Record** in `tasks.md > ## Pivot`:
-   ```markdown
-   ### YYYY-MM-DD HH:MM
-   - Previous: [what was planned]
-   - New: [new direction]
-   - Reason: [why changing]
-   ```
-4. **Update** Plan section accordingly
-5. **Adjust** Status if major pivot (e.g., back to `PLANNING`)
-
-**Principle**: Don't delete history. Pivots are valuable context.
-
----
-
-### sspec/handover
-
-Generate session handover document.
-
-**Output structure**:
-- **Background**: Brief context of task/project
-- **Done**: What was accomplished this session
-- **Current State**: What works, what doesn't
-- **Next Steps**: Concrete actions in priority order
-- **Notes**: Constraints, patterns, gotchas
-
-**Style**: High information density. Include file paths, function names, error messages. No filler.
-
-**After writing**: Update the relevant `handover.md` file.
-
----
-
-### sspec/context
-
-Reload project context.
-
-**Use when**: Starting new session, after long tangent, before major decisions.
-
-**Read**:
-1. `knowledge/index.md` + relevant knowledge files
-2. Active changes in `changes/`
-3. Current change's `proposal.md`, `tasks.md`, `handover.md`
-
-**Output**: Brief confirmation of loaded context.
-
----
-
-### sspec/archive
-
-Archive a completed change.
-
-**Prerequisites**:
-- Status is `DONE` or `REVIEW`
-- All tasks completed or explicitly deferred
-- No unresolved blockers
-
-**Steps**:
-1. Verify change is ready
-2. Update final state documents
-3. Run `sspec archive <name> --yes`
-4. Update global `handover.md` if needed
-
----
-
-## File Reference
-
-| File | Purpose | Update Frequency |
-|------|---------|-----------------|
-| `knowledge/index.md` | Project overview, tech stack, conventions, constraints | Stable (rarely) |
-| `knowledge/*.md` | Domain knowledge, architecture, decisions | As needed |
-| `changes/<n>/proposal.md` | Why and what to change | At creation |
-| `changes/<n>/tasks.md` | Plan, progress, decisions, pivots, blockers | Real-time |
-| `changes/<n>/memo.md` | Research notes, code snippets, ideas (scratchpad) | During work |
-| `changes/<n>/handover.md` | Session continuity | End of session |
-| `handover.md` | Cross-change global state | Periodically |
-| `requests/*.md` | User-written feature requests | User creates |
-
-### File Responsibility Boundaries
-
-**`tasks.md`** = Structured project state
-- Plan (ordered steps)
-- Progress (reverse chronological log)
-- Decisions (with reasoning)
-- Pivot (direction changes)
-- Blockers (current impediments)
-
-**`memo.md`** = Unstructured exploration
-- Research notes
-- Code snippets
-- Half-formed ideas
-- References
-
-**Rule**: Mature findings move from `memo.md` → `tasks.md` or `knowledge/`.
-
-### Status Values
-
-`PLANNING` → `IN_PROGRESS` → `BLOCKED` | `REVIEW` → `DONE`
-
----
-
-## Error Recovery
-
-| Situation | Action |
-|-----------|--------|
-| `tasks.md` has invalid status | Ask user to fix, or default to `PLANNING` |
-| Multiple active changes, unclear which | Ask: "Which change should I work on?" |
-| File missing but referenced | Note the issue, suggest running `sspec new` or check path |
-| Unclear user intent | Ask clarifying question before proceeding |
-
-**Principle**: When uncertain, ask. Don't guess silently.
-
----
-
-## Principles
-
-1. **`tasks.md` is the single source of truth** for current state
-2. **Read before doing, update after doing** — avoid duplicate work, keep state in sync
-3. **Always update handover before ending** — this is the cross-session bridge
-4. **Stable knowledge goes to `knowledge/`** — don't leave valuable info buried in chat
-5. **Mark ambiguity explicitly** — use `[NEEDS CLARIFICATION]` instead of guessing
-
----
-
-## Directory Structure
+## File Structure
 
 ```
 .sspec/
-├── AGENTS.md           ← You are here
+├── AGENTS.md           # This file
 ├── knowledge/
-│   └── index.md        ← Project context (read first)
+│   └── index.md        # Project context
 ├── changes/
-│   ├── <current>/
-│   │   ├── proposal.md ← Why and what
-│   │   ├── tasks.md    ← Plan and current state
-│   │   ├── memo.md     ← Research scratchpad
-│   │   └── handover.md ← Session continuity
-│   └── archive/        ← Completed changes
-├── prompts/            ← Command definitions
-└── handover.md         ← Global handover state
+│   ├── <name>/
+│   │   ├── spec.md     # Plan, tasks, progress, decisions
+│   │   └── handover.md # Session bridge
+│   └── archive/
+├── requests/           # User feature requests
+└── handover.md         # Global project state
 ```
-<!-- SSPEC:END -->
+
+## CLI Commands
+
+| Command | Usage |
+|---------|-------|
+| `sspec new <name>` | Create change (generates spec.md + handover.md) |
+| `sspec list` | List all changes |
+| `sspec list --all` | Include archived |
+| `sspec status` | Show overview |
+| `sspec status <name>` | Show specific change detail |
+| `sspec archive <name> --yes` | Archive completed change |
+| `sspec request <name>` | Create user request |
+
+**Important:** Use CLI to create/archive changes. Do not manually create directories.
+
+## Error Handling
+
+| Situation | Action |
+|-----------|--------|
+| No handover.md from previous session | Note gap, ask user for context |
+| Invalid STATUS in spec.md | Ask user to clarify or default to PLANNING |
+| Multiple active changes | Ask: "Which change should I work on?" |
+| Unclear user intent | Ask clarifying question before proceeding |
+| Missing files | Note issue, suggest running appropriate CLI command |
+
+## Principles
+
+1. **Handover bridges sessions** — Always update before ending
+2. **Context before action** — Load state at session start
+3. **Pivot immediately** — When direction changes, stop and record
+4. **Be specific** — File paths, function names, exact commands in handover
+5. **Mark uncertainty** — Use `[?]` for unclear requirements
+6. **CLI for structure** — Don't manually create change directories
+
+## Before Any Task
+
+**Context Checklist:**
+- [ ] Read `knowledge/index.md`
+- [ ] Check active changes with `sspec list`
+- [ ] Read relevant `handover.md` and `spec.md`
+- [ ] Understand current STATUS and progress
+
+**Before Creating Change:**
+- Check if similar change already exists
+- Confirm with user if it's worth a formal proposal
+- Ask 1-2 clarifying questions if request is ambiguous
+
+## Validation Checklist
+
+**Before ending session:**
+- [ ] handover.md has current timestamp
+- [ ] Next Steps are concrete (not vague like "continue working")
+- [ ] Gotchas document failed approaches
+- [ ] Current State is accurate right now
+- [ ] Another AI could continue without questions
+
+**Before implementing:**
+- [ ] spec.md Why and What are clear
+- [ ] Tasks are ordered by dependency
+- [ ] Each task is verifiable
+- [ ] User has reviewed and approved
+
+## Quick Reference
+
+### File Purposes
+- `spec.md` — Plan and tracking
+- `handover.md` — Session bridge
+- `knowledge/*.md` — Stable context
+- `requests/*.md` — User feature requests
+
+### Status Values
+`PLANNING` → `IN_PROGRESS` → `BLOCKED` | `REVIEW` → `DONE`
+
+### Key Insight
+AI loses context between sessions. sspec persists state in files. The handover.md file is the bridge between sessions.

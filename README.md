@@ -178,7 +178,7 @@ AI: [implements first 3 tasks, updates progress]
 
 You: I need to go. /handover
 
-AI: Handover saved. 
+AI: Handover saved.
     Done: Theme provider, toggle component, CSS variables
     Next: Persist preference, add to settings page
 ```
@@ -191,7 +191,7 @@ AI: Context loaded.
     Project: my-app (React + TypeScript)
     Active: dark-mode (IN_PROGRESS, 3/5 tasks)
     Next: Persist user preference to localStorage
-    
+
     Continuing from where we left off...
 ```
 

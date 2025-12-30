@@ -17,46 +17,38 @@ from sspec.core import (
 console = Console()
 
 
-ROOT_AGENT_PROMPT = f"""
+ROOT_AGENT_STUB = f"""
 <!-- SSPEC:START -->
-# sspec — AI Collaboration Protocol
+# sspec
 
 SSPEC_SCHEMA::{SCHEMA_VERSION}
 
-This project uses **sspec** for structured AI collaboration.
+This project uses sspec for AI collaboration.
 
-## ⚡ Activation Rule
+## 🚀 Quick Start
 
-**When you see `sspec/` commands, ALWAYS read `.sspec/AGENTS.md` first.**
+**User mentioned these keywords?** Read `@/.sspec/AGENTS.md` immediately:
+- sspec
+- "new feature" / "create change" / `@new`
+- "change plans" / "pivot" / `@pivot`
+- "end session" / "handover" / `@handover`
+- "status" / "progress" / `@status`
+- "go on changes" / `@context`
 
-For specific command details: `.sspec/prompts/<cmd>.md`
+## 📍 Core Files
 
-Example: `sspec/handover` → read `.sspec/AGENTS.md`, then `.sspec/prompts/handover.md`
+- `@/.sspec/AGENTS.md` — Complete workflow instructions
+- `@/.sspec/knowledge/index.md` — Project context
+- `@/.sspec/changes/<name>/spec.md` — Current change plan
+- `@/.sspec/changes/<name>/handover.md` — Previous session state
 
+## ⚡ Cross Session Principles
 
-## Quick Reference
+1. **Session start**: Read handover.md (where we left off)
+2. **Task completed**: Update spec.md progress
+3. **Session end**: Write handover.md (where to continue)
 
-| Command | Purpose |
-|---------|---------|
-| `sspec/propose <name>` | Create new change |
-| `sspec/status` | Show current state |
-| `sspec/pivot` | Record direction change |
-| `sspec/handover` | End session handover |
-| `sspec/context` | Reload project context |
-| `sspec/archive` | Archive completed change |
-
-## First Time Here?
-
-1. Read `.sspec/AGENTS.md` — Full instructions
-2. Read `.sspec/knowledge/index.md` — Project context
-3. Check `.sspec/changes/` — Active work
-
-## When to Read `.sspec/AGENTS.md`
-
-- Any `sspec/` command
-- Multi-step changes or new features
-- Starting or ending a session
-- Feeling lost about project state
+Full instructions: `@/.sspec/AGENTS.md`
 
 <!-- Keep this block for `sspec update` to refresh -->
 <!-- SSPEC:END -->
@@ -83,19 +75,11 @@ def init(force: bool) -> None:
     (sspec_path / 'changes').mkdir(exist_ok=True)
     (sspec_path / 'changes' / 'archive').mkdir(exist_ok=True)
     (sspec_path / 'requests').mkdir(exist_ok=True)
-    (sspec_path / 'prompts').mkdir(exist_ok=True)
 
     # Copy templates
     copy_template(template_dir / 'AGENTS.md', sspec_path / 'AGENTS.md')
     copy_template(template_dir / 'handover.md', sspec_path / 'handover.md')
-    copy_template(
-        template_dir / 'knowledge' / 'index.md', sspec_path / 'knowledge' / 'index.md'
-    )
-
-    # Copy prompt templates
-    prompts_template = template_dir / 'prompts'
-    if prompts_template.exists():
-        copy_template(prompts_template, sspec_path / 'prompts')
+    copy_template(template_dir / 'knowledge' / 'index.md', sspec_path / 'knowledge' / 'index.md')
 
     # Create .gitignore
     (sspec_path / '.gitignore').touch()
@@ -104,26 +88,26 @@ def init(force: bool) -> None:
     # Create metadata for update tracking
     _create_meta(sspec_path)
 
-    # Root AGENTS.md
+    # Root AGENTS.md stub
     root_agents_path = Path.cwd() / 'AGENTS.md'
     if not root_agents_path.exists():
-        root_agents_path.write_text(ROOT_AGENT_PROMPT, encoding='utf-8')
+        root_agents_path.write_text(ROOT_AGENT_STUB, encoding='utf-8')
     else:
         content = root_agents_path.read_text(encoding='utf-8')
         if '<!-- SSPEC:START -->' not in content:
             with open(root_agents_path, 'a', encoding='utf-8') as f:
-                f.write('\n\n' + ROOT_AGENT_PROMPT)
+                f.write('\n\n' + ROOT_AGENT_STUB)
 
     console.print(f'[green]✓[/green] Initialized {SSPEC_DIR}')
     console.print()
     console.print('[cyan]Structure:[/cyan]')
     console.print(f'  {SSPEC_DIR}/')
-    console.print('  ├── AGENTS.md           # AI instructions (entry point)')
+    console.print('  ├── AGENTS.md           # AI instructions')
     console.print('  ├── knowledge/')
     console.print('  │   └── index.md        # Project context')
     console.print('  ├── changes/')
     console.print('  │   └── archive/')
-    console.print('  ├── prompts/            # Command definitions')
+    console.print('  ├── requests/')
     console.print('  └── handover.md         # Global handover')
     console.print()
     console.print('[yellow]Next steps:[/yellow]')
@@ -146,7 +130,6 @@ def _create_meta(sspec_root: Path) -> None:
         content = path.read_text(encoding='utf-8')
         return hashlib.sha256(content.encode('utf-8')).hexdigest()[:16]
 
-    # Files to track (combine updatable and user files)
     tracked_files = UPDATABLE_FILES + USER_FILES
 
     files = {}

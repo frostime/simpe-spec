@@ -9,8 +9,8 @@ console = Console()
 
 
 @click.command()
-@click.argument("name", required=False)
-@click.option("--yes", "-y", is_flag=True, help="Skip confirmation")
+@click.argument('name', required=False)
+@click.option('--yes', '-y', is_flag=True, help='Skip confirmation')
 def archive(name: str, yes: bool) -> None:
     """Archive a completed change."""
     try:
@@ -21,23 +21,23 @@ def archive(name: str, yes: bool) -> None:
     # If no name provided, try to auto-select
     if not name:
         changes = list_changes(sspec_root)
-        active = [c for c in changes if not c["archived"]]
+        active = [c for c in changes if not c['archived']]
 
         if not active:
-            raise click.ClickException("No active changes to archive")
+            raise click.ClickException('No active changes to archive')
         elif len(active) == 1:
-            name = active[0]["name"]
-            console.print(f"[dim]Auto-selected: {name}[/dim]")
+            name = active[0]['name']
+            console.print(f'[dim]Auto-selected: {name}[/dim]')
         else:
-            console.print("[cyan]Active changes:[/cyan]")
+            console.print('[cyan]Active changes:[/cyan]')
             for c in active:
                 console.print(f"  - {c['name']}")
-            name = click.prompt("Which change to archive?")
+            name = click.prompt('Which change to archive?')
 
     # Confirm
     if not yes:
         if not click.confirm(f"Archive '{name}'?"):
-            console.print("[yellow]Cancelled[/yellow]")
+            console.print('[yellow]Cancelled[/yellow]')
             return
 
     try:
@@ -46,4 +46,4 @@ def archive(name: str, yes: bool) -> None:
         raise click.ClickException(str(e))
 
     rel_path = archive_path.relative_to(sspec_root.parent)
-    console.print(f"[green]✓[/green] Archived to: {rel_path}")
+    console.print(f'[green]✓[/green] Archived to: {rel_path}')

@@ -9,7 +9,7 @@ console = Console()
 
 
 @click.command()
-@click.argument("name")
+@click.argument('name')
 def new(name: str) -> None:
     """Create a new change proposal."""
     try:
@@ -24,13 +24,14 @@ def new(name: str) -> None:
 
     rel_path = change_path.relative_to(sspec_root.parent)
 
-    console.print(f"[green]✓[/green] Created change: {name}")
+    console.print(f'[green]✓[/green] Created change: {name}')
     console.print()
-    console.print("[cyan]Files:[/cyan]")
-    console.print(f"  {rel_path}/")
-    console.print("  ├── proposal.md   # Why and what")
-    console.print("  ├── tasks.md      # Plan, progress, decisions")
-    console.print("  ├── memo.md       # Research notes and ideas")
-    console.print("  └── handover.md   # Session handover")
+    console.print('[cyan]Files:[/cyan]')
+    console.print(f'  {rel_path}/')
+    console.print('  ├── spec.md      # Plan, tasks, progress, decisions')
+    console.print('  └── handover.md  # Session continuity (update every session!)')
     console.print()
-    console.print("[yellow]Next:[/yellow] Edit proposal.md and tasks.md")
+    console.print('[yellow]Next:[/yellow]')
+    console.print('  1. Fill in spec.md: Why, What, Tasks')
+    console.print('  2. Review with AI before implementation')
+    console.print('  3. Update handover.md at end of each session')

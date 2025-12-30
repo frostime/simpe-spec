@@ -4,19 +4,21 @@
 
 ---
 
-## Summary
-
-<!-- One sentence: current state of this change -->
-
 ## Done
 
-<!-- What's been completed. Be specific: files modified, features working. -->
+<!-- 
+What's been completed THIS SESSION. Be specific:
+- Files modified
+- Features implemented  
+- Tests passing
+- Commands run
+-->
 
 - 
 
 ## Current State
 
-<!-- What works, what doesn't. Include specifics. -->
+<!-- What works right now, what doesn't -->
 
 **Working**:
 - 
@@ -26,36 +28,44 @@
 
 ## Next Steps
 
-<!-- Concrete actions in priority order. The next session should start here. -->
+<!-- 
+Concrete actions for the next session.
+The next AI should be able to start immediately with step 1.
+Be SPECIFIC - file paths, function names, exact commands.
+-->
 
 1. 
 2. 
 3. 
 
-## Key Files
+## Gotchas
 
-<!-- Files modified or most relevant to current work -->
-
-- 
-
-## Watch Out
-
-<!-- Gotchas, risks, things that might break, non-obvious dependencies -->
+<!-- 
+Things that might trip up the next session:
+- Non-obvious dependencies
+- Failed approaches (don't retry these)
+- Environment quirks
+- Decisions that need context
+-->
 
 - 
 
 ## Open Questions
 
-<!-- Unresolved questions that need answers before proceeding -->
+<!-- 
+Unresolved issues that need user input.
+Next session should surface these early.
+-->
 
 - 
 
 ---
 
 <!--
-HANDOVER QUALITY CHECKLIST:
-- [ ] Could another AI continue from this without asking questions?
-- [ ] Are file paths and function names specific?
-- [ ] Are Next Steps actionable (not vague)?
-- [ ] Are gotchas documented?
+HANDOVER QUALITY CHECKLIST (verify before ending session):
+- [ ] Could another AI continue immediately without asking questions?
+- [ ] Are file paths and function names specific, not vague?
+- [ ] Are Next Steps actionable (not "continue working on X")?
+- [ ] Are failed approaches documented in Gotchas?
+- [ ] Is the Current State accurate right now?
 -->

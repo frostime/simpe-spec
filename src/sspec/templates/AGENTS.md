@@ -2,7 +2,38 @@
 
 Instructions for AI assistants using sspec for collaboration.
 
-## TL;DR Quick Checklist
+## TL;DR
+
+### Quick Decision Tree
+
+**User input → Your action:**
+
+```
+"@context" / "load context"
+  → Read: knowledge/index.md + changes/<n>/handover.md + spec.md
+  → Output: "Loaded <name>, status X, progress Y/Z"
+
+"@new <name>" / "new feature"
+  → Run bash: sspec new <name>
+  → Fill spec.md (Why: 1-2 sentences, What: bullet list, Tasks: ordered steps)
+  → Output: "Created <name>, please review spec.md"
+
+User says "wait" / "actually" / "change of plans"
+  → STOP current task immediately
+  → Confirm new intent: "You want to [new direction], correct?"
+  → Record PIVOT in spec.md Decisions
+  → Update Tasks (strikethrough old, add new)
+
+"@handover" / "end session"
+  → Write handover.md (Done / Current State / Next Steps / Gotchas)
+  → Self-check: Can another AI continue seamlessly?
+
+"@status"
+  → Read spec.md STATUS:: and progress
+  → Output brief status report
+```
+
+### Session Lifecycle
 
 **Session start:**
 - [ ] Read `knowledge/index.md` for project context
@@ -24,6 +55,7 @@ Instructions for AI assistants using sspec for collaboration.
 2. Fill `spec.md`: Why (1-2 sentences), What (bullets), Tasks (ordered steps)
 3. Review with user before implementation
 
+
 ## Three-Stage Pattern
 
 ### Stage 1: Context Loading
@@ -39,11 +71,11 @@ User says: `@context`, "load context", or starts new session
 ### Stage 2: Working
 During active work, track progress in files:
 
-**When user requests new feature/change:**
+**When user requests new feature/change** --> `@new`
 - Simple fix (bug, typo, config)? → Do directly
-- Structural change? → Create proposal with `@new`
+- Structural change? Create proposal with `sspec new`
 
-**When user changes direction:**
+**When user changes direction** --> `@pivot`
 - User says: "wait", "actually", "change plans"
 - Stop immediately, confirm new intent
 - Record in `spec.md` Decisions:
@@ -111,67 +143,6 @@ User says: `@handover`, "end session", "I'm leaving"
 └── handover.md         # Global project state
 ```
 
-## File Formats
-
-### spec.md
-
-```markdown
-# <change-name>
-
-STATUS::PLANNING
-<!-- PLANNING | IN_PROGRESS | BLOCKED | REVIEW | DONE -->
-
-## Why
-[1-2 sentence problem statement]
-
-## What
-- [Concrete change 1]
-- [Concrete change 2]
-
-## Tasks
-- [ ] 1. [First verifiable step]
-- [ ] 2. [Second step]
-- [ ] 3. [Verification/testing]
-
-## Progress
-[YYYY-MM-DD] Completed X
-[YYYY-MM-DD] Started Y
-
-## Decisions
-[YYYY-MM-DD] Chose A over B — Reason
-[YYYY-MM-DD] PIVOT
-- From: X
-- To: Y
-- Reason: ...
-- Tried: ...
-
-## Notes
-[Research notes, code snippets, references]
-```
-
-### handover.md
-
-```markdown
-# Handover: <name>
-
-**Updated**: [timestamp]
-
-## Done
-[What was completed — files, features, tests]
-
-## Current State
-**Working**: [what functions]
-**Not working**: [what's broken]
-
-## Next Steps
-1. [Concrete action with file paths/commands]
-2. [Second action]
-
-## Gotchas
-- [Non-obvious issues]
-- [Failed approaches]
-```
-
 ## CLI Commands
 
 | Command | Usage |
@@ -185,54 +156,6 @@ STATUS::PLANNING
 | `sspec request <name>` | Create user request |
 
 **Important:** Use CLI to create/archive changes. Do not manually create directories.
-
-## Decision Logic
-
-```
-User request →
-├─ Bug fix / typo / config?
-│   → Do directly
-│
-├─ New feature / structural change?
-│   → User says "@new" or "create proposal"
-│   → Run: sspec new <name>
-│   → Fill spec.md
-│   → Review with user
-│
-├─ Direction change mid-work?
-│   → User says "wait" / "actually" / "change plans"
-│   → Stop current work
-│   → Confirm new intent
-│   → Record PIVOT in spec.md Decisions
-│   → Update Tasks
-│
-├─ Session ending?
-│   → User says "@handover" or "end session"
-│   → Write to handover.md
-│   → Update timestamp
-│
-└─ Session starting?
-    → User says "@context" or "load context"
-    → Read knowledge/, handover.md, spec.md
-    → Output brief confirmation
-```
-
-## Common Triggers
-
-**@context** variations:
-- "load context", "reload context", "what's the state", "where are we"
-
-**@new** variations:
-- "create proposal", "new feature", "start new change"
-
-**@pivot** variations:
-- "wait", "actually", "change of plans", "let's do X instead"
-
-**@handover** variations:
-- "end session", "I'm leaving", "write handover", "session end"
-
-**@archive** variations:
-- "archive this", "this is done", "complete this change"
 
 ## Error Handling
 

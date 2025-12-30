@@ -25,15 +25,30 @@ SSPEC_SCHEMA::{SCHEMA_VERSION}
 
 This project uses sspec for AI collaboration.
 
-Always read `@/.sspec/AGENTS.md` when:
-- Starting work on this project
-- User mentions: proposal, spec, change, plan, @context, @new, @pivot, @handover
-- Need to understand project state
+## 🚀 Quick Start
 
-See `@/.sspec/AGENTS.md` for:
-- How to load context and write handovers
-- File formats and workflows
-- CLI commands
+**User mentioned these keywords?** Read `@/.sspec/AGENTS.md` immediately:
+- sspec
+- "new feature" / "create change" / `@new`
+- "change plans" / "pivot" / `@pivot`
+- "end session" / "handover" / `@handover`
+- "status" / "progress" / `@status`
+- "go on changes" / `@context`
+
+## 📍 Core Files
+
+- `@/.sspec/AGENTS.md` — Complete workflow instructions
+- `@/.sspec/knowledge/index.md` — Project context
+- `@/.sspec/changes/<name>/spec.md` — Current change plan
+- `@/.sspec/changes/<name>/handover.md` — Previous session state
+
+## ⚡ Cross Session Principles
+
+1. **Session start**: Read handover.md (where we left off)
+2. **Task completed**: Update spec.md progress
+3. **Session end**: Write handover.md (where to continue)
+
+Full instructions: `@/.sspec/AGENTS.md`
 
 <!-- Keep this block for `sspec update` to refresh -->
 <!-- SSPEC:END -->

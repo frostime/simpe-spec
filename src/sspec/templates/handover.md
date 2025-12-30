@@ -22,26 +22,26 @@ Cross-change project state. Update when switching between changes or at signific
 
 <!-- Identified but not yet started as changes -->
 
-- 
+-
 
 ## Cross-Cutting Notes
 
-<!-- 
+<!--
 Issues affecting multiple changes or the project as a whole:
 - Architectural decisions
 - Technical debt
 - Dependencies between changes
 -->
 
-- 
+-
 
 ## Project-Level Gotchas
 
-<!-- 
+<!--
 Things any session should know regardless of which change they work on:
 - Build quirks
 - Environment setup
 - Common pitfalls
 -->
 
-- 
+-

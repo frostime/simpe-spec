@@ -23,7 +23,8 @@ def main(ctx: click.Context) -> None:
 
 
 main.add_command(init.init)
-main.add_command(new.new)
+main.add_command(new.change, name='change')
+main.add_command(new.change, name='new')  # backward compatibility alias
 main.add_command(update.update)
 main.add_command(request.request)
 main.add_command(list_cmd.list_changes_cmd, name='list')

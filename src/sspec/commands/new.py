@@ -3,15 +3,21 @@
 import click
 from rich.console import Console
 
-from sspec.core import SspecNotFoundError, create_change, get_sspec_root
+from sspec.core import (
+    ChangeExistsError,
+    InvalidChangeNameError,
+    SspecNotFoundError,
+    create_change,
+    get_sspec_root,
+)
 
 console = Console()
 
 
-@click.command()
+@click.command(name='change')
 @click.argument('name')
-def new(name: str) -> None:
-    """Create a new change proposal."""
+def change(name: str) -> None:
+    """Create a new change proposal (spec, tasks, handover)."""
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
@@ -19,7 +25,7 @@ def new(name: str) -> None:
 
     try:
         change_path = create_change(sspec_root, name)
-    except ValueError as e:
+    except (InvalidChangeNameError, ChangeExistsError) as e:
         raise click.ClickException(str(e))
 
     rel_path = change_path.relative_to(sspec_root.parent)
@@ -28,10 +34,11 @@ def new(name: str) -> None:
     console.print()
     console.print('[cyan]Files:[/cyan]')
     console.print(f'  {rel_path}/')
-    console.print('  ├── spec.md      # Plan, tasks, progress, decisions')
+    console.print('  ├── spec.md      # Proposal and context')
+    console.print('  ├── tasks.md     # Executable tasks and progress')
     console.print('  └── handover.md  # Session continuity (update every session!)')
     console.print()
     console.print('[yellow]Next:[/yellow]')
-    console.print('  1. Fill in spec.md: Why, What, Tasks')
+    console.print('  1. Fill in spec.md (proposal) and tasks.md (plan)')
     console.print('  2. Review with AI before implementation')
     console.print('  3. Update handover.md at end of each session')

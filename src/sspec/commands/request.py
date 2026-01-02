@@ -10,32 +10,16 @@ from dotenv import load_dotenv
 from rich.console import Console
 from rich.table import Table
 
-from sspec.core import SspecNotFoundError, get_sspec_root
+from sspec.config import get_config
+from sspec.core import (
+    RequestStatus,
+    SspecNotFoundError,
+    get_sspec_root,
+    get_template_dir,
+    render_template,
+)
 
 console = Console()
-
-REQUEST_TEMPLATE = """---
-created: {timestamp}
-status: open
-changes: []
-tldr: ''
----
-
-# Request: {name}
-
-## What I Want
-
-<!-- Describe what you want to accomplish -->
-
-## Why
-
-<!-- Why is this needed? What problem does it solve? -->
-
-## Additional Context
-
-<!-- Any constraints, preferences, references -->
-
-"""
 
 
 def _extract_summary(body: str) -> str:
@@ -47,14 +31,17 @@ def _extract_summary(body: str) -> str:
     return ''
 
 
-def get_editor_command() -> str | None:
-    """Get editor command from environment or .env file."""
-    # Check environment first
+def get_editor_command(sspec_root: Path) -> str | None:
+    """Get editor command from config, environment, or .env file."""
+
+    config = get_config(sspec_root)
+    if config.editor:
+        return config.editor
+
     editor = os.environ.get('SSPEC_EDITOR')
     if editor:
         return editor
 
-    # Try loading .env
     env_path = Path.cwd() / '.env'
     if env_path.exists():
         load_dotenv(env_path)
@@ -62,13 +49,12 @@ def get_editor_command() -> str | None:
         if editor:
             return editor
 
-    # Fall back to $EDITOR
     return os.environ.get('EDITOR')
 
 
-def open_in_editor(file_path: Path) -> bool:
+def open_in_editor(file_path: Path, sspec_root: Path) -> bool:
     """Open file in editor. Returns True if editor was launched."""
-    editor_cmd = get_editor_command()
+    editor_cmd = get_editor_command(sspec_root)
 
     if not editor_cmd:
         return False
@@ -99,8 +85,17 @@ def normalize_name(name: str) -> str:
 @click.argument('name', required=False)
 @click.option('--list', '-l', 'list_requests', is_flag=True, help='List all requests')
 @click.option('--show', '-s', 'show_name', help='Show specific request')
-@click.option('--all', '-a', 'show_all', is_flag=True, help='Include done requests in list')
-def request(name: str | None, list_requests: bool, show_name: str | None, show_all: bool) -> None:
+@click.option('--link', 'link_change', help='Link request to a change')
+@click.option(
+    '--all', '-a', 'show_all', is_flag=True, help='Include done requests in list'
+)
+def request(
+    name: str | None,
+    list_requests: bool,
+    show_name: str | None,
+    link_change: str | None,
+    show_all: bool,
+) -> None:
     """Create or manage user requests.
 
     Examples:
@@ -108,6 +103,7 @@ def request(name: str | None, list_requests: bool, show_name: str | None, show_a
         sspec request add-dark-mode       # Create with custom name
         sspec request --list              # List open requests
         sspec request --show <name>       # Show request content
+        sspec request <name> --link <change>  # Link request to change
     """
     try:
         sspec_root = get_sspec_root()
@@ -116,14 +112,18 @@ def request(name: str | None, list_requests: bool, show_name: str | None, show_a
     requests_dir = sspec_root / 'requests'
     requests_dir.mkdir(exist_ok=True)
 
-    # List mode
     if list_requests:
         _list_requests(requests_dir, show_all)
         return
 
-    # Show mode
     if show_name:
         _show_request(requests_dir, show_name)
+        return
+
+    if link_change:
+        if not name:
+            raise click.ClickException('Request name required for --link')
+        _link_request_to_change(requests_dir, name, link_change, sspec_root)
         return
 
     # Create mode
@@ -144,15 +144,35 @@ def request(name: str | None, list_requests: bool, show_name: str | None, show_a
         raise click.ClickException(f"Request '{name}' already exists")
 
     # Create file
-    content = REQUEST_TEMPLATE.format(timestamp=timestamp, name=name)
+    template_path = get_template_dir() / 'requests' / 'requests.md'
+    replacements = {'TIME': timestamp, 'NAME': name}
+
+    if template_path.exists():
+        template_content = template_path.read_text(encoding='utf-8')
+        content = render_template(template_content, replacements)
+    else:
+        content = (
+            '---\n'
+            f'created: {timestamp}\n'
+            f'status: {RequestStatus.OPEN.value}\n'
+            'attach-change: null\n'
+            "tldr: ''\n"
+            '---\n\n'
+            f'# Request: {name}\n\n'
+            '## What I Want\n\n'
+            '<!-- Describe what you want to accomplish -->\n\n'
+            '## Why\n\n'
+            '<!-- Why is this needed? What problem does it solve? -->\n\n'
+            '## Additional Context\n\n'
+            '<!-- Any constraints, preferences, references -->\n\n'
+        )
     request_path.write_text(content, encoding='utf-8')
 
     console.print(f'[green]✓[/green] Created request: {name}')
     console.print(f'  [dim]{request_path.relative_to(sspec_root.parent)}[/dim]')
     console.print()
 
-    # Try to open in editor
-    if open_in_editor(request_path):
+    if open_in_editor(request_path, sspec_root):
         console.print('[dim]Opened in editor[/dim]')
     else:
         console.print('[yellow]Tip:[/yellow] Set SSPEC_EDITOR in .env to auto-open')
@@ -179,12 +199,25 @@ def _list_requests(requests_dir: Path, show_all: bool) -> None:
                     if not tldr:
                         tldr = _extract_summary(body)
 
+                    raw_status = (
+                        str(meta.get('status', RequestStatus.OPEN.value)).strip().upper()
+                    )
+                    normalized_status = {
+                        'DOING': RequestStatus.DOING.value,
+                        'IN_PROGRESS': RequestStatus.DOING.value,
+                        'IN-PROGRESS': RequestStatus.DOING.value,
+                        'TODO': RequestStatus.OPEN.value,
+                        'CLOSED': RequestStatus.DONE.value,
+                    }.get(raw_status, raw_status or RequestStatus.OPEN.value)
+
                     requests.append(
                         {
                             'name': f.stem,
-                            'status': meta.get('status', 'open'),
+                            'status': normalized_status,
                             'created': meta.get('created', ''),
-                            'changes': meta.get('changes', []),
+                            'changes': [meta.get('attach-change')]
+                            if meta.get('attach-change')
+                            else [],
                             'tldr': tldr,
                         }
                     )
@@ -197,10 +230,9 @@ def _list_requests(requests_dir: Path, show_all: bool) -> None:
         console.print('Create one with: sspec request <name>')
         return
 
-    # Group by status
-    open_reqs = [r for r in requests if r['status'] == 'open']
-    in_progress = [r for r in requests if r['status'] == 'in-progress']
-    done = [r for r in requests if r['status'] == 'done']
+    open_reqs = [r for r in requests if r['status'] == RequestStatus.OPEN.value]
+    in_progress = [r for r in requests if r['status'] == RequestStatus.DOING.value]
+    done = [r for r in requests if r['status'] == RequestStatus.DONE.value]
 
     console.print()
 
@@ -221,7 +253,9 @@ def _list_requests(requests_dir: Path, show_all: bool) -> None:
     console.print()
 
 
-def _print_request_table(requests: list, show_changes: bool = False, dim: bool = False) -> None:
+def _print_request_table(
+    requests: list, show_changes: bool = False, dim: bool = False
+) -> None:
     """Print requests as table."""
     table = Table(show_header=True, header_style='bold' if not dim else 'dim')
     table.add_column('Name')
@@ -245,16 +279,84 @@ def _print_request_table(requests: list, show_changes: bool = False, dim: bool =
     console.print(table)
 
 
+def _find_request_file(requests_dir: Path, name: str) -> Path:
+    """Find request file by exact or fuzzy match."""
+
+    exact_path = requests_dir / f'{name}.md'
+    if exact_path.exists():
+        return exact_path
+
+    matches = list(requests_dir.glob(f'*-{name}.md'))
+    if len(matches) == 1:
+        return matches[0]
+    if len(matches) > 1:
+        raise click.ClickException(
+            f"Multiple matches for '{name}':\n"
+            + '\n'.join(f'  - {m.stem}' for m in matches)
+        )
+
+    contains = [f for f in requests_dir.glob('*.md') if name in f.stem]
+    if len(contains) == 1:
+        return contains[0]
+    if len(contains) > 1:
+        raise click.ClickException(
+            f"Multiple matches for '{name}':\n"
+            + '\n'.join(f'  - {m.stem}' for m in contains)
+        )
+
+    raise click.ClickException(f"Request '{name}' not found")
+
+
 def _show_request(requests_dir: Path, name: str) -> None:
     """Show a specific request."""
-    request_path = requests_dir / f'{name}.md'
-    if not request_path.exists():
-        raise click.ClickException(f"Request '{name}' not found")
+
+    request_path = _find_request_file(requests_dir, name)
 
     from rich.markdown import Markdown
     from rich.panel import Panel
 
     content = request_path.read_text(encoding='utf-8')
     console.print()
-    console.print(Panel(Markdown(content), title=f'Request: {name}', border_style='cyan'))
+    console.print(
+        Panel(
+            Markdown(content), title=f'Request: {request_path.stem}', border_style='cyan'
+        )
+    )
     console.print()
+
+
+def _link_request_to_change(
+    requests_dir: Path, request_name: str, change_name: str, sspec_root: Path
+) -> None:
+    """Link a request to a change and update status."""
+
+    import yaml
+
+    request_path = _find_request_file(requests_dir, request_name)
+    change_path = sspec_root / 'changes' / change_name
+
+    if not change_path.exists():
+        raise click.ClickException(f"Change '{change_name}' not found")
+
+    content = request_path.read_text(encoding='utf-8')
+
+    if not content.startswith('---'):
+        raise click.ClickException('Request file missing front yaml')
+
+    parts = content.split('---', 2)
+    if len(parts) < 3:
+        raise click.ClickException('Invalid request file format')
+
+    try:
+        meta = yaml.safe_load(parts[1]) or {}
+    except yaml.YAMLError as e:
+        raise click.ClickException(f'Invalid yaml: {e}')
+
+    meta['attach-change'] = change_name
+    meta['status'] = RequestStatus.DOING.value
+
+    new_yaml = yaml.dump(meta, default_flow_style=False, allow_unicode=True)
+    new_content = f'---\n{new_yaml}---{parts[2]}'
+    request_path.write_text(new_content, encoding='utf-8')
+
+    console.print(f'[green]✓[/green] Linked {request_path.stem} → {change_name}')

@@ -12,47 +12,10 @@ from sspec.core import (
     USER_FILES,
     copy_template,
     get_template_dir,
+    render_template,
 )
 
 console = Console()
-
-
-ROOT_AGENT_STUB = f"""
-<!-- SSPEC:START -->
-# sspec
-
-SSPEC_SCHEMA::{SCHEMA_VERSION}
-
-This project uses sspec for AI collaboration.
-
-## 🚀 Quick Start
-
-**User mentioned these keywords?** Read `@/.sspec/AGENTS.md` immediately:
-- sspec
-- "new feature" / "create change" / `@new`
-- "change plans" / "pivot" / `@pivot`
-- "end session" / "handover" / `@handover`
-- "status" / "progress" / `@status`
-- "go on changes" / `@context`
-
-## 📍 Core Files
-
-- `@/.sspec/AGENTS.md` — Complete workflow instructions
-- `@/.sspec/knowledge/index.md` — Project context
-- `@/.sspec/changes/<name>/spec.md` — Current change plan
-- `@/.sspec/changes/<name>/handover.md` — Previous session state
-
-## ⚡ Cross Session Principles
-
-1. **Session start**: Read handover.md (where we left off)
-2. **Task completed**: Update spec.md progress
-3. **Session end**: Write handover.md (where to continue)
-
-Full instructions: `@/.sspec/AGENTS.md`
-
-<!-- Keep this block for `sspec update` to refresh -->
-<!-- SSPEC:END -->
-""".strip()
 
 
 @click.command()
@@ -68,18 +31,36 @@ def init(force: bool) -> None:
         )
 
     template_dir = get_template_dir()
+    common_replacements = {
+        'SCHEMA_VERSION': SCHEMA_VERSION,
+        'SCHEMA': SCHEMA_VERSION,
+    }
 
     # Create directory structure
     sspec_path.mkdir(parents=True, exist_ok=True)
-    (sspec_path / 'knowledge').mkdir(exist_ok=True)
+    # Remove legacy spec folder; only create required structure
     (sspec_path / 'changes').mkdir(exist_ok=True)
     (sspec_path / 'changes' / 'archive').mkdir(exist_ok=True)
     (sspec_path / 'requests').mkdir(exist_ok=True)
+    (sspec_path / 'skills').mkdir(exist_ok=True)
+
+    # 复制 skills 模板
+    skills_template_dir = template_dir / 'skills'
+    if skills_template_dir.exists():
+        for skill_file in skills_template_dir.glob('*.md'):
+            copy_template(
+                skill_file,
+                sspec_path / 'skills' / skill_file.name,
+                common_replacements,
+            )
 
     # Copy templates
-    copy_template(template_dir / 'AGENTS.md', sspec_path / 'AGENTS.md')
-    copy_template(template_dir / 'handover.md', sspec_path / 'handover.md')
-    copy_template(template_dir / 'knowledge' / 'index.md', sspec_path / 'knowledge' / 'index.md')
+    copy_template(
+        template_dir / 'project.md',
+        sspec_path / 'project.md',
+        {'TODO': 'TODO', **common_replacements},
+    )
+    # Global handover removed per new structure
 
     # Create .gitignore
     (sspec_path / '.gitignore').touch()
@@ -88,32 +69,50 @@ def init(force: bool) -> None:
     # Create metadata for update tracking
     _create_meta(sspec_path)
 
-    # Root AGENTS.md stub
+    # Root AGENTS.md
+    """
+    基本理念
+
+    Root Agents 内容不要超过 150 行
+    就算有多余的想要添加的，也可以放到 skills/ 目录下，然后在 Root Agents 里面放摘要和引用
+
+    Root Agents 应当多以明确的指令为主；直接告诉 Agent 应该做什么，应该如何同用户协作
+    """
     root_agents_path = Path.cwd() / 'AGENTS.md'
+    root_agents_content = (template_dir / 'Agents.md').read_text(encoding='utf-8')
+    rendered_root_agents = render_template(root_agents_content, common_replacements)
+
     if not root_agents_path.exists():
-        root_agents_path.write_text(ROOT_AGENT_STUB, encoding='utf-8')
+        root_agents_path.write_text(rendered_root_agents, encoding='utf-8')
     else:
         content = root_agents_path.read_text(encoding='utf-8')
-        if '<!-- SSPEC:START -->' not in content:
+        start_marker = '<!-- SSPEC:START -->'
+        end_marker = '<!-- SSPEC:END -->'
+        if start_marker in content and end_marker in content:
+            import re
+
+            pattern = re.compile(rf'{re.escape(start_marker)}.*?{re.escape(end_marker)}', re.DOTALL)
+            new_content = pattern.sub(rendered_root_agents, content)
+            if new_content != content:
+                root_agents_path.write_text(new_content, encoding='utf-8')
+        else:
             with open(root_agents_path, 'a', encoding='utf-8') as f:
-                f.write('\n\n' + ROOT_AGENT_STUB)
+                f.write('\n\n' + rendered_root_agents)
 
     console.print(f'[green]✓[/green] Initialized {SSPEC_DIR}')
     console.print()
     console.print('[cyan]Structure:[/cyan]')
     console.print(f'  {SSPEC_DIR}/')
-    console.print('  ├── AGENTS.md           # AI instructions')
-    console.print('  ├── knowledge/')
-    console.print('  │   └── index.md        # Project context')
+    console.print('  ├── project.md          # Project overview and conventions')
     console.print('  ├── changes/')
     console.print('  │   └── archive/')
     console.print('  ├── requests/')
-    console.print('  └── handover.md         # Global handover')
+    console.print('  └── skills/             # Reusable knowledge & prompts')
     console.print()
     console.print('[yellow]Next steps:[/yellow]')
-    console.print('  1. Edit .sspec/knowledge/index.md with project info')
-    console.print('  2. Run: sspec new <change-name>')
-    console.print('  3. Tell AI: "Read .sspec/AGENTS.md"')
+    console.print('  1. Fill in .sspec/project.md with project context and constraints')
+    console.print('  2. Run: sspec change <change-name>')
+    console.print('  3. Tell AI: "Read AGENTS.md"')
 
 
 def _create_meta(sspec_root: Path) -> None:

@@ -3,42 +3,134 @@
 import re
 import shutil
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import Mapping, TypedDict
+
+import yaml
 
 SSPEC_DIR = '.sspec'
-KNOWLEDGE_DIR = 'knowledge'
+SKILLS_DIR = 'skills'
 CHANGES_DIR = 'changes'
 ARCHIVE_DIR = 'archive'
 
 # Schema version - increment when template structure changes
-SCHEMA_VERSION = '2.1'
+SCHEMA_VERSION = '3.0'
 
-# Files tracked for updates
-UPDATABLE_FILES = ['AGENTS.md']
-USER_FILES = ['knowledge/index.md', 'handover.md']
+# Files tracked for updates (relative to .sspec/)
+UPDATABLE_FILES: list[str] = [
+    'skills/sspec-workflow.md',
+    'skills/sspec-status-guide.md',
+]
+
+
+# User-managed files tracked for changes but not auto-updated
+USER_FILES = ['project.md']
+
+# Change template source files
+CHANGE_TEMPLATE_FILES = ['spec.md', 'tasks.md', 'handover.md']
 
 # Files that should never be touched during update
-PROTECTED_PATTERNS = ['changes/*', 'requests/*']
+PROTECTED_PATTERNS = ['changes/*', 'requests/*', 'skills/*']
 
 
-class SspecNotFoundError(Exception):
+class SspecError(Exception):
+    """Base sspec exception."""
+
+
+class SspecNotFoundError(SspecError):
     """Raised when sspec project is not found."""
-    pass
 
 
-def find_sspec_root(start: Optional[Path] = None) -> Optional[Path]:
+class ChangeNotFoundError(SspecError):
+    """Raised when change is not found."""
+
+
+class ChangeExistsError(SspecError):
+    """Raised when change already exists."""
+
+
+class InvalidChangeNameError(SspecError):
+    """Raised when change name is invalid."""
+
+
+class ChangeStatus(str, Enum):
+    """Canonical change status values."""
+
+    PLANNING = 'PLANNING'
+    DOING = 'DOING'
+    BLOCKED = 'BLOCKED'
+    REVIEW = 'REVIEW'
+    DONE = 'DONE'
+
+
+class RequestStatus(str, Enum):
+    """Canonical request status values."""
+
+    OPEN = 'OPEN'
+    DOING = 'DOING'
+    DONE = 'DONE'
+
+
+# Status alias map (legacy compatibility)
+STATUS_ALIASES: dict[str, str] = {
+    'HANGUP': ChangeStatus.PLANNING.value,
+    'IN_PROGRESS': ChangeStatus.DOING.value,
+    'IN-PROGRESS': ChangeStatus.DOING.value,
+    'TODO': RequestStatus.OPEN.value,
+    'CLOSED': RequestStatus.DONE.value,
+}
+
+
+def normalize_status(raw: str, valid_enum: type[Enum]) -> str:
+    """Normalize status value using aliases and enum validation."""
+
+    upper = raw.strip().upper()
+    normalized = STATUS_ALIASES.get(upper, upper)
+    try:
+        return valid_enum(normalized).value
+    except ValueError:
+        return normalized
+
+
+class ChangeInfo(TypedDict):
+    """Structured change information."""
+
+    name: str
+    path: Path
+    status: str
+    type: str
+    progress: dict[str, int]
+    has_pivot: bool
+    has_blockers: bool
+    archived: bool
+
+
+class SkillInfo(TypedDict):
+    """Structured skill information."""
+
+    file: str
+    path: Path
+    skill: str
+    description: str
+
+
+def find_sspec_root(start: Path | None = None) -> Path | None:
     """Find .sspec directory by walking up from start path."""
+
     path = start or Path.cwd()
     for parent in [path] + list(path.parents):
         sspec_path = parent / SSPEC_DIR
-        if sspec_path.is_dir() and (sspec_path / 'AGENTS.md').exists():
-            return sspec_path
+        if sspec_path.is_dir():
+            markers = ['project.md']
+            if any((sspec_path / marker).exists() for marker in markers):
+                return sspec_path
     return None
 
 
 def get_sspec_root() -> Path:
     """Get .sspec directory or raise error."""
+
     root = find_sspec_root()
     if root is None:
         raise SspecNotFoundError('Not a sspec project')
@@ -50,8 +142,9 @@ def get_template_dir() -> Path:
     return Path(__file__).parent / 'templates'
 
 
-def copy_template(src: Path, dest: Path, replacements: Optional[dict] = None) -> None:
+def copy_template(src: Path, dest: Path, replacements: dict | None = None) -> None:
     """Copy template file/dir with variable replacements."""
+
     replacements = replacements or {}
 
     if src.is_dir():
@@ -60,15 +153,25 @@ def copy_template(src: Path, dest: Path, replacements: Optional[dict] = None) ->
             copy_template(item, dest / item.name, replacements)
     else:
         content = src.read_text(encoding='utf-8')
-        for key, value in replacements.items():
-            content = content.replace(f'{{{{{key}}}}}', value)
+        rendered = render_template(content, replacements)
         dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_text(content, encoding='utf-8')
+        dest.write_text(rendered, encoding='utf-8')
 
 
-def list_changes(sspec_root: Path, include_archived: bool = False) -> list[dict]:
+def render_template(content: str, replacements: Mapping[str, str]) -> str:
+    """Render {{var}} placeholders with provided replacements."""
+
+    def _replace(match: re.Match) -> str:
+        key = match.group(1).strip()
+        return str(replacements.get(key, ''))
+
+    return re.sub(r'{{\s*(.+?)\s*}}', _replace, content)
+
+
+def list_changes(sspec_root: Path, include_archived: bool = False) -> list[ChangeInfo]:
     """List all changes with their status."""
-    changes = []
+
+    changes: list[ChangeInfo] = []
     changes_dir = sspec_root / CHANGES_DIR
 
     if not changes_dir.exists():
@@ -90,37 +193,79 @@ def list_changes(sspec_root: Path, include_archived: bool = False) -> list[dict]
     return sorted(changes, key=lambda x: (x['archived'], x['name']))
 
 
-def parse_change(change_path: Path, archived: bool = False) -> dict:
+def list_skills(sspec_root: Path) -> list[SkillInfo]:
+    """List all skills found in skills directory."""
+
+    skills: list[SkillInfo] = []
+    skills_dir = sspec_root / SKILLS_DIR
+
+    if not skills_dir.exists():
+        return skills
+
+    for skill_file in skills_dir.glob('*.md'):
+        content = skill_file.read_text(encoding='utf-8')
+        if content.startswith('---'):
+            parts = content.split('---', 2)
+            if len(parts) >= 3:
+                try:
+                    meta = yaml.safe_load(parts[1]) or {}
+                    if 'skill' in meta:
+                        skills.append({
+                            'file': skill_file.name,
+                            'path': skill_file,
+                            'skill': str(meta['skill']),
+                            'description': str(meta.get('description', '')),
+                        })
+                except yaml.YAMLError:
+                    pass
+
+    return sorted(skills, key=lambda x: x['skill'])
+
+
+def parse_change(change_path: Path, archived: bool = False) -> ChangeInfo:
     """Parse change directory into structured data."""
+
     spec_file = change_path / 'spec.md'
-    status = 'UNKNOWN'
+    tasks_file = change_path / 'tasks.md'
+
+    status = ChangeStatus.PLANNING.value
+    change_type = ''
     progress = {'done': 0, 'total': 0}
     has_pivot = False
     has_blockers = False
+    # spec_progress: dict[str, int] | None = None
 
     if spec_file.exists():
         content = spec_file.read_text(encoding='utf-8')
 
-        # Extract status
-        status_match = re.search(r'\s*STATUS::([A-Z_]+)\s*', content)
-        if status_match:
-            status = status_match.group(1)
+        if content.startswith('---'):
+            parts = content.split('---', 2)
+            if len(parts) >= 3:
+                try:
+                    meta = yaml.safe_load(parts[1]) or {}
+                    raw_status = str(meta.get('status', ChangeStatus.PLANNING.value))
+                    status = normalize_status(raw_status, ChangeStatus)
+                    change_type = meta.get('type', '') or ''
+                except yaml.YAMLError:
+                    pass
 
-        # Count tasks
-        total = len(re.findall(r'- \[[ x]\]', content))
-        done = len(re.findall(r'- \[x\]', content))
+        has_pivot = bool(re.search(r'PIVOT', content, re.IGNORECASE))
+        has_blockers = status == ChangeStatus.BLOCKED.value
+
+    if tasks_file.exists():
+        content = tasks_file.read_text(encoding='utf-8')
+        checkbox_pattern = r'- \[[ xX~\-]\]'
+        total = len(re.findall(checkbox_pattern, content))
+        done = len(re.findall(r'- \[[xX]\]', content))
         progress = {'done': done, 'total': total}
-
-        # Check for pivots
-        has_pivot = bool(re.search(r'PIVOT', content))
-
-        # Check for blockers (STATUS::BLOCKED)
-        has_blockers = status == 'BLOCKED'
+    # elif spec_progress:
+    #     progress = spec_progress
 
     return {
         'name': change_path.name,
         'path': change_path,
         'status': status,
+        'type': change_type,
         'progress': progress,
         'has_pivot': has_pivot,
         'has_blockers': has_blockers,
@@ -129,38 +274,46 @@ def parse_change(change_path: Path, archived: bool = False) -> dict:
 
 
 def create_change(sspec_root: Path, name: str) -> Path:
-    """Create a new change directory with spec.md and handover.md."""
-    # Normalize name
+    """Create a new change directory with spec.md, tasks.md, and handover.md."""
+
     name = re.sub(r'\s+', '-', name.strip().lower())
     name = re.sub(r'[^a-z0-9\-]', '', name)
 
     if not name:
-        raise ValueError('Invalid change name')
+        raise InvalidChangeNameError('Invalid change name')
 
     change_path = sspec_root / CHANGES_DIR / name
     if change_path.exists():
-        raise ValueError(f"Change '{name}' already exists")
+        raise ChangeExistsError(f"Change '{name}' already exists")
 
     template_dir = get_template_dir() / 'change'
-    replacements = {'CHANGE_NAME': name}
-    
-    # Create change directory
+    replacements = {
+        'CHANGE_NAME': name,
+        'TIME': datetime.now().isoformat(timespec='seconds'),
+    }
+
     change_path.mkdir(parents=True, exist_ok=True)
-    
-    # Copy spec.md
-    copy_template(template_dir / 'spec.md', change_path / 'spec.md', replacements)
-    
-    # Copy handover.md
-    copy_template(template_dir / 'handover.md', change_path / 'handover.md', replacements)
+
+    for file_name in CHANGE_TEMPLATE_FILES:
+        copy_template(template_dir / file_name, change_path / file_name, replacements)
 
     return change_path
 
 
-def archive_change(sspec_root: Path, name: str) -> Path:
+def archive_change(sspec_root: Path, name: str, force: bool = False) -> Path:
     """Archive a completed change."""
+
     change_path = sspec_root / CHANGES_DIR / name
     if not change_path.exists():
-        raise ValueError(f"Change '{name}' not found")
+        raise ChangeNotFoundError(f"Change '{name}' not found")
+
+    if not force:
+        change = parse_change(change_path)
+        if change['status'] != ChangeStatus.DONE.value:
+            raise ValueError(
+                f"Change '{name}' status is {change['status']}, not DONE. "
+                f"Use --force to archive anyway."
+            )
 
     archive_dir = sspec_root / CHANGES_DIR / ARCHIVE_DIR
     archive_dir.mkdir(parents=True, exist_ok=True)
@@ -168,7 +321,6 @@ def archive_change(sspec_root: Path, name: str) -> Path:
     date_prefix = datetime.now().strftime('%Y-%m-%d')
     archive_name = f'{date_prefix}_{name}'
 
-    # Handle name conflicts
     archive_path = archive_dir / archive_name
     counter = 1
     while archive_path.exists():

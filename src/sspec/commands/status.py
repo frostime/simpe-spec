@@ -1,19 +1,25 @@
 """sspec status command."""
 
-from typing import Optional
+from pathlib import Path
 
 import click
 from rich.console import Console
 from rich.panel import Panel
 
-from sspec.core import SspecNotFoundError, get_sspec_root, list_changes, parse_change
+from sspec.core import (
+    ChangeStatus,
+    SspecNotFoundError,
+    get_sspec_root,
+    list_changes,
+    parse_change,
+)
 
 console = Console()
 
 
 @click.command()
 @click.argument('name', required=False)
-def status(name: Optional[str] = None) -> None:
+def status(name: str | None = None) -> None:
     """Show status summary."""
     try:
         sspec_root = get_sspec_root()
@@ -29,7 +35,7 @@ def status(name: Optional[str] = None) -> None:
         _show_overview(sspec_root)
 
 
-def _show_overview(sspec_root) -> None:
+def _show_overview(sspec_root: Path) -> None:
     """Show project overview."""
     changes = list_changes(sspec_root)
     active = [c for c in changes if not c['archived']]
@@ -46,11 +52,11 @@ def _show_overview(sspec_root) -> None:
             progress = change['progress']
 
             status_icon = {
-                'PLANNING': '📝',
-                'IN_PROGRESS': '🔄',
-                'BLOCKED': '🚧',
-                'REVIEW': '👀',
-                'DONE': '✅',
+                ChangeStatus.PLANNING.value: '📝',
+                ChangeStatus.DOING.value: '🔄',
+                ChangeStatus.BLOCKED.value: '🚧',
+                ChangeStatus.REVIEW.value: '👀',
+                ChangeStatus.DONE.value: '✅',
             }.get(status, '❓')
 
             progress_str = ''
@@ -65,12 +71,12 @@ def _show_overview(sspec_root) -> None:
 
             console.print(f"  {status_icon} {change['name']} {status}{progress_str}{flags}")
 
-    # Knowledge files count
-    knowledge_dir = sspec_root / 'knowledge'
-    if knowledge_dir.exists():
-        knowledge_count = len(list(knowledge_dir.glob('*.md')))
+    # Skills files count
+    skills_dir = sspec_root / 'skills'
+    if skills_dir.exists():
+        skills_count = len(list(skills_dir.glob('*.md')))
         console.print()
-        console.print(f'[dim]Knowledge files: {knowledge_count}[/dim]')
+        console.print(f'[dim]Skill files: {skills_count}[/dim]')
 
     # Archived count
     archive_dir = sspec_root / 'changes' / 'archive'
@@ -81,7 +87,7 @@ def _show_overview(sspec_root) -> None:
     console.print()
 
 
-def _show_change_detail(change_path) -> None:
+def _show_change_detail(change_path: Path) -> None:
     """Show detailed status of a single change."""
     change = parse_change(change_path)
 

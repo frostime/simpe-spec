@@ -11,6 +11,8 @@ console = Console()
 STATUS_COLORS = {
     'PLANNING': 'yellow',
     'IN_PROGRESS': 'cyan',
+    'DOING': 'cyan',
+    'HANGUP': 'yellow',
     'BLOCKED': 'red',
     'REVIEW': 'magenta',
     'DONE': 'green',
@@ -32,7 +34,7 @@ def list_changes_cmd(include_all: bool) -> None:
     if not changes:
         console.print('[dim]No changes found.[/dim]')
         console.print()
-        console.print('Create one with: sspec new <change-name>')
+        console.print('Create one with: sspec change <change-name>')
         return
 
     active = [c for c in changes if not c['archived']]

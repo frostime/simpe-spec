@@ -19,6 +19,7 @@ from sspec.core import (
     copy_template,
     get_sspec_root,
     get_template_dir,
+    render_template,
 )
 
 console = Console()
@@ -238,11 +239,17 @@ def update(dry_run: bool, force: bool, init_meta: bool) -> None:
 
 def update_root_agents_block() -> bool:
     """Update the SSPEC block in root AGENTS.md."""
-    from sspec.commands.init import ROOT_AGENT_STUB
+    template_path = get_template_dir() / 'Agents.md'
+    if not template_path.exists():
+        return False
 
     root_agents = Path.cwd() / 'AGENTS.md'
+    rendered = render_template(
+        template_path.read_text(encoding='utf-8'), {'SCHEMA_VERSION': SCHEMA_VERSION, 'SCHEMA': SCHEMA_VERSION}
+    )
+
     if not root_agents.exists():
-        root_agents.write_text(ROOT_AGENT_STUB, encoding='utf-8')
+        root_agents.write_text(rendered, encoding='utf-8')
         return True
 
     content = root_agents.read_text(encoding='utf-8')
@@ -252,14 +259,14 @@ def update_root_agents_block() -> bool:
 
     if start_marker not in content:
         with open(root_agents, 'a', encoding='utf-8') as f:
-            f.write('\n\n' + ROOT_AGENT_STUB)
+            f.write('\n\n' + rendered)
         return True
 
     import re
 
     pattern = re.compile(rf'{re.escape(start_marker)}.*?{re.escape(end_marker)}', re.DOTALL)
 
-    new_content = pattern.sub(ROOT_AGENT_STUB, content)
+    new_content = pattern.sub(rendered, content)
 
     if new_content != content:
         root_agents.write_text(new_content, encoding='utf-8')

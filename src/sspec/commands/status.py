@@ -48,6 +48,8 @@ def _show_overview(sspec_root) -> None:
             status_icon = {
                 'PLANNING': '📝',
                 'IN_PROGRESS': '🔄',
+                'DOING': '🔄',
+                'HANGUP': '⏸️',
                 'BLOCKED': '🚧',
                 'REVIEW': '👀',
                 'DONE': '✅',

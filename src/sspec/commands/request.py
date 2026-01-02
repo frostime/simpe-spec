@@ -10,33 +10,14 @@ from dotenv import load_dotenv
 from rich.console import Console
 from rich.table import Table
 
-from sspec.core import SspecNotFoundError, get_sspec_root
+from sspec.core import (
+    SspecNotFoundError,
+    get_sspec_root,
+    get_template_dir,
+    render_template,
+)
 
 console = Console()
-
-REQUEST_TEMPLATE = """---
-created: {timestamp}
-status: open
-changes: []
-tldr: ''
----
-
-# Request: {name}
-
-## What I Want
-
-<!-- Describe what you want to accomplish -->
-
-## Why
-
-<!-- Why is this needed? What problem does it solve? -->
-
-## Additional Context
-
-<!-- Any constraints, preferences, references -->
-
-"""
-
 
 def _extract_summary(body: str) -> str:
     """Extract summary from body as fallback."""
@@ -144,7 +125,28 @@ def request(name: str | None, list_requests: bool, show_name: str | None, show_a
         raise click.ClickException(f"Request '{name}' already exists")
 
     # Create file
-    content = REQUEST_TEMPLATE.format(timestamp=timestamp, name=name)
+    template_path = get_template_dir() / 'requests' / 'requests.md'
+    replacements = {'TIME': timestamp, 'NAME': name}
+
+    if template_path.exists():
+        template_content = template_path.read_text(encoding='utf-8')
+        content = render_template(template_content, replacements)
+    else:
+        content = (
+            '---\n'
+            f'created: {timestamp}\n'
+            'status: open\n'
+            'changes: []\n'
+            "tldr: ''\n"
+            '---\n\n'
+            f'# Request: {name}\n\n'
+            '## What I Want\n\n'
+            '<!-- Describe what you want to accomplish -->\n\n'
+            '## Why\n\n'
+            '<!-- Why is this needed? What problem does it solve? -->\n\n'
+            '## Additional Context\n\n'
+            '<!-- Any constraints, preferences, references -->\n\n'
+        )
     request_path.write_text(content, encoding='utf-8')
 
     console.print(f'[green]✓[/green] Created request: {name}')
@@ -179,10 +181,19 @@ def _list_requests(requests_dir: Path, show_all: bool) -> None:
                     if not tldr:
                         tldr = _extract_summary(body)
 
+                    raw_status = str(meta.get('status', 'open')).strip().lower()
+                    normalized_status = {
+                        'doing': 'in-progress',
+                        'in_progress': 'in-progress',
+                        'in-progress': 'in-progress',
+                        'todo': 'open',
+                        'closed': 'done',
+                    }.get(raw_status, raw_status or 'open')
+
                     requests.append(
                         {
                             'name': f.stem,
-                            'status': meta.get('status', 'open'),
+                            'status': normalized_status,
                             'created': meta.get('created', ''),
                             'changes': meta.get('changes', []),
                             'tldr': tldr,

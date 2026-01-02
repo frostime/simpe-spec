@@ -18,7 +18,11 @@ ARCHIVE_DIR = 'archive'
 SCHEMA_VERSION = '3.0'
 
 # Files tracked for updates (relative to .sspec/)
-UPDATABLE_FILES: list[str] = []
+UPDATABLE_FILES: list[str] = [
+    'skills/sspec-workflow.md',
+    'skills/sspec-status-guide.md',
+]
+
 
 # User-managed files tracked for changes but not auto-updated
 USER_FILES = ['project.md']
@@ -102,6 +106,15 @@ class ChangeInfo(TypedDict):
     archived: bool
 
 
+class SkillInfo(TypedDict):
+    """Structured skill information."""
+
+    file: str
+    path: Path
+    skill: str
+    description: str
+
+
 def find_sspec_root(start: Path | None = None) -> Path | None:
     """Find .sspec directory by walking up from start path."""
 
@@ -178,6 +191,35 @@ def list_changes(sspec_root: Path, include_archived: bool = False) -> list[Chang
         changes.append(parse_change(change_path, archived=False))
 
     return sorted(changes, key=lambda x: (x['archived'], x['name']))
+
+
+def list_skills(sspec_root: Path) -> list[SkillInfo]:
+    """List all skills found in skills directory."""
+
+    skills: list[SkillInfo] = []
+    skills_dir = sspec_root / SKILLS_DIR
+
+    if not skills_dir.exists():
+        return skills
+
+    for skill_file in skills_dir.glob('*.md'):
+        content = skill_file.read_text(encoding='utf-8')
+        if content.startswith('---'):
+            parts = content.split('---', 2)
+            if len(parts) >= 3:
+                try:
+                    meta = yaml.safe_load(parts[1]) or {}
+                    if 'skill' in meta:
+                        skills.append({
+                            'file': skill_file.name,
+                            'path': skill_file,
+                            'skill': str(meta['skill']),
+                            'description': str(meta.get('description', '')),
+                        })
+                except yaml.YAMLError:
+                    pass
+
+    return sorted(skills, key=lambda x: x['skill'])
 
 
 def parse_change(change_path: Path, archived: bool = False) -> ChangeInfo:

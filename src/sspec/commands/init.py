@@ -44,6 +44,16 @@ def init(force: bool) -> None:
     (sspec_path / 'requests').mkdir(exist_ok=True)
     (sspec_path / 'skills').mkdir(exist_ok=True)
 
+    # 复制 skills 模板
+    skills_template_dir = template_dir / 'skills'
+    if skills_template_dir.exists():
+        for skill_file in skills_template_dir.glob('*.md'):
+            copy_template(
+                skill_file,
+                sspec_path / 'skills' / skill_file.name,
+                common_replacements,
+            )
+
     # Copy templates
     copy_template(
         template_dir / 'project.md',

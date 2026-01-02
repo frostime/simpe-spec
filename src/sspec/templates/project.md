@@ -28,13 +28,4 @@
 ## Important Constraints
 [List any technical, business, or regulatory constraints]
 
-
-## Skills Files
-
-All the files below are listed under `.sspec/skills/`,
-
-| File | Content |
-|------|---------|
-|||
-
 ## External References

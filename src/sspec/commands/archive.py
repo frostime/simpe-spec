@@ -3,7 +3,13 @@
 import click
 from rich.console import Console
 
-from sspec.core import SspecNotFoundError, archive_change, get_sspec_root, list_changes
+from sspec.core import (
+    ChangeNotFoundError,
+    SspecNotFoundError,
+    archive_change,
+    get_sspec_root,
+    list_changes,
+)
 
 console = Console()
 
@@ -11,7 +17,8 @@ console = Console()
 @click.command()
 @click.argument('name', required=False)
 @click.option('--yes', '-y', is_flag=True, help='Skip confirmation')
-def archive(name: str, yes: bool) -> None:
+@click.option('--force', '-f', is_flag=True, help='Archive even if not DONE')
+def archive(name: str, yes: bool, force: bool) -> None:
     """Archive a completed change."""
     try:
         sspec_root = get_sspec_root()
@@ -41,8 +48,8 @@ def archive(name: str, yes: bool) -> None:
             return
 
     try:
-        archive_path = archive_change(sspec_root, name)
-    except ValueError as e:
+        archive_path = archive_change(sspec_root, name, force=force)
+    except (ChangeNotFoundError, ValueError) as e:
         raise click.ClickException(str(e))
 
     rel_path = archive_path.relative_to(sspec_root.parent)

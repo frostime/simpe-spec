@@ -4,7 +4,6 @@ import hashlib
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import click
 from rich.console import Console
@@ -32,14 +31,14 @@ def compute_hash(content: str) -> str:
     return hashlib.sha256(content.encode('utf-8')).hexdigest()[:16]
 
 
-def compute_file_hash(path: Path) -> Optional[str]:
+def compute_file_hash(path: Path) -> str | None:
     """Compute hash of file content."""
     if not path.exists():
         return None
     return compute_hash(path.read_text(encoding='utf-8'))
 
 
-def load_meta(sspec_root: Path) -> Optional[dict]:
+def load_meta(sspec_root: Path) -> dict | None:
     """Load metadata from .meta.json."""
     meta_path = sspec_root / META_FILE
     if not meta_path.exists():
@@ -85,7 +84,7 @@ def update(dry_run: bool, force: bool, init_meta: bool) -> None:
     """Update sspec templates to latest version.
 
     Only updates files that haven't been modified by the user.
-    User content (knowledge/, changes/, requests/) is never touched.
+    User content (skills/, changes/, requests/) is never touched.
     """
     try:
         sspec_root = get_sspec_root()
@@ -235,6 +234,8 @@ def update(dry_run: bool, force: bool, init_meta: bool) -> None:
 
     console.print()
     console.print(f'[green]✓[/green] Updated to schema {SCHEMA_VERSION}')
+    console.print()
+    console.print('[dim]Note: New changes created via `sspec change` will use updated templates.[/dim]')
 
 
 def update_root_agents_block() -> bool:

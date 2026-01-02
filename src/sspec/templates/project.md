@@ -29,9 +29,9 @@
 [List any technical, business, or regulatory constraints]
 
 
-## Knowledge Files
+## Skills Files
 
-All the files below are listed under `.sspec/knowledge/`,
+All the files below are listed under `.sspec/skills/`,
 
 | File | Content |
 |------|---------|

@@ -1,85 +1,97 @@
 <!-- SSPEC:START -->
-# .sspec Agent Protocol - see `.sspec` directory
+# .sspec Agent Protocol
 
 SSPEC_SCHEMA::{{SCHEMA_VERSION}}
 
 ## 0) Hard Rules
 - High-signal only: bullets > prose. No filler.
 - Treat `.sspec` as the single source of truth for planning/tracking/handover.
-- If user message contains `@$change` / `@handover` / `@resume`, follow the corresponding route immediately.
+- All `@xxx` triggers are explicit user commands, not auto-executable.
+
+## 1) Status Definitions
+
+### Change Status (in spec.md front yaml)
+| Status | Meaning | Agent Action |
+|--------|---------|--------------|
+| PLANNING | Defining scope & approach | Update spec.md (A, B, C sections) |
+| DOING | Implementation in progress | Update tasks.md progress, handover.md |
+| BLOCKED | Waiting on external dependency | Document blocker in spec.md section D |
+| REVIEW | Implementation complete, awaiting verification | Prepare demo, summarize in handover.md |
+| DONE | Completed and verified | Ready for `sspec archive` |
+
+### Request Status (in request front yaml)
+| Status | Meaning |
+|--------|---------|
+| OPEN | New request, not yet processed |
+| DOING | In progress, linked to a change |
+| DONE | Completed |
+
 ---
 
-## 1) Follow User's Trigger
+## 2) User Triggers
 
-User might attache with `@change` / `@handover` / `@resume` for pre-defined instruction.
+### 2.1 `@change <name>` — Switch/Create change context
+1. Set active change = `<name>`
+2. If `changes/<name>/` exists → read spec.md, tasks.md, handover.md (in order)
+3. If not exists → run `sspec change <name>`, then fill spec.md
+4. Output: context summary + next 3 actions
 
-### 1.1 `@change <name>`  (Switch/Create change)
-Goal: move work context to a specific change folder quickly.
+### 2.2 `@resume` — Recover session context
+1. Select active change:
+  - If user specified name → use it
+  - Else → pick most recently modified change with status ∈ {DOING, BLOCKED, REVIEW}
+2. Read: handover.md → tasks.md → spec.md
+3. Output: "Resuming <name>..." + current state + next actions
 
-Do:
-1) Set active change = `<name>`.
-2) If `changes/<name>/` exists: read spec/tasks/handover (in this order).
-3) If not exists: instruct user to run:
-   - `.sspec/scripts/new-change-task.ps1 -changeName "<name>"`
-   Then tell user which fields to fill first (spec.Status/Type + tasks.Task List).
-4) Output: "Current context summary" + "Next 3 actions".
+### 2.3 `@handover` — End session cleanly
+1. Update `changes/<change>/handover.md` with session summary
+2. Update `tasks.md`: mark completed tasks, add discovered tasks
+3. Update front yaml `status` if changed
+4. Output: confirmation + handover content written
 
-### 1.2 `@resume`  (Resume from handover)
-Goal: recover context in <30 seconds.
-When: a new start chat/agent session, user ask agent to resume the context.
-
-Do:
-1) Select active change:
-   - If user provided a name in recent messages -> use it
-   - Else choose the most recently updated change whose spec.Status ∈ {DOING, BLOCKED, REVIEW}
-2) Read: `changes/<change>/` `handover.md` (first), `tasks.md`, `spec.md`
-1) Import the context from last session, and move on in this session.
-
-### 1.3 `@handover`  (Write/Update handover now)
-Goal: end this session cleanly.
-When: a chat/agent session going to end, user ask agent to record the context.
+### 2.4 `@sync` — Sync .sspec with current reality
+**Purpose**: After autonomous coding sessions (Claude Code, Copilot, etc.), ensure .sspec reflects actual progress.
 
 Do:
-1) Update `changes/<change>/handover.md` following the predifined schema.
-2) Also update `tasks.md` progress and "Last Updated".
-3) Output: short confirmation + paste the exact handover content you wrote.
+1. Scan recent file changes in repo (git diff or file timestamps)
+2. For active change, update:
+  - `tasks.md`: mark completed tasks, add discovered tasks
+  - `spec.md`: update status in front yaml if appropriate
+  - `handover.md`: summarize what was accomplished
+3. Output: diff summary of .sspec updates
 
-## 1.4 `@sync` (Sync current state with .vibe-spce/changes)
-Goal: make `changes/` up to date with current situation.
 ---
 
-## 2) Folder Structure & Semantics (Read Me Once)
+## 3) Folder Structure
+```
 .sspec/
-- project.md: project overview + constraints + knowledge index (must read before work)
-- changes/<changeName>/
-  - spec.md: problem + constraints + decisions + solution outline (WHY/WHAT)
-  - tasks.md: executable task list + verification criteria (HOW)
-  - handover.md: cross-session bridge (WHERE AM I / NEXT)
-- requests/*.md: incoming requests backlog (lightweight intake)
-- knowledge/*.md: topic references (read only when needed)
+├── project.md              # Project overview, conventions, constraints
+├── changes/<name>/
+│   ├── spec.md             # WHY/WHAT: problem, constraints, decisions, solution
+│   ├── tasks.md            # HOW: executable tasks with verification
+│   └── handover.md         # SESSION BRIDGE: done/now/next
+├── requests/*.md           # Incoming requests backlog
+└── skills/*.md             # Reusable knowledge & prompts
+```
+
 ---
 
-## 3) File Handling Rules (Do not mix responsibilities)
+## 4) File Responsibilities
 
-### 3.1 spec.md (WHY/WHAT)
-- Contains: problem statement, constraints, decisions, solution outline.
-- Avoid: implementation logs, step-by-step progress notes.
-- When to update: when strategy/decision changes.
+### spec.md (WHY/WHAT)
+- **Contains**: problem statement, constraints, decisions, solution outline
+- **Front yaml**: status, type, created
+- **Update when**: strategy/decision changes, status transitions
 
-### 3.2 tasks.md (HOW)
-- Contains: tasks that are completable in <2 hours, each with verification criteria.
-- Avoid: long discussions; put rationale in spec.md.
-- When to update: before coding (Planning), and after completing tasks (Execution).
+### tasks.md (HOW)
+- **Contains**: tasks completable in <2h, each with verification criteria
+- **Update when**: before coding (plan), after completing tasks (progress)
 
-### 3.3 handover.md (SESSION BRIDGE)
-- Contains: Done / Now / Next / Files / Commands only.
-- Avoid: full spec restatement; avoid detailed reasoning.
-- When to update: end of session, or before switching to a different change.
+### handover.md (SESSION BRIDGE)
+- **Contains**: Done / Now / Next / Key Files / Commands
+- **Update when**: end of session, before switching changes, after `@sync`
 
-### 3.4 requests/*.md (INTAKE)
-- Use for raw requests; keep it short.
-- When a request becomes real work:
-  - create/switch change via `@change`
-  - set `attach-change`
-  - optionally mark request DONE when shipped
+### requests/*.md (INTAKE)
+- **Contains**: raw user requests with front yaml metadata
+- **Lifecycle**: OPEN → link to change → DOING → DONE
 <!-- SSPEC:END -->

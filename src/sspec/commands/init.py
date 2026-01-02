@@ -38,7 +38,7 @@ def init(force: bool) -> None:
 
     # Create directory structure
     sspec_path.mkdir(parents=True, exist_ok=True)
-    (sspec_path / 'spec').mkdir(exist_ok=True)
+    # Remove legacy spec folder; only create required structure
     (sspec_path / 'changes').mkdir(exist_ok=True)
     (sspec_path / 'changes' / 'archive').mkdir(exist_ok=True)
     (sspec_path / 'requests').mkdir(exist_ok=True)
@@ -50,7 +50,7 @@ def init(force: bool) -> None:
         sspec_path / 'project.md',
         {'TODO': 'TODO', **common_replacements},
     )
-    copy_template(template_dir / 'handover.md', sspec_path / 'handover.md', common_replacements)
+    # Global handover removed per new structure
 
     # Create .gitignore
     (sspec_path / '.gitignore').touch()
@@ -94,11 +94,10 @@ def init(force: bool) -> None:
     console.print('[cyan]Structure:[/cyan]')
     console.print(f'  {SSPEC_DIR}/')
     console.print('  ├── project.md          # Project overview and conventions')
-    console.print('  ├── handover.md         # Global handover')
-    console.print('  ├── knowledge/')
     console.print('  ├── changes/')
     console.print('  │   └── archive/')
-    console.print('  └── requests/')
+    console.print('  ├── requests/')
+    console.print('  └── skills/             # Reusable knowledge & prompts')
     console.print()
     console.print('[yellow]Next steps:[/yellow]')
     console.print('  1. Fill in .sspec/project.md with project context and constraints')

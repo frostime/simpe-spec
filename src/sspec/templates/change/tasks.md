@@ -1,62 +1,52 @@
-# Implementation Tasks
+---
+change: "{{CHANGE_NAME}}"
+updated: ""
+---
 
-<!-- @AGENT: Please update meta property here. -->
-**Change Name**: `{{CHANGE_NAME}}`
-**Last Updated**:
+# Implementation Tasks
 
 ## Task Organization
 
 Tasks are organized by implementation phase. Each task should:
 - Be completable in < 2 hours
 - Have clear verification criteria
-- Produce user-visible progress when possible
 - Be marked `[x]` only when fully complete and tested
 
-**Legend**:
-- ✅ `[x]` - Complete
-- 🚧 `[ ]` - In progress
-- ⏸️ `[-]` - Blocked/Paused
-- 🔄 `[~]` - Needs rework
-- 🚫 `[x]` - Discard
+**Legend**: ✅`[x]` Complete | 🚧`[ ]` Todo | ⏸️`[-]` Blocked | 🔄`[~]` Rework | 🚫`[x]` Discarded
 
 ---
 
-<!-- @AGENT: Please structure the tasks under Task List. You can follow the schema below. -->
 ## Task List
-<!-- EXAMPLE:START -->
-### Phase 1: Foundation Infrastructure
 
-#### 1.1 Type System ✅
+<!-- @AGENT: Structure tasks here. Delete the example below after creating real tasks. -->
 
-- [x] Define `IPayloadType` in `types.ts`
-- [x] Define `IMessagePayload` structure
-- [x] Add schema version field (`schema: 2`)
+<!-- EXAMPLE:START — DELETE THIS BLOCK -->
+### Phase 1: Foundation
 
-**Verification**: TypeScript compilation passes, types properly exported
+#### 1.1 Setup ✅
+- [x] Initialize project structure
+- [x] Configure dependencies
 
-#### 1.2 Migration Logic ✅
+**Verification**: Build passes, tests green
 
-- [ ]
+#### 1.2 Core Logic
+- [ ] Implement main algorithm
+- [ ] Add error handling
 
-**Verification**:
-
-### Phase 2: Implement Core Data Structure
-<!-- EXAMPLE:END -->
+**Verification**: Unit tests pass
+<!-- EXAMPLE:END — DELETE THIS BLOCK -->
 
 ---
 
-<!-- @AGENT: Please structure the progress under Progress Tracking. You can follow the example below. -->
 ## Progress Tracking
 
-<!-- EXAMPLE:START -->
-**Overall Progress**: 100% (All core objectives met)
+<!-- @AGENT: Update this section after task completion. -->
+
+**Overall Progress**: 0%
 
 | Phase | Progress | Status |
 |-------|----------|--------|
-| Phase 1 | 100% | ✅ Complete |
+| Phase 1 | 0% | 🚧 In Progress |
 
-**Recent Completions** (2025-12-28):
-- ✅ Implemented `IMessagePayload` types
-
-**Status**: CLOSED - Project successfully migrated to Tree Model V2.
-<!-- EXAMPLE:END -->
+**Recent Updates**:
+- (none yet)

@@ -3,7 +3,13 @@
 import click
 from rich.console import Console
 
-from sspec.core import SspecNotFoundError, create_change, get_sspec_root
+from sspec.core import (
+    ChangeExistsError,
+    InvalidChangeNameError,
+    SspecNotFoundError,
+    create_change,
+    get_sspec_root,
+)
 
 console = Console()
 
@@ -19,7 +25,7 @@ def change(name: str) -> None:
 
     try:
         change_path = create_change(sspec_root, name)
-    except ValueError as e:
+    except (InvalidChangeNameError, ChangeExistsError) as e:
         raise click.ClickException(str(e))
 
     rel_path = change_path.relative_to(sspec_root.parent)

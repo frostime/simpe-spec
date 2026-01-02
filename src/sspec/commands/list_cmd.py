@@ -4,19 +4,22 @@ import click
 from rich.console import Console
 from rich.table import Table
 
-from sspec.core import SspecNotFoundError, get_sspec_root, list_changes
+from sspec.core import (
+    ChangeInfo,
+    ChangeStatus,
+    SspecNotFoundError,
+    get_sspec_root,
+    list_changes,
+)
 
 console = Console()
 
-STATUS_COLORS = {
-    'PLANNING': 'yellow',
-    'IN_PROGRESS': 'cyan',
-    'DOING': 'cyan',
-    'HANGUP': 'yellow',
-    'BLOCKED': 'red',
-    'REVIEW': 'magenta',
-    'DONE': 'green',
-    'UNKNOWN': 'dim',
+STATUS_STYLES: dict[str, tuple[str, str]] = {
+    ChangeStatus.PLANNING.value: ('yellow', '📝'),
+    ChangeStatus.DOING.value: ('cyan', '🔄'),
+    ChangeStatus.BLOCKED.value: ('red', '🚧'),
+    ChangeStatus.REVIEW.value: ('magenta', '👀'),
+    ChangeStatus.DONE.value: ('green', '✅'),
 }
 
 
@@ -54,7 +57,7 @@ def list_changes_cmd(include_all: bool) -> None:
     console.print(f'[dim]Active: {len(active)} | Archived: {len(archived)}[/dim]')
 
 
-def _print_changes_table(changes: list, dim: bool = False) -> None:
+def _print_changes_table(changes: list[ChangeInfo], dim: bool = False) -> None:
     """Print changes as table."""
     table = Table(show_header=True, header_style='bold' if not dim else 'dim')
     table.add_column('Name')
@@ -64,7 +67,7 @@ def _print_changes_table(changes: list, dim: bool = False) -> None:
 
     for change in changes:
         status = change['status']
-        color = STATUS_COLORS.get(status, 'white')
+        color, icon = STATUS_STYLES.get(status, ('dim', '❓'))
         if dim:
             color = 'dim'
 
@@ -81,7 +84,7 @@ def _print_changes_table(changes: list, dim: bool = False) -> None:
 
         table.add_row(
             f"[{color}]{change['name']}[/{color}]",
-            f'[{color}]{status}[/{color}]',
+            f'[{color}]{icon} {status}[/{color}]',
             progress_str,
             ' '.join(flags),
         )

@@ -1,57 +1,42 @@
-# {{CHANGE_NAME}}
+---
+status: PLANNING
+type: ""
+created: {{TIME}}
+---
 
-<!-- @AGENT: Please update meta property here. -->
-<!-- Status:  HANGUP -> DOING -> BLOCKED | REVIEW → DONE -->
-<!-- Type: Feature | Refactor | Fix | Test | etc. -->
-**Status**: HANGUP
-**Type**:
-**Created**: {{TIME}}
+# {{CHANGE_NAME}}
 
 <!--
 [ Definition & Planning ]
-1. Requirement Analysis
-   (Understand User Needs)
-        ↓
-2. Solution Architecture
-   (Define High-Level Solution)
-        ↓
-3. Implementation Design
-   (Output: Update `task.md`)
-        ↓
-[ Execution & Iteration ]
-4. Implementation
-   (Coding/Building)
-        ↓
-5. User Feedback Loop
-   (Review: Dissatisfaction, New Ideas, Changes)
-        ↓
-   [ Decision Point ]
-        │
-        ├──> Approval: Complete
-        │
-        └──> Revision Needed:
-             a. Refine Strategy
-             b. Update `task.md`
-             c. Return to Implementation (Step 4)
- -->
+1. Requirement Analysis → Understand User Needs
+2. Solution Architecture → Define High-Level Solution
+3. Implementation Design → Output: Update `tasks.md`
 
-<!-- @AGENT: Please update section below. -->
+[ Execution & Iteration ]
+4. Implementation → Coding/Building
+5. User Feedback Loop → Review
+
+[ Status Transitions ]
+- PLANNING: Update spec.md (sections A, B, C)
+- DOING: Update tasks.md progress, handover.md
+- BLOCKED: Document blocker in spec.md section D
+- REVIEW: Prepare demo, update handover.md
+- DONE: Archive via `sspec archive`
+-->
 
 ## A. Proposal and Problem Statement
 
 ### Current Situation
 
-### User Request Requirement
+### User Request / Requirement
 
 ## B. Proposed Solution
 
 ### Framework of Idea
 
-### Philosophical Principles
-
 ### Key Changes
 
-## C. Implementation Strategy and Methodology
+## C. Implementation Strategy
 
-## D. User Feedback
+## D. Blockers & Feedback
 

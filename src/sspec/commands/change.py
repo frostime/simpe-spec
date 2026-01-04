@@ -229,8 +229,9 @@ def archive(name: str | None, yes: bool, force: bool) -> None:
             return
 
     try:
-        archive_change(sspec_root, name, force=force) # type: ignore
-        console.print(f'[green]✓[/green] Archived change: {name}')
+        archive_path = archive_change(sspec_root, name, force=force) # type: ignore
+        rel_path = archive_path.relative_to(sspec_root.parent)
+        console.print(f'[green]✓[/green] Archived to: {rel_path}')
     except ChangeNotFoundError as e:
         raise click.ClickException(str(e)) from e
     except ValueError as e:

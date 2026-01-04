@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -46,10 +47,7 @@ def init(force: bool) -> None:
         )
 
     template_dir = get_template_dir()
-    common_replacements = {
-        'SCHEMA_VERSION': SCHEMA_VERSION,
-        'SCHEMA': SCHEMA_VERSION,
-    }
+    common_replacements = {'SCHEMA_VERSION': SCHEMA_VERSION, 'SCHEMA': SCHEMA_VERSION}
 
     # Create directory structure
     sspec_path.mkdir(parents=True, exist_ok=True)
@@ -78,10 +76,11 @@ def init(force: bool) -> None:
         dest_path.parent.mkdir(parents=True, exist_ok=True)
 
         copy_template(template_path, dest_path, common_replacements)
-        # if template_path.suffix == '.md':
-        #     render_template(template_path, dest_path, common_replacements)
-        # else:
-        #     copy_template(template_path, dest_path, common_replacements)
+
+    # Create .gitignore
+    gitignore_path = sspec_path / '.gitignore'
+    if not gitignore_path.exists():
+        gitignore_path.write_text('*', encoding='utf-8')
 
     # Create initial .meta.json
     meta_data = {
@@ -101,7 +100,13 @@ def init(force: bool) -> None:
             meta_data['file_hashes'][file_path] = file_hash
 
     meta_path = sspec_path / '.meta.json'
-    meta_path.write_text(json.dumps(meta_data, indent=2, ensure_ascii=False), encoding='utf-8')
+    meta_path.write_text(
+        json.dumps(meta_data, indent=2, ensure_ascii=False), encoding='utf-8'
+    )
+
+    # Update root AGENTS.md
+    if update_root_agents_block():
+        console.print('  [green]✓[/green] Created/Updated root AGENTS.md')
 
     rel_path = sspec_path.relative_to(Path.cwd())
 
@@ -128,7 +133,9 @@ def status() -> None:
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
+        raise click.ClickException(
+            "Not a sspec project. Run 'sspec project init' first."
+        ) from None
 
     _show_overview(sspec_root)
 
@@ -150,13 +157,17 @@ def _show_overview(sspec_root: Path) -> None:
             status_icon = _get_status_icon(status)
             name = change['name']
 
-            console.print(f'{status_icon} [bold]{name}[/bold] [{_get_status_color(status)}]{status}[/]')
+            console.print(
+                f'{status_icon} [bold]{name}[/bold] [{_get_status_color(status)}]{status}[/]'
+            )
 
             if change.get('description'):
                 console.print(f'  [dim]{change["description"]}[/dim]')
             console.print()
 
-    console.print(f'[dim]{len(active)} active, {len(changes) - len(active)} archived[/dim]')
+    console.print(
+        f'[dim]{len(active)} active, {len(changes) - len(active)} archived[/dim]'
+    )
     console.print()
 
 
@@ -217,7 +228,9 @@ def save_meta(sspec_root: Path, meta: dict) -> None:
 
 
 @project.command()
-@click.option('--dry-run', is_flag=True, help='Show what would be updated without making changes')
+@click.option(
+    '--dry-run', is_flag=True, help='Show what would be updated without making changes'
+)
 @click.option('--force', is_flag=True, help='Force update even if files were modified')
 @click.option('--interactive', '-i', is_flag=True, help='Prompt for each file')
 def update(dry_run: bool, force: bool, interactive: bool) -> None:
@@ -225,16 +238,15 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
+        raise click.ClickException(
+            "Not a sspec project. Run 'sspec project init' first."
+        ) from None
 
     template_dir = get_template_dir()
     meta = load_meta(sspec_root) or {}
     old_hashes = meta.get('file_hashes', {})
 
-    common_replacements = {
-        'SCHEMA_VERSION': SCHEMA_VERSION,
-        'SCHEMA': SCHEMA_VERSION,
-    }
+    common_replacements = {'SCHEMA_VERSION': SCHEMA_VERSION, 'SCHEMA': SCHEMA_VERSION}
 
     # Collect update candidates
     updates = []
@@ -325,11 +337,19 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
     console.print()
 
     if not actions:
-        console.print('[green]✓[/green] All files are up to date')
-        return
+        # Check if AGENTS.md needs update
+        agents_needs_update = update_root_agents_block(dry_run=True)
+
+        if not agents_needs_update:
+            console.print('[green]✓[/green] All files are up to date')
+            return
+    else:
+        agents_needs_update = update_root_agents_block(dry_run=True)
 
     if dry_run:
         console.print(f'[cyan]Would update {len(actions)} file(s)[/cyan]')
+        if agents_needs_update:
+            console.print('[cyan]Would update root AGENTS.md block[/cyan]')
         return
 
     # Apply updates
@@ -362,5 +382,54 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
     meta['sspec_version'] = __version__
     save_meta(sspec_root, meta)
 
+    # Update root AGENTS.md block
+    if agents_needs_update:
+        update_root_agents_block(dry_run=False)
+        console.print('  [green]✓[/green] Updated root AGENTS.md block')
+
     console.print()
-    console.print(f'[green]✓[/green] Updated {updated_count} file(s)')
+    console.print(
+        f'[green]✓[/green] Updated {updated_count + (1 if agents_needs_update else 0)} file(s)'
+    )
+
+
+def update_root_agents_block(dry_run: bool = False) -> bool:
+    """Update the SSPEC block in root AGENTS.md."""
+    template_path = get_template_dir() / 'AGENTS.md'
+    if not template_path.exists():
+        return False
+
+    root_agents = Path.cwd() / 'AGENTS.md'
+    rendered = render_template(
+        template_path.read_text(encoding='utf-8'),
+        {'SCHEMA_VERSION': SCHEMA_VERSION, 'SCHEMA': SCHEMA_VERSION},
+    )
+
+    if not root_agents.exists():
+        if not dry_run:
+            root_agents.write_text(rendered, encoding='utf-8')
+        return True
+
+    content = root_agents.read_text(encoding='utf-8')
+
+    start_marker = '<!-- SSPEC:START -->'
+    end_marker = '<!-- SSPEC:END -->'
+
+    if start_marker not in content:
+        if not dry_run:
+            with open(root_agents, 'a', encoding='utf-8') as f:
+                f.write('\\n\\n' + rendered)
+        return True
+
+    pattern = re.compile(
+        rf'{re.escape(start_marker)}.*?{re.escape(end_marker)}', re.DOTALL
+    )
+
+    new_content = pattern.sub(rendered, content)
+
+    if new_content != content:
+        if not dry_run:
+            root_agents.write_text(new_content, encoding='utf-8')
+        return True
+
+    return False

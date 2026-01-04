@@ -32,21 +32,10 @@ STATUS_STYLES: dict[str, tuple[str, str]] = {
 }
 
 
-@click.group(invoke_without_command=True)
-@click.pass_context
-@click.argument('name', required=False)
-def change(ctx: click.Context, name: str | None) -> None:
-    """Change management operations (new, list, archive).
-
-    If called with a name and no subcommand, defaults to 'new'.
-    """
-    if ctx.invoked_subcommand is None:
-        if name:
-            # Default behavior: create new change
-            ctx.invoke(new, name=name)
-        else:
-            # Show list if no name provided
-            ctx.invoke(list_changes_cmd)
+@click.group()
+def change() -> None:
+    """Change management operations (new, list, archive)."""
+    pass
 
 
 @change.command()

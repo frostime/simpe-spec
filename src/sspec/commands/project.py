@@ -67,7 +67,7 @@ def init(force: bool) -> None:
             copy_template(skill_file, dest_path, common_replacements)
 
     # Initialize templates
-    for file_path, _is_user in [*UPDATABLE_FILES, *USER_FILES]:
+    for file_path in [*UPDATABLE_FILES, *USER_FILES]:
         template_path = template_dir / file_path
         dest_path = sspec_path / file_path
 
@@ -93,7 +93,7 @@ def init(force: bool) -> None:
     }
 
     # Compute initial hashes for updatable files
-    for file_path, _ in UPDATABLE_FILES:
+    for file_path in UPDATABLE_FILES:
         dest_path = sspec_path / file_path
         if dest_path.exists():
             content = dest_path.read_text(encoding='utf-8')
@@ -238,7 +238,8 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
 
     # Collect update candidates
     updates = []
-    for file_path, is_user in UPDATABLE_FILES:
+    for file_path in UPDATABLE_FILES:
+        is_user = False
         template_path = template_dir / file_path
         dest_path = sspec_root / file_path
 

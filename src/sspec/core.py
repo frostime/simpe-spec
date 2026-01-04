@@ -2,10 +2,11 @@
 
 import re
 import shutil
+from collections.abc import Mapping
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Mapping, TypedDict
+from typing import TypedDict
 
 import yaml
 
@@ -15,7 +16,7 @@ CHANGES_DIR = 'changes'
 ARCHIVE_DIR = 'archive'
 
 # Schema version - increment when template structure changes
-SCHEMA_VERSION = '3.0'
+SCHEMA_VERSION = '3.1'
 
 # Files tracked for updates (relative to .sspec/)
 UPDATABLE_FILES: list[str] = [
@@ -100,6 +101,7 @@ class ChangeInfo(TypedDict):
     path: Path
     status: str
     type: str
+    description: str
     progress: dict[str, int]
     has_pivot: bool
     has_blockers: bool
@@ -210,12 +212,14 @@ def list_skills(sspec_root: Path) -> list[SkillInfo]:
                 try:
                     meta = yaml.safe_load(parts[1]) or {}
                     if 'skill' in meta:
-                        skills.append({
-                            'file': skill_file.name,
-                            'path': skill_file,
-                            'skill': str(meta['skill']),
-                            'description': str(meta.get('description', '')),
-                        })
+                        skills.append(
+                            {
+                                'file': skill_file.name,
+                                'path': skill_file,
+                                'skill': str(meta['skill']),
+                                'description': str(meta.get('description', '')),
+                            }
+                        )
                 except yaml.YAMLError:
                     pass
 
@@ -230,6 +234,7 @@ def parse_change(change_path: Path, archived: bool = False) -> ChangeInfo:
 
     status = ChangeStatus.PLANNING.value
     change_type = ''
+    description = ''
     progress = {'done': 0, 'total': 0}
     has_pivot = False
     has_blockers = False
@@ -246,6 +251,7 @@ def parse_change(change_path: Path, archived: bool = False) -> ChangeInfo:
                     raw_status = str(meta.get('status', ChangeStatus.PLANNING.value))
                     status = normalize_status(raw_status, ChangeStatus)
                     change_type = meta.get('type', '') or ''
+                    description = meta.get('description', '') or ''
                 except yaml.YAMLError:
                     pass
 
@@ -266,6 +272,7 @@ def parse_change(change_path: Path, archived: bool = False) -> ChangeInfo:
         'path': change_path,
         'status': status,
         'type': change_type,
+        'description': description,
         'progress': progress,
         'has_pivot': has_pivot,
         'has_blockers': has_blockers,
@@ -311,8 +318,7 @@ def archive_change(sspec_root: Path, name: str, force: bool = False) -> Path:
         change = parse_change(change_path)
         if change['status'] != ChangeStatus.DONE.value:
             raise ValueError(
-                f"Change '{name}' status is {change['status']}, not DONE. "
-                f"Use --force to archive anyway."
+                f"Change '{name}' status is {change['status']}, not DONE. " f"Use --force to archive anyway."
             )
 
     archive_dir = sspec_root / CHANGES_DIR / ARCHIVE_DIR

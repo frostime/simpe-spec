@@ -45,21 +45,20 @@ sspec init
 ```
 .sspec/
 ├── AGENTS.md           # AI 首先读取这个
-├── knowledge/
-│   └── index.md        # 项目上下文
-├── changes/            # 进行中的工作
-├── prompts/            # 命令定义
-└── handover.md         # 跨会话状态
+├── project.md          # 项目上下文（技术栈、约束、笔记）
+├── changes/            # 进行中的变更提案
+├── requests/           # 临时/零散的用户请求
+└── skills/             # 自定义的 AI skills 与指导
 ```
 
 ### 配置
 
-编辑 `.sspec/knowledge/index.md`，填入项目信息：
+编辑 `.sspec/project.md`，填入项目信息：
 - 技术栈
 - 编码规范
 - 关键约束
 
-这是 AI 永远可以访问的上下文。
+这是 AI 主要会参考的项目上下文。
 
 ---
 
@@ -67,13 +66,18 @@ sspec init
 
 ### 开始新功能
 
-告诉 AI：
+告诉 AI（聊天命令）：
 ```
 /propose add-user-auth
 ```
 
+或使用 CLI：
+```
+sspec change new add-user-auth
+```
+
 AI 会：
-1. 创建 `changes/add-user-auth/` 目录，包含 proposal、tasks、memo、handover
+1. 创建 `changes/add-user-auth/` 目录，包含 `spec.md`、`tasks.md` 和 `handover.md`
 2. 帮你定义要做什么、为什么做
 3. 把工作拆分成小的、可验证的步骤
 
@@ -131,12 +135,26 @@ AI 重新加载所有上下文，无缝继续工作。
 ## CLI 命令
 
 ```bash
-sspec init              # 在当前目录初始化 .sspec
-sspec new <名称>        # 创建新变更
-sspec list              # 列出所有变更
-sspec status            # 显示状态概览
-sspec archive <名称>    # 归档已完成的变更
-sspec prompt --list     # 列出可用的提示词
+# 项目级别
+sspec project init              # 在当前目录初始化 .sspec
+sspec project update            # 更新内置模板
+sspec project status            # 显示项目概览
+
+# 变更管理
+sspec change new <名称>         # 创建新的变更提案
+sspec change list               # 列出变更
+sspec change status <名称>      # 显示单个变更详情
+sspec change archive <名称>     # 归档已完成的变更
+
+# 请求
+sspec request                   # 创建请求（创建文件）
+sspec request --list            # 列出请求
+sspec request --show <名称>     # 显示请求
+sspec request <名称> --link <change>  # 将请求链接到变更
+
+# Skills
+sspec skill list                # 列出 skills
+sspec skill new <名称>          # 创建新 skill（simple 或 complex）
 ```
 
 ---
@@ -192,7 +210,7 @@ AI: 上下文已加载。
     项目: my-app (React + TypeScript)
     当前变更: dark-mode (进行中, 3/5 任务)
     下一步: 将用户偏好保存到 localStorage
-    
+
     从上次中断处继续...
 ```
 
@@ -202,9 +220,7 @@ AI: 上下文已加载。
 
 ### 最佳实践
 
-1. **写好上下文**：认真填写 `knowledge/index.md`
-2. **审核提案**：不要让 AI 猜测需求
-3. **坚持用 `/handover`**：这是会话之间的桥梁
+1. **写好上下文**：认真填写 `.sspec/project.md`（技术栈、约束、关键命令和文件）
 4. **保持变更小**：一个功能 = 一个变更
 
 ### 什么时候不用 sspec
@@ -227,9 +243,9 @@ AI: 上下文已加载。
 
 告诉它："先读 .sspec/AGENTS.md"
 
-**Q: 可以自定义提示词吗？**
+**Q: 可以自定义助手的行为吗？**
 
-可以。编辑 `.sspec/prompts/` 下的文件。
+可以。编辑 `.sspec/skills/` 下的文件以添加或修改 skills，编辑 `.sspec/project.md` 添加项目特定的上下文。使用 `sspec project update` 可以更新内置模板。
 
 **Q: 这和直接聊天有什么区别？**
 

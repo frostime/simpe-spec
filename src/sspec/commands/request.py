@@ -86,9 +86,7 @@ def normalize_name(name: str) -> str:
 @click.option('--list', '-l', 'list_requests', is_flag=True, help='List all requests')
 @click.option('--show', '-s', 'show_name', help='Show specific request')
 @click.option('--link', 'link_change', help='Link request to a change')
-@click.option(
-    '--all', '-a', 'show_all', is_flag=True, help='Include done requests in list'
-)
+@click.option('--all', '-a', 'show_all', is_flag=True, help='Include done requests in list')
 def request(
     name: str | None,
     list_requests: bool,
@@ -108,7 +106,7 @@ def request(
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException("Not a sspec project. Run 'sspec init' first.")
+        raise click.ClickException("Not a sspec project. Run 'sspec init' first.") from None
     requests_dir = sspec_root / 'requests'
     requests_dir.mkdir(exist_ok=True)
 
@@ -199,9 +197,7 @@ def _list_requests(requests_dir: Path, show_all: bool) -> None:
                     if not tldr:
                         tldr = _extract_summary(body)
 
-                    raw_status = (
-                        str(meta.get('status', RequestStatus.OPEN.value)).strip().upper()
-                    )
+                    raw_status = str(meta.get('status', RequestStatus.OPEN.value)).strip().upper()
                     normalized_status = {
                         'DOING': RequestStatus.DOING.value,
                         'IN_PROGRESS': RequestStatus.DOING.value,
@@ -215,9 +211,7 @@ def _list_requests(requests_dir: Path, show_all: bool) -> None:
                             'name': f.stem,
                             'status': normalized_status,
                             'created': meta.get('created', ''),
-                            'changes': [meta.get('attach-change')]
-                            if meta.get('attach-change')
-                            else [],
+                            'changes': [meta.get('attach-change')] if meta.get('attach-change') else [],
                             'tldr': tldr,
                         }
                     )
@@ -253,9 +247,7 @@ def _list_requests(requests_dir: Path, show_all: bool) -> None:
     console.print()
 
 
-def _print_request_table(
-    requests: list, show_changes: bool = False, dim: bool = False
-) -> None:
+def _print_request_table(requests: list, show_changes: bool = False, dim: bool = False) -> None:
     """Print requests as table."""
     table = Table(show_header=True, header_style='bold' if not dim else 'dim')
     table.add_column('Name')
@@ -290,19 +282,13 @@ def _find_request_file(requests_dir: Path, name: str) -> Path:
     if len(matches) == 1:
         return matches[0]
     if len(matches) > 1:
-        raise click.ClickException(
-            f"Multiple matches for '{name}':\n"
-            + '\n'.join(f'  - {m.stem}' for m in matches)
-        )
+        raise click.ClickException(f"Multiple matches for '{name}':\n" + '\n'.join(f'  - {m.stem}' for m in matches))
 
     contains = [f for f in requests_dir.glob('*.md') if name in f.stem]
     if len(contains) == 1:
         return contains[0]
     if len(contains) > 1:
-        raise click.ClickException(
-            f"Multiple matches for '{name}':\n"
-            + '\n'.join(f'  - {m.stem}' for m in contains)
-        )
+        raise click.ClickException(f"Multiple matches for '{name}':\n" + '\n'.join(f'  - {m.stem}' for m in contains))
 
     raise click.ClickException(f"Request '{name}' not found")
 
@@ -317,17 +303,11 @@ def _show_request(requests_dir: Path, name: str) -> None:
 
     content = request_path.read_text(encoding='utf-8')
     console.print()
-    console.print(
-        Panel(
-            Markdown(content), title=f'Request: {request_path.stem}', border_style='cyan'
-        )
-    )
+    console.print(Panel(Markdown(content), title=f'Request: {request_path.stem}', border_style='cyan'))
     console.print()
 
 
-def _link_request_to_change(
-    requests_dir: Path, request_name: str, change_name: str, sspec_root: Path
-) -> None:
+def _link_request_to_change(requests_dir: Path, request_name: str, change_name: str, sspec_root: Path) -> None:
     """Link a request to a change and update status."""
 
     import yaml
@@ -350,7 +330,7 @@ def _link_request_to_change(
     try:
         meta = yaml.safe_load(parts[1]) or {}
     except yaml.YAMLError as e:
-        raise click.ClickException(f'Invalid yaml: {e}')
+        raise click.ClickException(f'Invalid yaml: {e}') from e
 
     meta['attach-change'] = change_name
     meta['status'] = RequestStatus.DOING.value

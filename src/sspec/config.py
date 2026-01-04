@@ -14,9 +14,7 @@ class SspecConfig:
 
     editor: str | None = None
     default_change_type: str = ''
-    statuses: list[str] = field(
-        default_factory=lambda: ['PLANNING', 'DOING', 'BLOCKED', 'REVIEW', 'DONE']
-    )
+    statuses: list[str] = field(default_factory=lambda: ['PLANNING', 'DOING', 'BLOCKED', 'REVIEW', 'DONE'])
 
     @classmethod
     def load(cls, sspec_root: Path) -> 'SspecConfig':
@@ -46,9 +44,7 @@ class SspecConfig:
             'statuses': self.statuses,
         }
         data = {k: v for k, v in data.items() if v is not None}
-        config_path.write_text(
-            yaml.dump(data, default_flow_style=False, allow_unicode=True), encoding='utf-8'
-        )
+        config_path.write_text(yaml.dump(data, default_flow_style=False, allow_unicode=True), encoding='utf-8')
 
 
 def get_config(sspec_root: Path) -> SspecConfig:

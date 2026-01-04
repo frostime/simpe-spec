@@ -3,7 +3,7 @@
 import click
 from rich.console import Console
 
-from sspec.commands import archive, init, list_cmd, new, request, status, update
+from sspec.commands import change, project, request, skill
 
 console = Console()
 
@@ -17,19 +17,16 @@ def main(ctx: click.Context) -> None:
         from sspec.core import find_sspec_root
 
         if find_sspec_root():
-            ctx.invoke(status.status)
+            ctx.invoke(project.status)
         else:
             click.echo(ctx.get_help())
 
 
-main.add_command(init.init)
-main.add_command(new.change, name='change')
-main.add_command(new.change, name='new')  # backward compatibility alias
-main.add_command(update.update)
+# Register command groups
+main.add_command(project.project)
+main.add_command(change.change)
+main.add_command(skill.skill)
 main.add_command(request.request)
-main.add_command(list_cmd.list_changes_cmd, name='list')
-main.add_command(status.status)
-main.add_command(archive.archive)
 
 
 if __name__ == '__main__':

@@ -75,10 +75,10 @@ description: Status definitions, transition rules, validation criteria, and edge
 
 **Agent actions**:
 - Final handover.md update
-- Ready for `sspec archive`
+- Ready for complete the change
 
 **Exit criteria**:
-- User runs `sspec archive <name>`
+- User runs `sspec change archive <name>`
 
 ---
 

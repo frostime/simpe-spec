@@ -21,7 +21,7 @@ created: {{TIME}}
 - DOING: Update tasks.md progress, handover.md
 - BLOCKED: Document blocker in spec.md section D
 - REVIEW: Prepare demo, update handover.md
-- DONE: Archive via `sspec archive`
+- DONE: Archive via shell command `sspec change archive <name>`
 -->
 
 ## A. Proposal and Problem Statement

@@ -37,28 +37,27 @@ pip install sspec
 
 ```bash
 cd your-project
-sspec init
+sspec project init
 ```
 
 This creates:
 ```
 .sspec/
 ├── AGENTS.md           # AI reads this first
-├── knowledge/
-│   └── index.md        # Your project context
-├── changes/            # Active work
-├── prompts/            # Command definitions
-└── handover.md         # Cross-session state
+├── project.md          # Project context (tech stack, constraints, notes)
+├── changes/            # Active change proposals
+├── requests/           # Ad-hoc user requests for the AI
+└── skills/             # Custom AI skills and guidance
 ```
 
 ### Configure
 
-Edit `.sspec/knowledge/index.md` with your project info:
+Edit `.sspec/project.md` with your project info:
 - Tech stack
 - Coding conventions
 - Key constraints
 
-This is the context AI will always have access to.
+This is the primary project context the AI will use when assisting you.
 
 ---
 
@@ -66,13 +65,18 @@ This is the context AI will always have access to.
 
 ### Starting a Feature
 
-Tell your AI:
+Tell your AI (chat command):
 ```
 /propose add-user-auth
 ```
 
+Or use the CLI to create a change:
+```
+sspec change new add-user-auth
+```
+
 AI will:
-1. Create `changes/add-user-auth/` with proposal, tasks, memo, handover
+1. Create `changes/add-user-auth/` with `spec.md`, `tasks.md`, and `handover.md`
 2. Help you define what and why
 3. Break work into small, verifiable steps
 
@@ -123,19 +127,33 @@ AI reloads everything and continues seamlessly.
 | `/context` | Reload project context |
 | `/archive` | Archive completed change |
 
-These work in any AI tool that reads AGENTS.md (Claude Code, Cursor, etc.)
+These are chat workflow examples that AI assistants can follow. CLI equivalents (use these in your shell) include `sspec change new`, `sspec change status`, `sspec change archive`, `sspec request`, and `sspec skill`.
 
 ---
 
 ## CLI Commands
 
 ```bash
-sspec init              # Initialize .sspec in current directory
-sspec new <name>        # Create new change
-sspec list              # List all changes
-sspec status            # Show status overview
-sspec archive <name>    # Archive completed change
-sspec prompt --list     # List available prompts
+# Project-level
+sspec project init              # Initialize .sspec in current directory
+sspec project update            # Update built-in templates
+sspec project status            # Show project overview
+
+# Change management
+sspec change new <name>         # Create a new change (proposal)
+sspec change list               # List active changes
+sspec change status <name>      # Show detailed status for a change
+sspec change archive <name>     # Archive completed change
+
+# Requests
+sspec request                   # Create a new request (opens file)
+sspec request --list            # List requests
+sspec request --show <name>     # Show a request
+sspec request <name> --link <change>  # Link a request to a change
+
+# Skills
+sspec skill list                # List skills
+sspec skill new <name>          # Create a new skill (simple or complex)
 ```
 
 ---
@@ -146,9 +164,10 @@ sspec prompt --list     # List available prompts
 
 | File | Purpose | You edit? |
 |------|---------|-----------|
-| `knowledge/index.md` | Project context, tech stack, conventions | Yes, initially |
-| `knowledge/*.md` | Domain knowledge, architecture docs | As needed |
-| `handover.md` | Global cross-change state | AI updates |
+| `project.md` | Project context, tech stack, conventions | Yes, initially |
+| `requests/*.md` | Ad-hoc requests for the AI | As needed |
+| `skills/*.md` | Custom skills & guidance for assistant | As needed |
+| `handover.md` | Global cross-session state (optional) | AI updates |
 
 ### For Each Change
 
@@ -201,7 +220,7 @@ AI: Context loaded.
 
 ### For Best Results
 
-1. **Start with good context**: Fill `knowledge/index.md` thoroughly
+1. **Start with good context**: Fill `.sspec/project.md` thoroughly (tech stack, constraints, common commands, and important files).
 2. **Review proposals**: Don't let AI guess requirements
 3. **Use `/handover` religiously**: It's the bridge between sessions
 4. **Keep changes small**: One feature = one change
@@ -226,9 +245,9 @@ Any tool that reads AGENTS.md files: Claude Code, Cursor, Windsurf, GitHub Copil
 
 Tell it: "Read .sspec/AGENTS.md first"
 
-**Q: Can I customize the prompts?**
+**Q: Can I customize the assistant's behavior?**
 
-Yes. Edit files in `.sspec/prompts/` to match your preferences.
+Yes. Add or edit files under `.sspec/skills/` to provide skills and usage guidance; edit `.sspec/project.md` for project-specific context. Templates in the package (used by `sspec project init`) can be updated via `sspec project update`.
 
 **Q: How is this different from just chatting?**
 

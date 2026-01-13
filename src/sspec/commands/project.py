@@ -21,7 +21,10 @@ from sspec.core import (
     copy_template,
     get_sspec_root,
     get_template_dir,
+    get_workspace_skill_targets,
     list_changes,
+    list_template_skills,
+    parse_skill_metadata,
     render_template,
 )
 
@@ -38,7 +41,8 @@ def project() -> None:
 @click.option('--force', is_flag=True, help='Overwrite existing .sspec directory')
 def init(force: bool) -> None:
     """Initialize .sspec directory in current project."""
-    sspec_path = Path.cwd() / SSPEC_DIR
+    project_root = Path.cwd()
+    sspec_path = project_root / SSPEC_DIR
 
     if sspec_path.exists() and not force:
         raise click.ClickException(
@@ -57,12 +61,21 @@ def init(force: bool) -> None:
     (sspec_path / 'requests').mkdir(exist_ok=True)
     (sspec_path / 'skills').mkdir(exist_ok=True)
 
-    # 复制 skills 模板
-    skills_template_dir = template_dir / 'skills'
-    if skills_template_dir.exists():
-        for skill_file in skills_template_dir.glob('*.md'):
-            dest_path = sspec_path / 'skills' / skill_file.name
-            copy_template(skill_file, dest_path, common_replacements)
+    # Copy skills to all workspace targets
+    template_skills = list_template_skills()
+    skill_targets = get_workspace_skill_targets(project_root)
+
+    for skill_dir in template_skills:
+        skill_name = skill_dir.name
+        for target_dir in skill_targets:
+            dest_skill_dir = target_dir / skill_name
+            copy_template(skill_dir, dest_skill_dir, common_replacements)
+
+    if template_skills:
+        for target_dir in skill_targets:
+            if target_dir.exists():
+                rel_target = target_dir.relative_to(project_root)
+                console.print(f'  [green]✓[/green] Installed skills to {rel_target}/')
 
     # Initialize templates
     for file_path in [*UPDATABLE_FILES, *USER_FILES]:
@@ -118,8 +131,7 @@ def init(force: bool) -> None:
     console.print('  ├── AGENTS.md       # AI context and guidance')
     console.print('  ├── project.md      # Project overview')
     console.print('  ├── changes/        # Active change proposals')
-    console.print('  ├── requests/       # Ad-hoc AI requests')
-    console.print('  └── skills/         # Custom AI skills')
+    console.print('  └── requests/       # Ad-hoc AI requests')
     console.print()
     console.print('[yellow]Next:[/yellow]')
     console.print('  1. Edit .sspec/project.md (project context)')
@@ -136,6 +148,8 @@ def status() -> None:
         raise click.ClickException(
             "Not a sspec project. Run 'sspec project init' first."
         ) from None
+
+    project_root = sspec_root.parent
 
     _show_overview(sspec_root)
 
@@ -248,7 +262,7 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
 
     common_replacements = {'SCHEMA_VERSION': SCHEMA_VERSION, 'SCHEMA': SCHEMA_VERSION}
 
-    # Collect update candidates
+    # Collect update candidates (template files tracked via UPDATABLE_FILES)
     updates = []
     for file_path in UPDATABLE_FILES:
         is_user = False
@@ -336,15 +350,12 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
     console.print(table)
     console.print()
 
-    if not actions:
-        # Check if AGENTS.md needs update
-        agents_needs_update = update_root_agents_block(dry_run=True)
 
-        if not agents_needs_update:
-            console.print('[green]✓[/green] All files are up to date')
-            return
-    else:
-        agents_needs_update = update_root_agents_block(dry_run=True)
+    agents_needs_update = update_root_agents_block(dry_run=True)
+
+    if not actions and not agents_needs_update:
+        console.print('[green]✓[/green] All files are up to date')
+        return
 
     if dry_run:
         console.print(f'[cyan]Would update {len(actions)} file(s)[/cyan]')
@@ -354,6 +365,7 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
 
     # Apply updates
     updated_count = 0
+    skill_updated_count = 0
     new_hashes = old_hashes.copy()
 
     for upd in actions:
@@ -377,10 +389,11 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
             console.print(f'  [green]✓[/green] Updated {path}')
 
     # Update metadata
-    meta['file_hashes'] = new_hashes
-    meta['updated_at'] = datetime.now().isoformat()
-    meta['sspec_version'] = __version__
-    save_meta(sspec_root, meta)
+    if updated_count or skill_updated_count:
+        meta['file_hashes'] = new_hashes
+        meta['updated_at'] = datetime.now().isoformat()
+        meta['sspec_version'] = __version__
+        save_meta(sspec_root, meta)
 
     # Update root AGENTS.md block
     if agents_needs_update:
@@ -389,7 +402,7 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
 
     console.print()
     console.print(
-        f'[green]✓[/green] Updated {updated_count + (1 if agents_needs_update else 0)} file(s)'
+        f"[green]✓[/green] Updated {updated_count + skill_updated_count + (1 if agents_needs_update else 0)} item(s)"
     )
 
 

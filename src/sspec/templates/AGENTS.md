@@ -83,37 +83,24 @@ Do:
 │   ├── spec.md             # WHY/WHAT: problem, constraints, decisions
 │   ├── tasks.md            # HOW: executable tasks + progress
 │   └── handover.md         # SESSION BRIDGE: done/now/next
-├── requests/*.md           # Incoming requests (OPEN → DOING → DONE)
-└── skills/                 # Reusable knowledge modules
-    ├── sspec-workflow.md   # Complete workflow guide
-    ├── status-guide.md     # Status definitions & transitions
-    └──  <CUSTOM_SKILL> /
-        ├── SKILL.md
-        └── <Others>
+└── requests/*.md           # Incoming requests (OPEN → DOING → DONE)
 ```
 ------
 
 ## Skills Reference
 
-Skills are reusable knowledge modules in `.sspec/skills/`. Each skill has front matter:
+Skills are reusable knowledge modules following the `<skill-name>/SKILL.md` directory convention. Each skill has front matter:
 ```yaml
 ---
 skill: my-skill-name
 description: What this skill does
 ---
 ```
-**Adding custom skills**: run shell command `sspec skill new --mode [simple|complex]`
-  - Simple Skill: Create `.sspec/skills/<skill-name>.md` with proper front matter.
-  - Complex Skill: Create `.sspec/skills/<skill-name>/` with `SKILL.md`.
-**To list all skills**: run shell command: `sspec skill list`.
 
-<!-- Built-In Skills -->
-- **.sspec/skills/sspec-workflow**
-  - WHEN: Use when you're a first-time sspec user or need a complete workflow reference.
-  - HOW: Read for session patterns, file update timing, and best practices.
-- **.sspec/skills/sspec-status-guide**
-  - WHEN: Use when you're unsure about status meanings or transition rules.
-  - HOW: Reference status definitions, allowed transitions, and edge cases.
+<!-- Built-In Skill -->
+- **sspec** (installed to workspace skills directories)
+  - WHEN: Use when you need workflow guidance, status definitions, or best practices.
+  - HOW: Read for session patterns, status transitions, handover quality guidelines.
 ------
 
 ## File Responsibilities
@@ -146,6 +133,5 @@ Commands:
   change   Change management operations (new, list, archive).
   project  Project-level operations (init, status, update).
   request  Create or manage user requests.
-  skill    Skill management operations (list, new).
 ```
 <!-- SSPEC:END -->

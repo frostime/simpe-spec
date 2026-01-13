@@ -12,6 +12,8 @@ import yaml
 
 SSPEC_DIR = '.sspec'
 SKILLS_DIR = 'skills'
+WORKSPACE_DIRS = ['.github', '.claude']
+SKILL_SUBDIR = 'skills'
 CHANGES_DIR = 'changes'
 ARCHIVE_DIR = 'archive'
 
@@ -19,10 +21,7 @@ ARCHIVE_DIR = 'archive'
 SCHEMA_VERSION = '3.1'
 
 # Files tracked for updates (relative to .sspec/)
-UPDATABLE_FILES: list[str] = [
-    'skills/sspec-workflow.md',
-    'skills/sspec-status-guide.md',
-]
+UPDATABLE_FILES: list[str] = []
 
 
 # User-managed files tracked for changes but not auto-updated
@@ -170,6 +169,56 @@ def render_template(content: str, replacements: Mapping[str, str]) -> str:
     return re.sub(r'{{\s*(.+?)\s*}}', _replace, content)
 
 
+def parse_skill_metadata(skill_path: Path, replacements: Mapping[str, str] | None = None) -> dict:
+    """Parse YAML front matter from a SKILL.md file."""
+
+    if not skill_path.exists():
+        return {}
+
+    content = skill_path.read_text(encoding='utf-8')
+    if replacements:
+        content = render_template(content, replacements)
+    if not content.startswith('---'):
+        return {}
+
+    parts = content.split('---', 2)
+    if len(parts) < 3:
+        return {}
+
+    try:
+        return yaml.safe_load(parts[1]) or {}
+    except yaml.YAMLError:
+        return {}
+
+
+def get_workspace_skill_targets(project_root: Path) -> list[Path]:
+    """Return all workspace directories that should host skills."""
+
+    targets: list[Path] = []
+    for ws_dir in WORKSPACE_DIRS:
+        ws_path = project_root / ws_dir
+        if ws_path.is_dir():
+            targets.append(ws_path / SKILL_SUBDIR)
+
+    # Always include .sspec/skills for backward compatibility
+    targets.append(project_root / SSPEC_DIR / SKILL_SUBDIR)
+    return targets
+
+
+def list_template_skills() -> list[Path]:
+    """List skill template directories that contain SKILL.md."""
+
+    template_skills_dir = get_template_dir() / 'skills'
+    if not template_skills_dir.exists():
+        return []
+
+    return [
+        d
+        for d in template_skills_dir.iterdir()
+        if d.is_dir() and (d / 'SKILL.md').exists()
+    ]
+
+
 def list_changes(sspec_root: Path, include_archived: bool = False) -> list[ChangeInfo]:
     """List all changes with their status."""
 
@@ -204,24 +253,30 @@ def list_skills(sspec_root: Path) -> list[SkillInfo]:
     if not skills_dir.exists():
         return skills
 
-    for skill_file in skills_dir.glob('*.md'):
-        content = skill_file.read_text(encoding='utf-8')
-        if content.startswith('---'):
-            parts = content.split('---', 2)
-            if len(parts) >= 3:
-                try:
-                    meta = yaml.safe_load(parts[1]) or {}
-                    if 'skill' in meta:
-                        skills.append(
-                            {
-                                'file': skill_file.name,
-                                'path': skill_file,
-                                'skill': str(meta['skill']),
-                                'description': str(meta.get('description', '')),
-                            }
-                        )
-                except yaml.YAMLError:
-                    pass
+    for entry in skills_dir.iterdir():
+        if entry.is_file() and entry.suffix == '.md':
+            meta = parse_skill_metadata(entry)
+            if meta.get('skill'):
+                skills.append(
+                    {
+                        'file': entry.name,
+                        'path': entry,
+                        'skill': str(meta['skill']),
+                        'description': str(meta.get('description', '')),
+                    }
+                )
+        elif entry.is_dir():
+            skill_file = entry / 'SKILL.md'
+            meta = parse_skill_metadata(skill_file)
+            if meta.get('skill'):
+                skills.append(
+                    {
+                        'file': f"{entry.name}/SKILL.md",
+                        'path': skill_file,
+                        'skill': str(meta['skill']),
+                        'description': str(meta.get('description', '')),
+                    }
+                )
 
     return sorted(skills, key=lambda x: x['skill'])
 

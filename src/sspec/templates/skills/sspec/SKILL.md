@@ -1,242 +1,160 @@
 ---
 skill: sspec
 version: 1.0.0
-description: SSPEC workflow, status definitions, and best practices
+description: Status definitions, transition rules, and quality standards for sspec workflow
 ---
 
 # SSPEC Skill
 
-## Purpose
+Reference material for status management and quality standards. Consult when uncertain about status meanings, allowed transitions, or handling edge cases.
 
-Provide a single skill that explains how to run sspec workflows, manage status transitions, and maintain high-quality handovers.
+## Status Definitions
 
-## Workflow Guide
+### PLANNING
+Defining scope and creating task plan.
 
-### Session Start Patterns
-
-#### Pattern 1: Resume Existing Work
-```
-User: @resume
-Agent:
-
-1. Identifies active change (e.g., "add-dark-mode")
-2. Reads handover.md → tasks.md → spec.md
-3. Outputs: "Resuming add-dark-mode. Status: DOING. Progress: 3/7 tasks.
-   Last session: Implemented toggle component.
-   Next: Add theme persistence to localStorage."
-
-```
-
-#### Pattern 2: Switch Context
-```
-User: @change payment-refactor
-Agent:
-
-1. If exists → loads context
-2. If not → creates change, prompts user to fill spec.md
-3. Outputs context summary
-
-```
-
-### During Session
-
-#### Task Execution
-- Work through tasks.md sequentially
-- Mark `[x]` only when fully complete and verified
-- Add discovered tasks as `[ ]` immediately
-
-#### When User Says `@argue`
-**Scenario**: User objects to implementation approach
-
-**Agent response**:
-1. STOP coding immediately
-2. Ask clarifying questions:
-   - "Is this about implementation detail, design approach, or requirement misunderstanding?"
-3. Analyze scope:
-   - **Detail-level**: Update tasks.md, continue
-   - **Design-level**: Update spec.md B/C, regenerate tasks.md
-   - **Requirement-level**: Update spec.md A, may need full replanning
-4. If major pivot → add `<!-- PIVOT: <date> <reason> -->` in spec.md
-5. Get user confirmation before proceeding
-
-### Session End
-
-#### Handover Checklist
-```
-User: @handover
-Agent updates:
-✓ handover.md: Done / Now / Next / Key Files / Commands
-✓ tasks.md: Mark completed, add discovered
-✓ spec.md: Update status if changed (e.g., DOING → REVIEW)
-
-Output: "Handover written. Status: REVIEW. 5/7 tasks done. Next session: final testing."
-```
-
-### After Autonomous Coding
-
-**Scenario**: User used Claude Code / Copilot to implement features outside this session.
-```
-
-User: @sync
-Agent:
-
-1. Scans: git diff HEAD~5..HEAD (or file timestamps)
-2. Identifies: which tasks were completed
-3. Updates:
-   - tasks.md: mark relevant tasks [x]
-   - spec.md: update status if appropriate
-   - handover.md: summarize what was done
-4. Outputs: "Synced. Marked 3 tasks complete. Status unchanged (DOING)."
-
-```
-
-### Best Practices
-
-#### Handover Quality
-- **Bad**: "Worked on auth. Some progress."
-- **Good**: "Implemented JWT validation middleware. Tests pass. Next: add refresh token logic."
-
-#### Task Granularity
-- Each task should be **<2 hours**
-- Each task should have **verification criteria**
-- Break down large tasks immediately
-
-#### Status Transitions
-- Only update status when milestone reached
-- Document blockers in spec.md section D before setting BLOCKED
-- Set REVIEW only when implementation complete and ready for user verification
-
-#### PIVOT Handling
-- Mark pivots explicitly in spec.md: `<!-- PIVOT: 2025-01-03 User changed auth from JWT to OAuth -->`
-- Regenerate tasks.md after pivot
-- Update handover.md with pivot reasoning
-
-## Status Guide
-
-### Change Status Definitions
-
-#### PLANNING
-**Meaning**: Defining scope, approach, and creating task plan.
+**Entry**: New change created, or major pivot from any status.
 
 **Agent actions**:
-- Fill spec.md sections A, B, C
+- Fill spec.md sections A (problem), B (solution), C (strategy)
 - Break down into tasks in tasks.md
-- Get user approval before moving to DOING
+- Get user approval before proceeding
 
 **Exit criteria**:
-- spec.md sections A-C complete
-- tasks.md has executable tasks with verification
-- User approves plan
+- spec.md sections complete
+- tasks.md has executable tasks with verification criteria
+- User explicitly approves plan
 
----
+### DOING
+Implementation in progress.
 
-#### DOING
-**Meaning**: Implementation in progress.
+**Entry**: User approves plan, or returns from BLOCKED/REVIEW.
 
 **Agent actions**:
-- Execute tasks from tasks.md
-- Update progress regularly
+- Execute tasks sequentially
+- Mark `[x]` only when fully complete and tested
 - Update handover.md at session end
 
 **Exit criteria**:
-- All tasks marked `[x]`, OR
-- Hit blocker → BLOCKED, OR
-- Implementation complete → REVIEW
+- All tasks done → REVIEW
+- Hit blocker → BLOCKED
+- Major pivot → PLANNING
 
----
+### BLOCKED
+Waiting on external dependency or unresolved issue.
 
-#### BLOCKED
-**Meaning**: Waiting on external dependency or unresolved issue.
+**Entry**: Cannot proceed without external input.
 
 **Agent actions**:
-- Document blocker in spec.md section D with:
-  - What's blocked
-  - Why (missing info, external dependency, technical limitation)
-  - What's needed to unblock
+- Document in spec.md section D: what's blocked, why, what's needed
 - Do NOT continue implementation
 - Update handover.md with blocker status
 
 **Exit criteria**:
-- Blocker resolved → back to DOING
-- User decides to pivot → back to PLANNING
+- Blocker resolved → DOING
+- User pivots → PLANNING
 
----
+### REVIEW
+Implementation complete, awaiting user verification.
 
-#### REVIEW
-**Meaning**: Implementation complete, awaiting user verification.
+**Entry**: All planned tasks complete.
 
 **Agent actions**:
-- Prepare demo or summary of changes
-- Update handover.md with:
-  - What was accomplished
-  - How to verify
-  - Known limitations
+- Summarize what was accomplished
+- Note how to verify and known limitations
+- Update handover.md
 
 **Exit criteria**:
 - User accepts → DONE
-- User requests changes → back to DOING
+- User requests changes → DOING
+
+### DONE
+Completed and verified.
+
+**Entry**: User accepts in REVIEW.
+
+**Next**: User runs `sspec change archive <name>`
 
 ---
 
-#### DONE
-**Meaning**: Completed and verified by user.
+## Transition Rules
 
-**Agent actions**:
-- Final handover.md update
-- Ready for complete the change
-
-**Exit criteria**:
-- User runs `sspec change archive <name>`
-
-### Status Transitions
-
-#### Allowed Transitions
+### Allowed
+```
+PLANNING → DOING       (plan approved)
+DOING    → BLOCKED     (hit blocker)
+DOING    → REVIEW      (implementation complete)
+BLOCKED  → DOING       (blocker resolved)
+BLOCKED  → PLANNING    (pivot needed)
+REVIEW   → DONE        (user accepts)
+REVIEW   → DOING       (changes requested)
+Any      → PLANNING    (major pivot)
 ```
 
-PLANNING → DOING (plan approved)
-DOING → BLOCKED (hit blocker)
-DOING → REVIEW (implementation complete)
-BLOCKED → DOING (blocker resolved)
-BLOCKED → PLANNING (pivot needed)
-REVIEW → DONE (user accepts)
-REVIEW → DOING (user requests changes)
-Any → PLANNING (major pivot)
-
-```
-
-#### Forbidden Transitions
-
-- PLANNING → REVIEW (skip implementation)
-- PLANNING → DONE (skip implementation + review)
+### Forbidden
+- PLANNING → REVIEW/DONE (skip implementation)
 - DOING → DONE (skip review)
 - BLOCKED → DONE (unresolved blocker)
 
-### Request Status
+---
 
-| Status | Meaning | Typical Action |
-|--------|---------|----------------|
-| OPEN | New request, not started | Triage, decide if/when to work |
-| DOING | Linked to active change | Update via `sspec request <name> --link <change>` |
-| DONE | Completed and delivered | Mark when change archived |
+## Quality Standards
 
-### Edge Cases
+### Handover Quality
 
-#### Multiple Changes in DOING
-**Problem**: Context switching confusion.
+**Bad**: "Worked on auth. Some progress."
 
-**Solution**: Use `@change <name>` to explicitly switch. Update handover for previous change before switching.
+**Good**: "Implemented JWT validation middleware in `src/auth/jwt.py`. Unit tests pass. Next: add refresh token logic in `src/auth/refresh.py`."
 
-#### BLOCKED but Can Work on Other Parts
-**Problem**: Only part of change is blocked.
+A good handover enables the next session to start coding within 30 seconds.
 
-**Solution**: Break into separate changes. Keep blocked part as BLOCKED, move unblocked to new change.
+### Task Granularity
 
-#### REVIEW Takes Multiple Sessions
+Each task should:
+- Be completable in **< 2 hours**
+- Have **verification criteria** (how to know it's done)
+- Be **atomic** (can be marked done independently)
+
+If a task is too large, break it down immediately.
+
+### PIVOT Handling
+
+When user fundamentally changes direction:
+1. Add marker in spec.md: `<!-- PIVOT: YYYY-MM-DD reason -->`
+2. Regenerate tasks.md
+3. Document reasoning in handover.md
+
+---
+
+## Edge Cases
+
+### Multiple Changes in DOING
+**Problem**: Context switching causes confusion.
+
+**Solution**: Use `@change <name>` to switch explicitly. Before switching, update handover.md for current change.
+
+### Partially BLOCKED
+**Problem**: Only part of change is blocked, other parts can continue.
+
+**Solution**: Split into separate changes. Keep blocked portion as BLOCKED, move unblocked work to new change.
+
+### REVIEW Spans Multiple Sessions
 **Problem**: User needs time to verify.
 
-**Solution**: Status stays REVIEW. Handover should note "Awaiting user verification" in Now section.
+**Solution**: Status stays REVIEW. Handover should note "Awaiting user verification" in Now section. Do not proceed until user responds.
 
-#### User Wants to Skip REVIEW
-**Problem**: User trusts implementation, wants to mark DONE immediately.
+### User Wants to Skip REVIEW
+**Problem**: User trusts implementation, wants DONE immediately.
 
-**Solution**: Acceptable for small changes. Agent should still update handover with "User approved without formal review" note.
+**Solution**: Acceptable for small, low-risk changes. Add note in handover: "User approved without formal review."
+
+---
+
+## Request Status
+
+| Status | Meaning | Action |
+|--------|---------|--------|
+| OPEN | New, not started | Triage and prioritize |
+| DOING | Linked to active change | `sspec request <name> --link <change>` |
+| DONE | Delivered | Mark when change archived |
+

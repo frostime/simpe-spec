@@ -6,12 +6,7 @@ import click
 from rich.console import Console
 from rich.table import Table
 
-from sspec.core import (
-    SCHEMA_VERSION,
-    SspecNotFoundError,
-    get_sspec_root,
-    list_skills,
-)
+from sspec.core import SCHEMA_VERSION, SspecNotFoundError, get_sspec_root, list_skills
 
 console = Console()
 
@@ -28,7 +23,9 @@ def list_skills_cmd() -> None:
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
+        raise click.ClickException(
+            "Not a sspec project. Run 'sspec project init' first."
+        ) from None
 
     _list_skills(sspec_root)
 
@@ -51,11 +48,7 @@ def _list_skills(sspec_root: Path) -> None:
     table.add_column('File')
 
     for skill in skills:
-        table.add_row(
-            skill['skill'],
-            skill['description'],
-            skill['file'],
-        )
+        table.add_row(skill['skill'], skill['description'], skill['file'])
 
     console.print(table)
     console.print()
@@ -65,35 +58,58 @@ def _list_skills(sspec_root: Path) -> None:
 @skill.command()
 @click.argument('name')
 @click.option(
-    '--mode',
-    type=click.Choice(['simple', 'complex'], case_sensitive=False),
-    default='simple',
-    help='Creation mode: simple (single .md file) or complex (directory with SKILL.md)',
+    '--claude', 'to_claude', is_flag=True, help='Create skill under .claude/skills'
 )
-def new(name: str, mode: str) -> None:
-    """Create a new skill file or directory.
+@click.option(
+    '--github', 'to_github', is_flag=True, help='Create skill under .github/skills'
+)
+def new(name: str, to_claude: bool, to_github: bool) -> None:
+    """Create a new skill directory with SKILL.md in workspace skill locations."""
 
-    Simple mode: Creates <name>.md in .sspec/skills/
-    Complex mode: Creates .sspec/skills/<name>/SKILL.md
-    """
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
+        raise click.ClickException(
+            "Not a sspec project. Run 'sspec project init' first."
+        ) from None
 
-    skills_dir = sspec_root / 'skills'
-    skills_dir.mkdir(parents=True, exist_ok=True)
+    project_root = sspec_root.parent
 
-    if mode == 'simple':
-        # Create single markdown file
-        skill_file = skills_dir / f'{name}.md'
-        if skill_file.exists():
-            raise click.ClickException(f"Skill file '{skill_file.name}' already exists")
+    # Determine targets
+    explicit = to_claude or to_github
+    targets: list[Path] = []
 
-        template_content = f"""---
+    candidates = [project_root / '.github' / 'skills', project_root / '.claude' / 'skills']
+
+    if to_github:
+        targets.append(candidates[0])
+    if to_claude:
+        targets.append(candidates[1])
+
+    if not explicit:
+        # Auto-detect: prefer existing skill dirs, then existing workspace parents, otherwise fallback to .github/skills
+        existing_skill_dirs = [p for p in candidates if p.exists()]
+        if existing_skill_dirs:
+            targets.extend(existing_skill_dirs)
+        else:
+            existing_parents = [p for p in candidates if p.parent.exists()]
+            if existing_parents:
+                targets.extend(existing_parents)
+            else:
+                targets.append(candidates[0])  # default to .github/skills
+
+    # Ensure unique targets
+    targets = list(dict.fromkeys(targets))
+
+    # Pre-flight conflict detection across all targets
+    conflicts = [t for t in targets if (t / name).exists()]
+    if conflicts:
+        conflict_list = ', '.join(str(p.relative_to(project_root)) for p in conflicts)
+        raise click.ClickException(f"Skill '{name}' already exists in: {conflict_list}")
+
+    template_content = f"""---
 skill: {name}
-version: 1.0.0
-schema: {SCHEMA_VERSION}
+description: ""
 ---
 
 # {name}
@@ -102,82 +118,28 @@ schema: {SCHEMA_VERSION}
 
 <!-- Describe what this skill helps the AI to accomplish -->
 
-## Context
-
-<!-- Provide relevant background information -->
-
 ## Guidelines
 
-<!-- Provide specific instructions for using this skill -->
+<!-- Provide specific instructions -->
 
 ## Examples
 
-<!-- Optional: Show example usage patterns -->
-
-## Related
-
-<!-- Optional: Link to related skills or resources -->
+<!-- Show example usage patterns -->
 """
-        skill_file.write_text(template_content, encoding='utf-8')
 
-        console.print(f'[green]✓[/green] Created skill: {skill_file.name}')
-        console.print()
-        console.print(f'  {skill_file.relative_to(sspec_root.parent)}')
-        console.print()
-        console.print('[yellow]Next:[/yellow] Edit the file to define your skill')
-
-    else:  # complex mode
-        # Create directory with SKILL.md
-        skill_dir = skills_dir / name
-        if skill_dir.exists():
-            raise click.ClickException(f"Skill directory '{name}' already exists")
-
+    created: list[Path] = []
+    for target in targets:
+        skill_dir = target / name
         skill_dir.mkdir(parents=True, exist_ok=True)
         skill_file = skill_dir / 'SKILL.md'
-
-        template_content = f"""---
-skill: {name}
-version: 1.0.0
-schema: {SCHEMA_VERSION}
----
-
-# {name}
-
-## Purpose
-
-<!-- Describe what this skill helps the AI to accomplish -->
-
-## Context
-
-<!-- Provide relevant background information -->
-
-## Guidelines
-
-<!-- Provide specific instructions for using this skill -->
-
-## Structure
-
-<!-- Describe additional files in this skill directory -->
-
-This skill uses multiple files:
-- `SKILL.md` - Main skill definition (this file)
-- Add other files as needed for examples, templates, etc.
-
-## Examples
-
-<!-- Optional: Show example usage patterns or link to example files -->
-
-## Related
-
-<!-- Optional: Link to related skills or resources -->
-"""
         skill_file.write_text(template_content, encoding='utf-8')
+        created.append(skill_dir)
 
-        console.print(f'[green]✓[/green] Created skill directory: {name}/')
-        console.print()
-        console.print(f'  {skill_dir.relative_to(sspec_root.parent)}/')
+    console.print(f"[green]✓[/green] Created skill '{name}'")
+    for skill_dir in created:
+        console.print(f'  {skill_dir.relative_to(project_root)}/')
         console.print('  └── SKILL.md')
-        console.print()
-        console.print('[yellow]Next:[/yellow]')
-        console.print('  1. Edit SKILL.md to define your skill')
-        console.print('  2. Add additional files (examples, templates) as needed')
+    console.print()
+    console.print('[yellow]Next:[/yellow]')
+    console.print('  1. Edit SKILL.md to define your skill')
+    console.print('  2. Add additional files (examples, templates) as needed')

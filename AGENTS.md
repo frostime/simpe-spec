@@ -85,6 +85,88 @@ uv pip install -e .
 
 ---
 
+## Writing Effective AGENTS.md
+
+When improving the AGENTS.md template or writing AI guidance documents, apply these principles:
+
+### 1. Executability (可执行性)
+
+**Definition**: Every paragraph MUST translate to concrete Agent actions or decision criteria.
+
+**Litmus test**: For each paragraph, ask— *"After reading this, what does the Agent do next?"* If the answer is vague, the paragraph is ineffective.
+
+| Pattern | ❌ Ineffective (Will Be Ignored) | ✅ Effective (Actionable) |
+|---------|----------------------------------|---------------------------|
+| Tech stack listing | `Tech stack: React 18, TypeScript, Tailwind` | `Components MUST use React function components + TypeScript. Styling MUST use Tailwind classes; CSS files are FORBIDDEN.` |
+| Important markers | `Important file: src/config/settings.ts` | `When adding environment variables, MUST update default values in src/config/settings.ts` |
+| Vague quality asks | `Keep code clean` | `Functions >40 lines MUST be split. Files >300 lines SHOULD be split into modules.` |
+| Implicit expectations | `Follow existing project style` | `Naming: Components=PascalCase, hooks=camelCase with "use" prefix, constants=UPPER_SNAKE_CASE` |
+| Abstract goals | `Consider performance and security` | `Database queries MUST use parameterized statements. Lists >50 items MUST use virtual scrolling.` |
+| Background info | `This is an e-commerce backend service` | `This service handles payments. Monetary calculations MUST use Decimal; float is FORBIDDEN.` |
+
+### 2. Explicit Over Implicit (显式优于隐式)
+
+**Definition**: Never assume the Agent will "understand intent" or "automatically connect context." All expected behaviors must be stated explicitly.
+
+**Anti-pattern**:
+```markdown
+❌ IMPLICIT EXPECTATION
+
+## Project Structure
+src/
+├── components/   # Reusable components
+├── features/     # Business modules
+└── utils/        # Utilities
+
+(User's thought: Agent should know where to put new code, right?)
+(Reality: Agent may place files randomly or ask every time)
+```
+
+**Correct pattern**:
+```markdown
+✅ EXPLICIT RULES
+
+## File Placement Rules
+
+When creating new files, determine location by type:
+
+| File Type | Target Path | Example |
+|-----------|-------------|---------|
+| Generic UI component (Button, Modal) | src/components/{Name}/ | src/components/Button/ |
+| Feature-specific component | src/features/{feature}/components/ | src/features/checkout/components/ |
+| Global utility | src/utils/ | src/utils/format.ts |
+| Feature-specific utility | src/features/{feature}/utils/ | src/features/checkout/utils/ |
+| Type definitions | src/types/{domain}.ts | src/types/order.ts |
+```
+
+### 3. Minimal Sufficiency (最小充分)
+
+**Definition**: Provide exactly what the Agent needs to complete the task—no more, no less.
+
+- **No more**: Avoid background knowledge that "might be useful"—it wastes context window
+- **No less**: All decision-affecting constraints MUST be explicitly stated
+
+**Anti-pattern**: Including a 500-line API reference when Agent only needs 3 endpoints
+**Correct**: Reference the doc, specify which endpoints to use, state the constraints
+
+### 4. Determinism (确定性)
+
+**Definition**: Same input → predictable output. Eliminate ambiguity.
+
+**Anti-pattern**: "You can use A, B, or C" → Agent may choose differently each time
+
+**Correct patterns**:
+```markdown
+✅ Priority order: Try A first. If A fails, use B. C is last resort.
+
+✅ Selection criteria:
+  - Use A when: <condition>
+  - Use B when: <condition>
+  - Default to C otherwise
+```
+
+---
+
 ## Project Context and Glossary
 
 | Term | Definition |
@@ -110,8 +192,6 @@ uv pip install -e .
 
 ### Frequently Modified Files
 
-When working on features:
-
 | File | Purpose | When to Edit |
 |------|---------|--------------|
 | `src/sspec/templates/AGENTS.md` | User-facing protocol | Improving agent guidance |
@@ -130,9 +210,6 @@ uv pip install -e .
 cd tmp; mkdir test_xyz; cd test_xyz
 ..\..\..\.venv\Scripts\sspec.exe project init
 
-# Check errors
-cd src; python -m pylance (if available)
-
 # List changes (dogfooding)
 .venv\Scripts\sspec.exe change list
 ```
@@ -140,117 +217,3 @@ cd src; python -m pylance (if available)
 ---
 
 **Remember**: You're developing the framework that guides other agents. Test thoroughly, write clear templates, and use `.sspec/` to track your own work.
-
----
-
-<!-- Legacy SSPEC protocol below - OUTDATED, kept for historical reference only -->
-<!-- For current protocol, see src/sspec/templates/AGENTS.md -->
-
-<details>
-<summary>⚠️ MIGHT BE OUTDATED SSPEC Protocol (Click to expand - DO NOT USE for development)</summary>
-
-<!-- SSPEC:START -->
-# .sspec Agent Protocol
-
-SSPEC_SCHEMA::3.1
-
-## Hard Rules
-- `.sspec` = single source of truth for planning/tracking/handover.
-- All `@xxx` are explicit user commands, not auto-executable.
-------
-
-## Workflow Overview
-
-**Typical session flow**:
-1. **Start**: User triggers `@change <name>` or `@resume` → Agent loads context
-2. **Work**: Agent implements tasks, updates `tasks.md` progress
-3. **Pivot**: If user says `@argue` → Agent stops, reassesses, revises plan
-4. **Sync**: After autonomous coding → User says `@sync` → Agent updates .sspec
-5. **End**: User says `@handover` → Agent writes session summary
-
-**Cross-session continuity**: `handover.md` bridges sessions. Each handover should enable next session to start in <30 seconds.
-------
-
-## User Triggers
-
-### `@change <name>`
-Switch/create change context.
-1. If `changes/<name>/` exists → read spec.md, tasks.md, handover.md
-2. If not exists → run shell `sspec change new <name>`,  fill spec.md with user's help
-3. Output: context summary + next actions
-
-### `@resume`
-Resume work after session break. e.g. Start a New Chat in copilot, cursor etc, or start new cli for claude code.
-1. Pick user specified change with status ∈ {DOING, BLOCKED, REVIEW}
-2. Read: handover.md → tasks.md → spec.md
-3. Output: current state + next actions
-
-### `@handover`
-End session and write handover doc, enabling next agent quickly know the context.
-1. Update handover.md with session summary, must include
-  * Background of the Major Task
-  * What Was Accomplished in the Previous (Current) Session
-  * Current Status
-  * Next Steps
-  * Conventions and Standards to Follow
-2. Update tasks.md progress
-3. Update spec.md status if changed
-
-### `@sync`
-After autonomous coding sessions (Claude Code, Copilot, etc.), ensure .sspec reflects actual progress.
-1. Scan recent changes (agent chat history, git diff or timestamps)
-2. For active change, update:
-   - `tasks.md`: mark completed tasks, add discovered tasks
-   - `spec.md`: update status in front yaml if appropriate
-
-
-### `@argue`
-Handle user disagreement with implementation approach, design, or requirements during implementing.
-1. STOP current implementation
-2. Analyze scope: detail / design / requirement level
-3. Update relevant files, add PIVOT marker if major change
-4. Await user confirmation
-------
-
-## Folder Structure
-
-```text
-.sspec/
-├── project.md              # Project overview, conventions
-├── changes/<name>/
-│   ├── spec.md             # WHY/WHAT: problem, decisions
-│   ├── tasks.md            # HOW: executable tasks + progress
-│   └── handover.md         # SESSION BRIDGE: done/now/next
-└── requests/*.md           # Incoming requests
-```
-------
-
-## File Responsibilities
-
-| File | Content | Update When |
-|------|---------|-------------|
-| spec.md | Problem, constraints, decisions | Strategy/status change |
-| tasks.md | Tasks (<2h each) + progress | Planning, task completion |
-| handover.md | Done / Now / Next | Every session end |
-| requests/*.md | Raw user requests | Lifecycle: OPEN → DOING → DONE |
-
-------
-
-## Skills
-
-For detailed guidance on status definitions, transitions, and edge cases, read the **sspec** skill:
-- Location: `.github/skills/sspec/SKILL.md` or `.claude/skills/sspec/SKILL.md`
-- Use when: uncertain about status meanings, transition rules, or quality standards
-
-## CLI Reference
-
-```shell
-sspec change new <name>      # Create change
-sspec change list            # List changes
-sspec change archive <name>  # Archive completed change
-sspec project status         # Show project overview
-sspec request <name>         # Create request
-```
-<!-- SSPEC:END -->
-
-</details>

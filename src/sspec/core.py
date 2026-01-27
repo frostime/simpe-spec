@@ -12,7 +12,7 @@ import yaml
 
 SSPEC_DIR = '.sspec'
 SKILLS_DIR = 'skills'
-WORKSPACE_DIRS = ['.github', '.claude']
+WORKSPACE_DIRS = ['.github', '.claude', '.agent']
 SKILL_SUBDIR = 'skills'
 CHANGES_DIR = 'changes'
 ARCHIVE_DIR = 'archive'
@@ -21,6 +21,10 @@ ARCHIVE_DIR = 'archive'
 SCHEMA_VERSION = '4.0'
 
 # Files tracked for updates (relative to .sspec/)
+# NOTE: Empty by design. The .sspec/ directory contains user-managed files that should
+# not be auto-updated. The 'project update' command specifically handles updating the
+# root AGENTS.md file's SSPEC protocol block via update_root_agents_block().
+# If future templates need auto-update support, add them here.
 UPDATABLE_FILES: list[str] = []
 
 

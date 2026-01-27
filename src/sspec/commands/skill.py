@@ -87,16 +87,23 @@ def new(name: str, to_claude: bool, to_github: bool) -> None:
         targets.append(candidates[1])
 
     if not explicit:
-        # Auto-detect: prefer existing skill dirs, then existing workspace parents, otherwise fallback to .github/skills
+        # Auto-detect: prefer existing skill dirs, then existing workspace parents, otherwise fallback to .claude/skills
+        # This matches the default behavior of 'sspec project init --skill-loc .claude'
         existing_skill_dirs = [p for p in candidates if p.exists()]
         if existing_skill_dirs:
             targets.extend(existing_skill_dirs)
         else:
             existing_parents = [p for p in candidates if p.parent.exists()]
             if existing_parents:
-                targets.extend(existing_parents)
+                # Prefer .claude over .github when both exist
+                claude_parent = project_root / '.claude' / 'skills'
+                if claude_parent.parent in [p.parent for p in existing_parents]:
+                    targets.append(claude_parent)
+                else:
+                    targets.extend(existing_parents)
             else:
-                targets.append(candidates[0])  # default to .github/skills
+                # Default to .claude/skills (consistent with project init)
+                targets.append(candidates[1])  # candidates[1] is .claude/skills
 
     # Ensure unique targets
     targets = list(dict.fromkeys(targets))

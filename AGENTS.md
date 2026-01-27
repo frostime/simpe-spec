@@ -98,21 +98,6 @@ uv pip install -e .
 
 ---
 
-## Current Workflow Assessment (Agent Perspective)
-
-Based on experience with this change (`improve-agents-protocol`):
-
-**What Worked Well** ✅:
-- Self-hosting forced us to test improvements immediately
-- spec.md → tasks.md → handover.md structure kept work organized
-- Auto mode (`/auto`) enabled autonomous progress
-- Real CLI testing in `tmp/` caught issues early
-
-**What Could Improve** 🔄:
-- Initial template had less detail than needed (hence this improvement)
-- Status transitions could use more enforcement/validation
-- Handover format could have stricter templates
-
 **Agent Recommendations**:
 1. **Always test in tmp/**: Don't assume template changes work until tested
 2. **Use .sspec/ for planning**: The structure genuinely helps organize complex refactors

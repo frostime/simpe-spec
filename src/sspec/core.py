@@ -29,13 +29,13 @@ UPDATABLE_FILES: list[str] = []
 
 
 # User-managed files tracked for changes but not auto-updated
-USER_FILES = ['project.md']
+USER_FILES = ['project.md', 'spec/README.md']
 
 # Change template source files
 CHANGE_TEMPLATE_FILES = ['spec.md', 'tasks.md', 'handover.md']
 
 # Files that should never be touched during update
-PROTECTED_PATTERNS = ['changes/*', 'requests/*', 'skills/*']
+PROTECTED_PATTERNS = ['changes/*', 'requests/*', 'skills/*', 'spec/*']
 
 
 class SspecError(Exception):

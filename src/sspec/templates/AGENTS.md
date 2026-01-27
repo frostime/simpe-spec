@@ -166,11 +166,16 @@ User disagrees with approach during implementation.
 ```
 .sspec/
 ├── project.md              # Project overview, tech stack, conventions
+├── spec/                   # Project-level specifications (persistent)
+│   ├── README.md           # Spec usage guide
+│   └── <name>.md           # Individual specs (or <name>/index.md for multi-file)
 ├── skills/sspec/SKILL.md   # Status rules, quality standards, edge cases
 ├── changes/<name>/
 │   ├── spec.md             # Problem, solution, decisions
 │   ├── tasks.md            # Tasks (<2h each) + progress
-│   └── handover.md         # Session continuity
+│   ├── handover.md         # Session continuity
+│   ├── reference/          # Optional: detailed design, research notes
+│   └── scripts/            # Optional: migration scripts, test data
 └── requests/               # Ad-hoc requests (optional)
 ```
 
@@ -179,11 +184,19 @@ User disagrees with approach during implementation.
 ### CLI Commands
 
 ```shell
+# Project
+sspec project init           # Initialize .sspec/
+sspec project status         # Show overview
+
+# Changes
 sspec change new <name>      # Create change
 sspec change list            # List all changes
 sspec change archive <name>  # Archive completed change
-sspec project init           # Initialize .sspec/
-sspec project status         # Show overview
+
+# Specifications
+sspec spec list              # List project specifications
+sspec spec new <name>        # Create single-file spec
+sspec spec new <name> --dir  # Create directory-based spec
 ```
 
 ---

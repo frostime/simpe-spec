@@ -1,352 +1,365 @@
 ---
 skill: sspec
-version: 2.0.0
+version: 2.1.0
 description: |
-  Deep reference for SSPEC workflow: status definitions, transition rules,
-  quality standards, and edge case handling. Consult when AGENTS.md Quick
-  Reference is insufficient—especially for status ambiguity, blocked scenarios,
-  or handover quality issues.
+  SSPEC 工作流深度参考：文档编写指南、状态规则、边缘案例。
+  当 AGENTS.md 的快速参考不够用时查阅——特别是编写高质量 spec/tasks/handover，
+  或处理状态歧义、阻塞场景时。
 ---
 
 # SSPEC Skill
 
-**When to read this SKILL**:
-- Uncertain which status a change should be in
-- Transition seems ambiguous (e.g., "partially blocked")
-- Writing handover and unsure what quality bar to hit
-- Handling unusual scenarios not covered in AGENTS.md
+**何时查阅此 SKILL**：
+- 不确定 spec.md / tasks.md / handover.md 该怎么写
+- 状态转换有歧义（如"部分阻塞"）
+- 处理 AGENTS.md 未覆盖的异常情况
 
-For everyday workflow, AGENTS.md suffices. This SKILL is the deep reference.
-
----
-
-## Status Definitions (Detailed)
-
-### PLANNING
-
-**What it means**: Scope and approach are being defined. No implementation yet.
-
-**Entry conditions**:
-- New change created via `sspec change new <name>`
-- Major pivot from any other status (direction fundamentally changed)
-
-**Agent responsibilities**:
-1. Fill spec.md sections:
-   - **A. Problem Statement**: What problem? Why now? What's the impact?
-   - **B. Proposed Solution**: High-level approach, key design decisions
-   - **C. Implementation Strategy**: Phases, risks, dependencies
-2. Break down into tasks in tasks.md:
-   - Each task < 2 hours
-   - Include verification criteria
-3. **Wait for explicit user approval** before transitioning
-
-**Exit criteria** (ALL must be true):
-- [ ] spec.md sections A, B, C are complete
-- [ ] tasks.md has executable tasks with verification criteria
-- [ ] User explicitly says "approved" / "looks good" / "let's proceed"
-
-**Common mistake**: Starting implementation before user approves plan.
+日常工作流用 AGENTS.md 足够。此 SKILL 是深度参考。
 
 ---
 
-### DOING
+## 文档编写指南
 
-**What it means**: Active implementation in progress.
+### spec.md — 规格说明书
 
-**Entry conditions**:
-- User approved plan (from PLANNING)
-- Blocker resolved (from BLOCKED)
-- Changes requested (from REVIEW)
+**核心原则**：写给下一个 Agent（或未来的自己），让 TA 能 **快速理解问题和方案**。
 
-**Agent responsibilities**:
-1. Execute tasks sequentially (unless parallelizable)
-2. Mark tasks `[x]` **immediately** when done—not in batches
-3. Update handover.md at every session end
-4. If scope creep detected, pause and discuss with user
+#### Section A: Problem Statement（问题陈述）
 
-**Exit criteria** (one of):
-- All tasks complete → **REVIEW**
-- External dependency blocks progress → **BLOCKED**
-- User requests fundamental pivot → **PLANNING**
+回答：**为什么要做这件事？**
 
-**Common mistakes**:
-- Marking multiple tasks done at once (loses granularity)
-- Continuing when blocked instead of stopping
-- Skipping handover because "almost done"
-
----
-
-### BLOCKED
-
-**What it means**: Cannot proceed without external input or resolution.
-
-**Entry conditions**:
-- Missing information only user can provide
-- Waiting on external system/API/approval
-- Technical issue requiring investigation beyond current scope
-
-**Agent responsibilities**:
-1. **STOP implementation** (do not attempt workarounds without permission)
-2. Document clearly in spec.md section D:
-   - What is blocked
-   - Why it's blocked
-   - What's needed to unblock
-3. Update handover.md with blocker status
-4. Suggest alternatives if any exist
-
-**Exit criteria**:
-- Blocker resolved → **DOING**
-- User decides to pivot → **PLANNING**
-
-**Quality standard for blocker documentation**:
-
-❌ **Bad**: "Blocked on API"
-
-✅ **Good**: "Blocked on payment API credentials. Need: 1) Stripe test API key, 2) Webhook secret. Without these, cannot test checkout flow. Workaround: mock API responses (loses integration coverage)."
-
----
-
-### REVIEW
-
-**What it means**: Implementation complete, awaiting user verification.
-
-**Entry conditions**:
-- All planned tasks marked `[x]`
-
-**Agent responsibilities**:
-1. Summarize what was accomplished
-2. Provide verification steps (how user can test)
-3. Note any known limitations or follow-up items
-4. Update handover.md
-
-**Exit criteria**:
-- User accepts → **DONE** (then `sspec change archive <name>`)
-- User requests changes → **DOING**
-
-**Important**: Status stays REVIEW until user explicitly responds. Do not auto-proceed.
-
----
-
-### DONE
-
-**What it means**: Completed and verified.
-
-**Entry conditions**:
-- User accepted in REVIEW
-
-**Next action**: User runs `sspec change archive <name>` to move to archive.
-
----
-
-## Transition Rules
-
-### Allowed Transitions
-
-```
-PLANNING → DOING       # User approves plan
-DOING    → BLOCKED     # Hit external blocker
-DOING    → REVIEW      # All tasks complete
-DOING    → PLANNING    # Major pivot (user requests)
-BLOCKED  → DOING       # Blocker resolved
-BLOCKED  → PLANNING    # Pivot while blocked
-REVIEW   → DONE        # User accepts
-REVIEW   → DOING       # User requests changes
-Any      → PLANNING    # Major pivot at any time
-```
-
-### Forbidden Transitions (and why)
-
-| Forbidden | Reason |
-|-----------|--------|
-| PLANNING → REVIEW | Can't review without implementation |
-| PLANNING → DONE | Can't complete without work |
-| DOING → DONE | Must go through REVIEW (verification matters) |
-| BLOCKED → DONE | Can't finish with unresolved blocker |
-| BLOCKED → REVIEW | Unblocking means more work, not review |
-
----
-
-## Quality Standards
-
-### Handover Quality
-
-The handover is the **only memory** between sessions. Quality directly impacts next session's efficiency.
-
-**The 30-Second Test**: Can the next Agent start productive work within 30 seconds of reading handover.md?
-
-#### Comparison
-
-❌ **Failing handover**:
 ```markdown
-## Session 3
-Worked on auth. Made some progress. Still have stuff to do.
-```
-Problems: No specifics, no file references, no next steps.
+## A. Proposal and Problem Statement
 
-✅ **Passing handover**:
+### Current Situation
+<!-- 现状：描述当前的痛点或不足 -->
+用户反馈认证流程太慢，平均耗时 5 秒，导致转化率下降 12%。
+
+### User Request / Requirement
+<!-- 需求：用户希望达成什么？ -->
+将认证时间降至 <1 秒，提升用户体验。
+```
+
+**质量标准**：
+- ✅ 包含可量化的问题描述
+- ✅ 说明为什么现在要解决
+- ❌ 避免："需要重构一下"（没有 why）
+
+#### Section B: Proposed Solution（方案设计）
+
+回答：**怎么解决？为什么选这个方案？**
+
 ```markdown
-## Session 3 - 2026-01-27 14:30
+## B. Proposed Solution
+
+### Framework of Idea
+<!-- 核心思路 -->
+采用 JWT + Redis 缓存方案，将 token 验证从 DB 查询改为内存查询。
+
+### Key Changes
+<!-- 关键变更 -->
+1. 引入 Redis 作为 session 缓存
+2. 修改 auth middleware 使用缓存优先策略
+3. 添加 token 刷新机制防止频繁重新登录
+```
+
+**质量标准**：
+- ✅ 说明方案的核心思路
+- ✅ 列出关键的设计决策
+- ❌ 避免：直接跳到实现细节
+
+#### Section C: Implementation Strategy（实施策略）
+
+**关键要求**：细化到 **文件级别**。
+
+```markdown
+## C. Implementation Strategy
+
+### Phase 1: 基础设施
+- `src/cache/redis.py` — 新建，Redis 连接池
+- `src/config/settings.py` — 修改，添加 Redis 配置项
+- `requirements.txt` — 修改，添加 redis 依赖
+
+### Phase 2: 认证逻辑
+- `src/auth/middleware.py` — 修改，缓存优先验证
+- `src/auth/jwt.py` — 修改，token 刷新逻辑
+- `tests/test_auth.py` — 修改，增加缓存测试
+
+### Risk & Dependencies
+- 需要 DevOps 配置 Redis 实例（外部依赖）
+- 需处理缓存失效时的降级策略
+```
+
+**质量标准**：
+- ✅ 列出要新建/修改的文件
+- ✅ 每个文件说明变更内容
+- ✅ 标注外部依赖和风险
+- ❌ 避免："修改相关文件"（不具体）
+
+#### Section D: Blockers & Feedback
+
+记录阻塞项和用户反馈：
+
+```markdown
+## D. Blockers & Feedback
+
+### Blocker (2026-01-27)
+**阻塞**：等待 DevOps 提供 Redis 连接信息
+**影响**：无法进行集成测试
+**需要**：Redis host, port, password
+
+### Feedback (2026-01-28)
+用户反馈：token 刷新频率太高，改为每 5 分钟一次
+```
+
+---
+
+### tasks.md — 任务清单
+
+**核心原则**：每个任务 **可独立执行、可验证、<2小时完成**。
+
+#### 任务粒度
+
+```markdown
+# 粒度对比
+
+❌ 太大：
+- [ ] 实现认证系统
+
+✅ 合适：
+- [ ] 创建 Redis 连接池 `src/cache/redis.py`
+      验证：单元测试通过，能连接本地 Redis
+- [ ] 修改 auth middleware 使用缓存
+      验证：请求响应时间 <100ms
+```
+
+#### 任务组织
+
+按 **实现阶段** 组织，每个阶段有明确验证点：
+
+```markdown
+### Phase 1: Infrastructure ✅
+
+- [x] 添加 redis 依赖到 requirements.txt
+- [x] 创建 `src/cache/redis.py` 连接池
+
+**验证**：`pytest tests/test_cache.py` 通过
+
+### Phase 2: Auth Logic 🚧
+
+- [x] 修改 `src/auth/middleware.py` 缓存优先
+- [ ] 添加 token 刷新逻辑
+- [ ] 处理缓存失效降级
+
+**验证**：认证响应时间 <100ms
+```
+
+#### 进度追踪
+
+```markdown
+## Progress Tracking
+
+**Overall**: 60% (3/5 tasks)
+
+| Phase | Progress | Status |
+|-------|----------|--------|
+| Phase 1: Infrastructure | 100% | ✅ Done |
+| Phase 2: Auth Logic | 33% | 🚧 In Progress |
+
+**Recent Updates**:
+- 2026-01-27: Phase 1 完成，Redis 连接池可用
+- 2026-01-28: middleware 修改完成，待 token 刷新
+```
+
+---
+
+### handover.md — 交接文档
+
+**核心原则**：30 秒内让下一个 Agent 进入工作状态。
+
+#### 必备内容
+
+```markdown
+## Session 2 - 2026-01-28 14:30
 
 ### Background
-Implementing JWT-based authentication for the API (change: auth-system).
+实现 JWT + Redis 认证缓存（change: auth-speedup）。
+目标：认证响应 <1秒。
 
 ### Accomplished
-- Completed JWT validation middleware in `src/auth/jwt.py`
-- Added token refresh endpoint at `/api/auth/refresh`
-- Unit tests pass (12/12)
+- ✅ Phase 1 完成：Redis 连接池可用
+- ✅ middleware 修改完成，缓存优先策略生效
+- 🧪 本地测试：响应时间从 5s → 80ms
 
 ### Current Status
-DOING - 7/10 tasks complete (70%)
+**DOING** — 60% complete (3/5 tasks)
 
 ### Next Steps
-1. Implement logout (token blacklist) in `src/auth/logout.py`
-2. Add rate limiting to auth endpoints
-3. Write integration tests for full auth flow
+1. **立即**：实现 token 刷新 `src/auth/jwt.py:refresh_token()`
+2. **之后**：添加缓存失效降级逻辑
+3. **最后**：集成测试（需 DevOps 配置 Redis）
 
 ### Conventions
-- All auth errors return 401 with `{"error": "...", "code": "AUTH_XXX"}`
-- Tokens expire in 15min (access) / 7d (refresh)
+- Redis key 格式：`auth:session:{user_id}`
+- Token 过期时间：access=15min, refresh=7d
+- 错误码：AUTH_001=invalid, AUTH_002=expired
 ```
+
+#### 质量对比
+
+| 维度 | ❌ 差 | ✅ 好 |
+|------|-------|-------|
+| 背景 | "做认证" | "JWT+Redis 缓存，目标 <1s 响应" |
+| 进度 | "做了些东西" | "Phase 1 完成，60% 进度" |
+| 下一步 | "继续做" | "实现 jwt.py:refresh_token()" |
+| 约定 | 无 | key 格式、过期时间、错误码 |
 
 ---
 
-### Task Granularity
+## spec/ 目录
 
-Each task MUST be:
-- **Completable in < 2 hours**: If longer, break it down
-- **Verifiable**: Include how to know it's done
-- **Atomic**: Can be marked done independently
+`.sspec/spec/` 用于存放 **项目级技术规范**，与单个 change 无关的长期文档。
 
-#### Examples
+### 适合放入的内容
 
-❌ **Too large**: "Implement authentication system"
+| 类型 | 示例 |
+|------|------|
+| 架构设计 | `architecture.md` — 系统架构、模块划分 |
+| 开发规范 | `coding-standards.md` — 命名规范、代码风格 |
+| API 规格 | `api-spec.md` — 接口定义、数据格式 |
+| 技术决策 | `adr/` — Architecture Decision Records |
+| 部署流程 | `deployment.md` — CI/CD、环境配置 |
 
-✅ **Properly granular**:
+### 与 change 的区别
+
+- **change/spec.md**：单次变更的问题和方案（临时）
+- **spec/**：项目级规范和设计（持久）
+
+### 引用方式
+
+在 change 的 spec.md 中引用：
+
 ```markdown
-- [ ] Create JWT validation middleware (verify: unit test passes)
-- [ ] Add login endpoint POST /auth/login (verify: returns token)
-- [ ] Add token refresh endpoint (verify: extends session)
-- [ ] Implement logout with token blacklist (verify: old token rejected)
+## B. Proposed Solution
+
+遵循 [API 规格](../../spec/api-spec.md) 中定义的认证接口格式。
 ```
 
 ---
 
-### PIVOT Handling
+## Change 附属文件
 
-When user fundamentally changes direction mid-implementation:
+除了核心三件套（spec.md, tasks.md, handover.md），change 目录下可以存放辅助文件：
 
-1. **Add PIVOT marker** in spec.md:
-   ```markdown
-   <!-- PIVOT: 2026-01-27 - Changed from REST to GraphQL per user request -->
-   ```
+### 目录结构
 
-2. **Regenerate tasks.md**: Old tasks may be invalid
+```
+.sspec/changes/<name>/
+├── spec.md           # 必需：规格说明
+├── tasks.md          # 必需：任务清单
+├── handover.md       # 必需：会话交接
+├── reference/        # 可选：参考资料
+│   ├── design.md     # 详细设计文档
+│   ├── api-draft.md  # API 草案
+│   └── research.md   # 调研笔记
+└── scripts/          # 可选：辅助脚本
+    ├── migrate.py    # 迁移脚本
+    └── test-data.sql # 测试数据
+```
 
-3. **Document in handover.md**: Why the pivot happened, what was salvaged
+### 使用场景
 
-4. **Reset status to PLANNING** if scope changed significantly
+| 目录 | 用途 | 示例 |
+|------|------|------|
+| `reference/` | 详细设计、调研、草案 | 架构图、API 设计、技术选型分析 |
+| `scripts/` | 一次性脚本、测试数据 | 数据迁移、环境配置、mock 数据 |
+
+### 在 spec.md 中引用
+
+```markdown
+## B. Proposed Solution
+
+详细设计见 [design.md](reference/design.md)。
+
+### Key Changes
+1. 数据迁移使用 [migrate.py](scripts/migrate.py)
+```
+
+### 归档行为
+
+当执行 `sspec change archive <name>` 时，整个 change 目录（包括 reference/ 和 scripts/）一起归档。
 
 ---
 
-## Edge Cases
+## 状态规则速查
 
-### Multiple Changes in DOING
+### 状态定义
 
-**Problem**: Only one change should be DOING at a time—context switching causes errors.
+| Status | 含义 | 进入条件 | 退出条件 |
+|--------|------|----------|----------|
+| **PLANNING** | 定义范围和方案 | 新建 change / 重大转向 | 用户批准计划 |
+| **DOING** | 实施中 | 计划批准 / 阻塞解除 | 任务完成 / 遇阻 / 转向 |
+| **BLOCKED** | 等待外部 | 缺少信息/资源/审批 | 阻塞解除 / 转向 |
+| **REVIEW** | 完成待验收 | 所有任务完成 | 用户接受 / 要求修改 |
+| **DONE** | 完成归档 | 用户接受 | `sspec change archive` |
 
-**Solution**:
-1. Before switching, run `@handover` on current change
-2. Use `@change <other>` to switch explicitly
-3. System should warn if multiple DOING detected
+### 禁止的转换
 
-### Partially BLOCKED
-
-**Problem**: Part of change is blocked, but other parts can continue.
-
-**Solutions** (choose based on situation):
-1. **Split the change**: Create new change for unblocked work, keep blocked portion as BLOCKED
-2. **Reorder tasks**: If blocked task isn't critical path, move to end and continue
-3. **Document and continue**: If block is minor, note in spec.md and proceed with workaround
-
-### REVIEW Spans Multiple Sessions
-
-**Problem**: User needs days to verify; Agent sessions happen in between.
-
-**Solution**:
-- Status stays REVIEW
-- Handover notes: "Awaiting user verification since <date>"
-- Agent does NOT proceed until user responds
-- Can work on other changes in meantime
-
-### User Wants to Skip REVIEW
-
-**Problem**: User trusts implementation, wants to go directly to DONE.
-
-**Solution**:
-- Acceptable for **small, low-risk changes** only
-- Document in handover: "User approved without formal review"
-- Still run `sspec change archive <name>` to complete lifecycle
-
-### Disagreement During Implementation
-
-**Problem**: User says "that's not what I wanted" mid-implementation.
-
-**Solution**:
-1. STOP immediately (don't continue hoping to fix later)
-2. Use `@argue` flow to clarify scope
-3. Update spec.md/tasks.md based on clarification
-4. Get explicit approval before resuming
+| 禁止 | 原因 |
+|------|------|
+| PLANNING → DONE | 未实施不能完成 |
+| DOING → DONE | 必须经过 REVIEW |
+| BLOCKED → DONE | 阻塞未解决 |
 
 ---
 
-## Request Lifecycle
+## 边缘案例
 
-Requests are lightweight incoming work items, tracked separately from changes.
+### 部分阻塞
 
-| Status | Meaning | Transition |
-|--------|---------|------------|
-| **OPEN** | New request, not started | Triage and prioritize |
-| **DOING** | Linked to active change | `sspec request <name> --link <change>` |
-| **DONE** | Delivered | When linked change is archived |
+**情况**：部分任务阻塞，其他可继续。
 
-**Best practice**: Convert requests to changes for anything taking >2 hours.
+**处理**：
+1. **拆分 change**：阻塞部分独立为新 change
+2. **重排任务**：非关键路径的阻塞任务移到末尾
+3. **记录并继续**：在 spec.md D 节记录，用 workaround 继续
+
+### REVIEW 跨多个会话
+
+**情况**：用户需要几天验证。
+
+**处理**：
+- 状态保持 REVIEW
+- handover 记录："等待用户验证，自 <日期>"
+- 可同时处理其他 change
+
+### 用户中途反对
+
+**情况**：用户说"这不是我要的"。
+
+**处理**：
+1. 立即停止实施
+2. 用 `@argue` 澄清范围
+3. 更新 spec.md/tasks.md
+4. 获得明确批准后再继续
+
+### 多个 change 同时 DOING
+
+**问题**：上下文切换导致错误。
+
+**处理**：
+1. 切换前先 `@handover` 当前 change
+2. 用 `@change <other>` 显式切换
+3. 避免同时 DOING 多个
 
 ---
 
-## Anti-Patterns to Avoid
+## 反模式
 
-| Anti-Pattern | Why It's Bad | Correct Approach |
-|--------------|--------------|------------------|
-| Skipping handover "because session was short" | Next session has no context | Always handover, even if brief |
-| Marking tasks done without testing | False progress, bugs later | "Done" means complete AND verified |
-| Staying in DOING when blocked | Wastes time on workarounds | Transition to BLOCKED, document clearly |
-| Auto-transitioning to DONE | Skips user verification | Always go through REVIEW |
-| Multiple changes in DOING | Context confusion | Handover first change before switching |
-| Vague spec.md | Tasks become unclear | Invest time in clear problem/solution |
-
----
-
-## Quick Diagnostic
-
-**"What status should this be?"**
-
-```
-Is scope/approach still being defined? → PLANNING
-Are you actively implementing? → DOING
-Are you waiting on something external? → BLOCKED
-Is all planned work complete? → REVIEW
-Did user accept and archive? → DONE
-```
-
-**"Should I transition status?"**
-
-```
-Can you make progress right now without user input?
-  YES → Stay in DOING
-  NO, need clarification → Stay in DOING, ask user
-  NO, need external resource → BLOCKED
-
-Are ALL tasks done?
-  YES → REVIEW
-  NO → Stay in DOING
-```
+| 反模式 | 后果 | 正确做法 |
+|--------|------|----------|
+| 跳过 handover | 下个会话浪费 30 分钟理解上下文 | 每次都写，即使简短 |
+| 不测试就标完成 | 虚假进度，后续 bug | "完成" = 实现 + 验证 |
+| spec 不写到文件级 | 实施时不知道改哪里 | Section C 列出具体文件 |
+| DOING 时遇阻不转 BLOCKED | 浪费时间绕弯 | 及时转 BLOCKED 并记录 |
+| DOING → DONE 跳过 REVIEW | 缺少用户验证 | 始终经过 REVIEW |

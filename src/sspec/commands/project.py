@@ -61,11 +61,11 @@ def init(force: bool, skill_loc: str) -> None:
 
     # Create directory structure
     sspec_path.mkdir(parents=True, exist_ok=True)
-    # Remove legacy spec folder; only create required structure
     (sspec_path / 'changes').mkdir(exist_ok=True)
     (sspec_path / 'changes' / 'archive').mkdir(exist_ok=True)
     (sspec_path / 'requests').mkdir(exist_ok=True)
     (sspec_path / 'skills').mkdir(exist_ok=True)
+    (sspec_path / 'spec').mkdir(exist_ok=True)  # Project-level specifications
 
     # Copy skills to specified location (and .sspec for backward compatibility)
     template_skills = list_template_skills()
@@ -145,8 +145,8 @@ def init(force: bool, skill_loc: str) -> None:
     console.print()
     console.print('[cyan]Structure:[/cyan]')
     console.print('  .sspec/')
-    console.print('  ├── AGENTS.md       # AI context and guidance')
     console.print('  ├── project.md      # Project overview')
+    console.print('  ├── spec/           # Project-level specifications')
     console.print('  ├── changes/        # Active change proposals')
     console.print('  └── requests/       # Ad-hoc AI requests')
     console.print()

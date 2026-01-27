@@ -5,42 +5,59 @@ updated: ""
 
 # Implementation Tasks
 
-## Task Organization
+<!-- @AGENT: Task Organization Principles
+- Each task < 2 hours to complete
+- Each task has clear verification criteria
+- Organize by implementation phase
+- Done = implemented + tested
 
-Tasks are organized by implementation phase. Each task should:
-- Be completable in < 2 hours
-- Have clear verification criteria
-- Be marked `[x]` only when fully complete and tested
+For detailed guidance, consult sspec SKILL.
+-->
 
-**Legend**: ✅`[x]` Complete | 🚧`[ ]` Todo | ⏸️`[-]` Blocked | 🔄`[~]` Rework | 🚫`[x]` Discarded
+## Task Legend
+
+| Marker | Meaning |
+|--------|---------|
+| `[ ]` | Todo |
+| `[x]` | Done (implemented + verified) |
+## Task List
+
+<!-- @AGENT: Organize tasks by phases from spec.md Section C
+
+Format:
+
+### Phase 1: <Phase Name>
+
+- [ ] <Task description> `path/to/file.py`
+- [ ] <Task description> `path/to/file.py`
+
+**Verification**: <How to verify this phase is complete>
 
 ---
 
-## Task List
+Concrete Example:
 
-<!-- @AGENT: Structure tasks here. Delete the example below after creating real tasks. -->
+### Phase 1: Infrastructure ✅
 
-<!-- EXAMPLE:START — DELETE THIS BLOCK -->
-### Phase 1: Foundation
+- [x] Add redis dependency `requirements.txt`
+- [x] Create Redis connection pool `src/cache/redis.py`
 
-#### 1.1 Setup ✅
-- [x] Initialize project structure
-- [x] Configure dependencies
+**Verification**: `pytest tests/test_cache.py` passes
 
-**Verification**: Build passes, tests green
+### Phase 2: Core Logic 🚧
 
-#### 1.2 Core Logic
-- [ ] Implement main algorithm
-- [ ] Add error handling
+- [x] Modify auth middleware `src/auth/middleware.py`
+- [ ] Add token refresh logic `src/auth/jwt.py`
+- [ ] Handle cache failure fallback `src/auth/fallback.py`
 
-**Verification**: Unit tests pass
-<!-- EXAMPLE:END — DELETE THIS BLOCK -->
+**Verification**: Auth response time <100ms
+-->
 
 ---
 
 ## Progress Tracking
 
-<!-- @AGENT: Update this section after task completion. -->
+<!-- @AGENT: Update this section after each task completion -->
 
 **Overall Progress**: 0%
 

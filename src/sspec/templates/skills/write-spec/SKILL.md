@@ -1,8 +1,6 @@
 ---
 name: write-spec
-description: |
-  Guide for writing project specifications in .sspec/spec/.
-  Use when creating or updating spec documents.
+description: Guide for writing project specifications in .sspec/spec/. MUST Use this when creating or updating spec documents under  SSPEC system.
 ---
 
 # Write-Spec

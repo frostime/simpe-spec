@@ -82,8 +82,9 @@ Example:
 - <Potential risks and mitigation>
 
 Optional: If complex, create reference/design.md for detailed design
-## D. Blockers & Feedback
+-->
 
+## D. Blockers & Feedback
 <!-- @AGENT: Document blockers and user feedback
 
 ### Blocker (YYYY-MM-DD)

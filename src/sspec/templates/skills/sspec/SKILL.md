@@ -1,10 +1,7 @@
 ---
 skill: sspec
 version: 2.1.0
-description: |
-  SSPEC 工作流深度参考：文档编写指南、状态规则、边缘案例。
-  当 AGENTS.md 的快速参考不够用时查阅——特别是编写高质量 spec/tasks/handover，
-  或处理状态歧义、阻塞场景时。
+description: SSPEC 工作流深度参考：文档编写指南、状态规则、边缘案例。MUST Use this at the first time use sspec workflow.
 ---
 
 # SSPEC Skill
@@ -13,8 +10,6 @@ description: |
 - 不确定 spec.md / tasks.md / handover.md 该怎么写
 - 状态转换有歧义（如"部分阻塞"）
 - 处理 AGENTS.md 未覆盖的异常情况
-
-日常工作流用 AGENTS.md 足够。此 SKILL 是深度参考。
 
 ---
 

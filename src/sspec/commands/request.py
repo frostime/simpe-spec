@@ -96,6 +96,9 @@ def request(
 ) -> None:
     """Create or manage user requests.
 
+    NOTE: This command uses a mixed mode (flags + argument) rather than subcommands
+    like 'change' or 'skill'.
+
     Examples:
         sspec request                     # Create with timestamp name
         sspec request add-dark-mode       # Create with custom name

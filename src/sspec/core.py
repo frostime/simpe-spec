@@ -12,26 +12,30 @@ import yaml
 
 SSPEC_DIR = '.sspec'
 SKILLS_DIR = 'skills'
-WORKSPACE_DIRS = ['.github', '.claude']
+WORKSPACE_DIRS = ['.github', '.claude', '.agent']
 SKILL_SUBDIR = 'skills'
 CHANGES_DIR = 'changes'
 ARCHIVE_DIR = 'archive'
 
 # Schema version - increment when template structure changes
-SCHEMA_VERSION = '3.1'
+SCHEMA_VERSION = '4.0'
 
 # Files tracked for updates (relative to .sspec/)
+# NOTE: Empty by design. The .sspec/ directory contains user-managed files that should
+# not be auto-updated. The 'project update' command specifically handles updating the
+# root AGENTS.md file's SSPEC protocol block via update_root_agents_block().
+# If future templates need auto-update support, add them here.
 UPDATABLE_FILES: list[str] = []
 
 
 # User-managed files tracked for changes but not auto-updated
-USER_FILES = ['project.md']
+USER_FILES = ['project.md', 'spec/README.md']
 
 # Change template source files
 CHANGE_TEMPLATE_FILES = ['spec.md', 'tasks.md', 'handover.md']
 
 # Files that should never be touched during update
-PROTECTED_PATTERNS = ['changes/*', 'requests/*', 'skills/*']
+PROTECTED_PATTERNS = ['changes/*', 'requests/*', 'skills/*', 'spec/*']
 
 
 class SspecError(Exception):
@@ -191,17 +195,36 @@ def parse_skill_metadata(skill_path: Path, replacements: Mapping[str, str] | Non
         return {}
 
 
-def get_workspace_skill_targets(project_root: Path) -> list[Path]:
-    """Return all workspace directories that should host skills."""
+def get_workspace_skill_targets(project_root: Path, primary_loc: str | None = None) -> list[Path]:
+    """Return workspace directories that should host skills.
 
+    Args:
+        project_root: Project root directory
+        primary_loc: Primary location for skills (.claude, .github, or .sspec)
+                    If specified, only install to primary_loc and .sspec (for compatibility)
+                    If None, auto-detect existing workspace dirs
+
+    Returns:
+        List of target directories for skill installation
+    """
     targets: list[Path] = []
-    for ws_dir in WORKSPACE_DIRS:
-        ws_path = project_root / ws_dir
-        if ws_path.is_dir():
-            targets.append(ws_path / SKILL_SUBDIR)
 
-    # Always include .sspec/skills for backward compatibility
-    targets.append(project_root / SSPEC_DIR / SKILL_SUBDIR)
+    if primary_loc:
+        # User specified primary location - use it + .sspec for backward compatibility
+        if primary_loc != '.sspec':
+            primary_path = project_root / primary_loc / SKILL_SUBDIR
+            targets.append(primary_path)
+        # Always include .sspec/skills for backward compatibility
+        targets.append(project_root / SSPEC_DIR / SKILL_SUBDIR)
+    else:
+        # Auto-detect mode: install to all existing workspace dirs
+        for ws_dir in WORKSPACE_DIRS:
+            ws_path = project_root / ws_dir
+            if ws_path.is_dir():
+                targets.append(ws_path / SKILL_SUBDIR)
+        # Always include .sspec/skills for backward compatibility
+        targets.append(project_root / SSPEC_DIR / SKILL_SUBDIR)
+
     return targets
 
 

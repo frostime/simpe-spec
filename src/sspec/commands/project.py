@@ -39,7 +39,13 @@ def project() -> None:
 
 @project.command()
 @click.option('--force', is_flag=True, help='Overwrite existing .sspec directory')
-def init(force: bool) -> None:
+@click.option(
+    '--skill-loc',
+    type=click.Choice(['.claude', '.github', '.sspec', '.agent'], case_sensitive=False),
+    default='.claude',
+    help='Primary location for skill installation (default: .claude)'
+)
+def init(force: bool, skill_loc: str) -> None:
     """Initialize .sspec directory in current project."""
     project_root = Path.cwd()
     sspec_path = project_root / SSPEC_DIR
@@ -55,15 +61,15 @@ def init(force: bool) -> None:
 
     # Create directory structure
     sspec_path.mkdir(parents=True, exist_ok=True)
-    # Remove legacy spec folder; only create required structure
     (sspec_path / 'changes').mkdir(exist_ok=True)
     (sspec_path / 'changes' / 'archive').mkdir(exist_ok=True)
     (sspec_path / 'requests').mkdir(exist_ok=True)
     (sspec_path / 'skills').mkdir(exist_ok=True)
+    (sspec_path / 'spec').mkdir(exist_ok=True)  # Project-level specifications
 
-    # Copy skills to all workspace targets
+    # Copy skills to specified location (and .sspec for backward compatibility)
     template_skills = list_template_skills()
-    skill_targets = get_workspace_skill_targets(project_root)
+    skill_targets = get_workspace_skill_targets(project_root, primary_loc=skill_loc)
 
     for skill_dir in template_skills:
         skill_name = skill_dir.name
@@ -102,7 +108,18 @@ def init(force: bool) -> None:
         'created_at': datetime.now().isoformat(),
         'updated_at': datetime.now().isoformat(),
         'file_hashes': {},
+        'skill_locations': [],  # Track where skills are installed
     }
+
+    # Record skill installation locations (relative to project root)
+    for target_dir in skill_targets:
+        if target_dir.exists():
+            try:
+                rel_loc = target_dir.relative_to(project_root)
+                meta_data['skill_locations'].append(str(rel_loc))
+            except ValueError:
+                # target_dir is outside project_root, skip
+                pass
 
     # Compute initial hashes for updatable files
     for file_path in UPDATABLE_FILES:
@@ -128,8 +145,8 @@ def init(force: bool) -> None:
     console.print()
     console.print('[cyan]Structure:[/cyan]')
     console.print('  .sspec/')
-    console.print('  ├── AGENTS.md       # AI context and guidance')
     console.print('  ├── project.md      # Project overview')
+    console.print('  ├── spec/           # Project-level specifications')
     console.print('  ├── changes/        # Active change proposals')
     console.print('  └── requests/       # Ad-hoc AI requests')
     console.print()
@@ -312,6 +329,66 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
             }
         )
 
+    # Collect skill update candidates
+    project_root = sspec_root.parent
+    skill_locations = meta.get('skill_locations', [])
+    template_skills = list_template_skills()
+
+    for skill_dir in template_skills:
+        skill_name = skill_dir.name
+        for loc_str in skill_locations:
+            skill_dest = project_root / loc_str / skill_name / 'SKILL.md'
+            template_skill_file = skill_dir / 'SKILL.md'
+
+            if not template_skill_file.exists():
+                continue
+
+            # Read template
+            template_content = template_skill_file.read_text(encoding='utf-8')
+            for old, new in common_replacements.items():
+                template_content = template_content.replace(f'{{{{{old}}}}}', new)
+
+            new_hash = compute_hash(template_content)
+
+            # Determine status
+            if not skill_dest.exists():
+                status = 'missing'
+                current_hash = None
+            else:
+                current_hash = compute_file_hash(skill_dest)
+                # Use skill-specific hash key
+                skill_hash_key = f'skills/{skill_name}/SKILL.md'
+                old_hash = old_hashes.get(skill_hash_key)
+
+                if old_hash is None:
+                    status = 'unknown'
+                elif current_hash == new_hash:
+                    status = 'current'
+                elif current_hash == old_hash:
+                    status = 'updatable'
+                else:
+                    status = 'modified'
+
+            # Construct display path
+            try:
+                display_path = skill_dest.relative_to(project_root)
+            except ValueError:
+                display_path = skill_dest
+
+            updates.append(
+                {
+                    'path': str(display_path),
+                    'is_user': False,
+                    'status': status,
+                    'template_path': template_skill_file,
+                    'dest_path': skill_dest,
+                    'template_content': template_content,
+                    'new_hash': new_hash,
+                    'current_hash': current_hash,
+                    'skill_hash_key': skill_hash_key,  # Special key for skills
+                }
+            )
+
     # Show status table
     table = Table(title='Update Status')
     table.add_column('File', style='cyan')
@@ -379,8 +456,15 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
 
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         dest_path.write_text(upd['template_content'], encoding='utf-8')
-        new_hashes[path] = upd['new_hash']
-        updated_count += 1
+
+        # Use skill_hash_key if this is a skill, otherwise use path
+        hash_key = upd.get('skill_hash_key', path)
+        new_hashes[hash_key] = upd['new_hash']
+
+        if 'skill_hash_key' in upd:
+            skill_updated_count += 1
+        else:
+            updated_count += 1
 
         status = upd['status']
         if status == 'missing':

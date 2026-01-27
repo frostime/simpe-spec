@@ -39,7 +39,13 @@ def project() -> None:
 
 @project.command()
 @click.option('--force', is_flag=True, help='Overwrite existing .sspec directory')
-def init(force: bool) -> None:
+@click.option(
+    '--skill-loc',
+    type=click.Choice(['.claude', '.github', '.sspec', '.agent'], case_sensitive=False),
+    default='.claude',
+    help='Primary location for skill installation (default: .claude)'
+)
+def init(force: bool, skill_loc: str) -> None:
     """Initialize .sspec directory in current project."""
     project_root = Path.cwd()
     sspec_path = project_root / SSPEC_DIR
@@ -61,9 +67,9 @@ def init(force: bool) -> None:
     (sspec_path / 'requests').mkdir(exist_ok=True)
     (sspec_path / 'skills').mkdir(exist_ok=True)
 
-    # Copy skills to all workspace targets
+    # Copy skills to specified location (and .sspec for backward compatibility)
     template_skills = list_template_skills()
-    skill_targets = get_workspace_skill_targets(project_root)
+    skill_targets = get_workspace_skill_targets(project_root, primary_loc=skill_loc)
 
     for skill_dir in template_skills:
         skill_name = skill_dir.name

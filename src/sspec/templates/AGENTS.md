@@ -21,6 +21,7 @@ SSPEC is a document-driven AI collaboration framework. All planning, tracking, a
 | Term | Definition |
 |------|------------|
 | **Change** | Unit of work (feature/bugfix/refactor) with its own spec/tasks/handover |
+| **Spec** | Project-level specification (persistent design docs, not tied to changes) |
 | **Directive** | User command via `@xxx` syntax—Agent MUST NOT auto-trigger |
 | **Status** | Lifecycle: PLANNING → DOING → REVIEW → DONE (or BLOCKED) |
 | **SKILL** | Deep reference for status rules, quality standards, edge cases |
@@ -51,6 +52,25 @@ ELSE:
     Help user fill spec.md (problem + solution)
     Generate tasks.md
     Wait for user approval
+```
+
+---
+
+### `@spec <name>`
+
+Create or edit project specification to persistent design docs (architecture, API contracts, standards)
+
+```
+IF user wants to create new spec:
+    User request the concet needs
+    Run if need: sspec spec new "<name>" [--dir]
+    Consult: SKILL "write-spec"
+      IF not found: see .sspec/skills/write-spec/SKILL.md
+    Write spec document
+
+ELSE IF updating existing spec:
+    Find spec, by "sspec spec list" or user specified.
+    Apply write-spec SKILL guidelines -> Update.
 ```
 
 ---
@@ -196,7 +216,7 @@ sspec change archive <name>  # Archive completed change
 # Specifications
 sspec spec list              # List project specifications
 sspec spec new <name>        # Create single-file spec
-sspec spec new <name> --dir  # Create directory-based spec
+sspec spec new <name> --dir  # Create directory-based spec (complex subsystems)
 ```
 
 ---

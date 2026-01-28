@@ -54,7 +54,7 @@ def new(name: str) -> None:
 
     rel_path = change_path.relative_to(sspec_root.parent)
 
-    console.print(f'[green]✓[/green] Created change: {name}')
+    console.print(f'[green]+[/green] Created change: {name}')
     console.print()
     console.print('[cyan]Files:[/cyan]')
     console.print(f'  {rel_path}/')
@@ -222,7 +222,54 @@ def archive(name: str | None, yes: bool, force: bool) -> None:
                 console.print(f"  - {c['name']}")
             name = click.prompt('Which change to archive?')
 
-    # Confirm
+    # Check current status
+    change_path = sspec_root / 'changes' / name  # type: ignore
+    if not change_path.exists():
+        raise click.ClickException(f"Change '{name}' not found")
+
+    change_info = parse_change(change_path)
+    current_status = change_info['status']
+
+    # Interactive prompt if status is not DONE and not forced
+    if current_status != ChangeStatus.DONE.value and not force:
+        console.print()
+        console.print(f'[yellow]Warning: Change \"{name}\" status is {current_status}, not DONE[/yellow]')
+        console.print()
+        console.print('[cyan]Options:[/cyan]')
+        console.print('  1. Force archive (keep current status)')
+        console.print('  2. Mark as DONE and archive')
+        console.print('  3. Cancel')
+        console.print()
+
+        choice = click.prompt(
+            'Select option',
+            type=click.Choice(['1', '2', '3']),
+            default='3'
+        )
+
+        if choice == '3':
+            console.print('[yellow]Cancelled[/yellow]')
+            return
+        elif choice == '1':
+            force = True
+        elif choice == '2':
+            # Update status to DONE in spec.md
+            spec_file = change_path / 'spec.md'
+            if spec_file.exists():
+                content = spec_file.read_text(encoding='utf-8')
+                # Update YAML front matter status
+                if content.startswith('---'):
+                    import re
+                    content = re.sub(
+                        r'(status:\s*)[^\n]+',
+                        r'\1DONE',
+                        content,
+                        count=1
+                    )
+                    spec_file.write_text(content, encoding='utf-8')
+                    console.print('[green]OK[/green] Updated status to DONE')
+
+    # Confirm if not --yes
     if not yes:
         if not click.confirm(f"Archive '{name}'?"):
             console.print('[yellow]Cancelled[/yellow]')
@@ -231,7 +278,7 @@ def archive(name: str | None, yes: bool, force: bool) -> None:
     try:
         archive_path = archive_change(sspec_root, name, force=force) # type: ignore
         rel_path = archive_path.relative_to(sspec_root.parent)
-        console.print(f'[green]✓[/green] Archived to: {rel_path}')
+        console.print(f'[green]+[/green] Archived to: {rel_path}')
     except ChangeNotFoundError as e:
         raise click.ClickException(str(e)) from e
     except ValueError as e:

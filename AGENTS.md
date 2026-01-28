@@ -132,11 +132,8 @@ When creating new files, determine location by type:
 
 | File Type | Target Path | Example |
 |-----------|-------------|---------|
-| Generic UI component (Button, Modal) | src/components/{Name}/ | src/components/Button/ |
 | Feature-specific component | src/features/{feature}/components/ | src/features/checkout/components/ |
 | Global utility | src/utils/ | src/utils/format.ts |
-| Feature-specific utility | src/features/{feature}/utils/ | src/features/checkout/utils/ |
-| Type definitions | src/types/{domain}.ts | src/types/order.ts |
 ```
 
 ### 3. Minimal Sufficiency (最小充分)

@@ -31,6 +31,77 @@ from sspec.core import (
 console = Console()
 
 
+def _interactive_skill_selection(project_root: Path) -> list[str]:
+    """Interactive skill location selection.
+
+    Detects existing workspace directories and prompts user to select skill installation locations.
+    """
+    available_locations = ['.claude', '.github', '.agent']
+    existing_dirs = [loc for loc in available_locations if (project_root / loc).is_dir()]
+
+    console.print()
+    console.print('[bold cyan]Skill Installation Location Selection[/bold cyan]')
+    console.print()
+
+    if existing_dirs:
+        console.print(f'[green]Detected existing directories:[/green] {", ".join(existing_dirs)}')
+    else:
+        console.print('[yellow]No existing workspace directories found.[/yellow]')
+
+    console.print()
+    console.print('[dim]Available locations:[/dim]')
+    for i, loc in enumerate(available_locations, 1):
+        exists_marker = '[green]+[/green]' if loc in existing_dirs else '[dim]o[/dim]'
+        console.print(f'  {i}. {exists_marker} {loc}')
+
+    console.print()
+    console.print('[dim]Enter numbers separated by commas (e.g., 1,3) or press Enter to select detected directories[/dim]')
+
+    # Default to existing directories
+    default_indices = ','.join(str(available_locations.index(loc) + 1) for loc in existing_dirs)
+    user_input = click.prompt(
+        'Select locations',
+        default=default_indices if existing_dirs else '',
+        show_default=True
+    ).strip()
+
+    if not user_input:
+        return existing_dirs if existing_dirs else ['.claude']  # Fallback to .claude
+
+    # Parse user input
+    selected = []
+    try:
+        indices = [int(x.strip()) for x in user_input.split(',')]
+        for idx in indices:
+            if 1 <= idx <= len(available_locations):
+                selected.append(available_locations[idx - 1])
+    except ValueError:
+        console.print('[yellow]Invalid input, using default (.claude)[/yellow]')
+        return ['.claude']
+
+    if not selected:
+        console.print('[yellow]No valid selection, using default (.claude)[/yellow]')
+        return ['.claude']
+
+    return selected
+
+
+def _get_skill_targets_from_locations(project_root: Path, locations: list[str]) -> list[Path]:
+    """Get skill target paths from location names.
+
+    Always includes .sspec/skills for backward compatibility.
+    """
+    targets = []
+    for loc in locations:
+        if loc == '.sspec':
+            continue  # Will be added later
+        targets.append(project_root / loc / 'skills')
+
+    # Always include .sspec/skills for backward compatibility
+    targets.append(project_root / SSPEC_DIR / 'skills')
+    return targets
+
+
 @click.group()
 def project() -> None:
     """Project-level operations (init, status, update)."""
@@ -41,11 +112,11 @@ def project() -> None:
 @click.option('--force', is_flag=True, help='Overwrite existing .sspec directory')
 @click.option(
     '--skill-loc',
-    type=click.Choice(['.claude', '.github', '.sspec', '.agent'], case_sensitive=False),
-    default='.claude',
-    help='Primary location for skill installation (default: .claude)'
+    multiple=True,
+    type=click.Choice(['.claude', '.github', '.agent'], case_sensitive=False),
+    help='Skill installation locations (can specify multiple, or use interactive mode)'
 )
-def init(force: bool, skill_loc: str) -> None:
+def init(force: bool, skill_loc: tuple[str, ...]) -> None:
     """Initialize .sspec directory in current project."""
     project_root = Path.cwd()
     sspec_path = project_root / SSPEC_DIR
@@ -67,9 +138,12 @@ def init(force: bool, skill_loc: str) -> None:
     (sspec_path / 'skills').mkdir(exist_ok=True)
     (sspec_path / 'spec-docs').mkdir(exist_ok=True)  # Project-level specification documents
 
+    # Interactive skill location selection if not specified via CLI
+    skill_locations = list(skill_loc) if skill_loc else _interactive_skill_selection(project_root)
+
     # Copy skills to specified location (and .sspec for backward compatibility)
     template_skills = list_template_skills()
-    skill_targets = get_workspace_skill_targets(project_root, primary_loc=skill_loc)
+    skill_targets = _get_skill_targets_from_locations(project_root, skill_locations)
 
     for skill_dir in template_skills:
         skill_name = skill_dir.name
@@ -81,7 +155,7 @@ def init(force: bool, skill_loc: str) -> None:
         for target_dir in skill_targets:
             if target_dir.exists():
                 rel_target = target_dir.relative_to(project_root)
-                console.print(f'  [green]✓[/green] Installed skills to {rel_target}/')
+                console.print(f'  [green]+[/green] Installed skills to {rel_target}/')
 
     # Initialize templates
     for file_path in [*UPDATABLE_FILES, *USER_FILES]:
@@ -136,12 +210,12 @@ def init(force: bool, skill_loc: str) -> None:
 
     # Update root AGENTS.md
     if update_root_agents_block():
-        console.print('  [green]✓[/green] Created/Updated root AGENTS.md')
+        console.print('  [green]+[/green] Created/Updated root AGENTS.md')
 
     rel_path = sspec_path.relative_to(Path.cwd())
 
     console.print()
-    console.print(f'[green]✓[/green] Initialized sspec project in {rel_path}/')
+    console.print(f'[green]+[/green] Initialized sspec project in {rel_path}/')
     console.print()
     console.print('[cyan]Structure:[/cyan]')
     console.print('  .sspec/')
@@ -431,7 +505,7 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
     agents_needs_update = update_root_agents_block(dry_run=True)
 
     if not actions and not agents_needs_update:
-        console.print('[green]✓[/green] All files are up to date')
+        console.print('[green]+[/green] All files are up to date')
         return
 
     if dry_run:
@@ -468,9 +542,9 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
 
         status = upd['status']
         if status == 'missing':
-            console.print(f'  [green]✓[/green] Created {path}')
+            console.print(f'  [green]+[/green] Created {path}')
         else:
-            console.print(f'  [green]✓[/green] Updated {path}')
+            console.print(f'  [green]+[/green] Updated {path}')
 
     # Update metadata
     if updated_count or skill_updated_count:
@@ -482,11 +556,11 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
     # Update root AGENTS.md block
     if agents_needs_update:
         update_root_agents_block(dry_run=False)
-        console.print('  [green]✓[/green] Updated root AGENTS.md block')
+        console.print('  [green]+[/green] Updated root AGENTS.md block')
 
     console.print()
     console.print(
-        f"[green]✓[/green] Updated {updated_count + skill_updated_count + (1 if agents_needs_update else 0)} item(s)"
+        f"[green]+[/green] Updated {updated_count + skill_updated_count + (1 if agents_needs_update else 0)} item(s)"
     )
 
 

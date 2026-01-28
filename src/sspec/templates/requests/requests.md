@@ -7,14 +7,16 @@ tldr: ""
 
 # Request: {{NAME}}
 
-## What I Want
+## Context
+<!-- What's the current situation? Any background info that helps understand the request. -->
 
-<!-- Describe what you want to accomplish -->
+## Problem
+<!-- What's not working or missing? Describe the gap or pain point you're experiencing. -->
 
-## Why
+## Initiative / Proposal
+<!-- Your initial idea or direction — even rough thoughts are fine. -->
 
-<!-- Why is this needed? What problem does it solve? -->
+<!-- If you have specific approaches in mind, sketch them here. -->
 
 ## Additional Context
-
-<!-- Any constraints, preferences, references -->
+<!-- Constraints, preferences, related links, or anything else worth mentioning. -->

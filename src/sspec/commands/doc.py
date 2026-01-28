@@ -1,4 +1,4 @@
-"""sspec spec command - project specification management."""
+"""sspec doc command - project specification document management."""
 
 from datetime import datetime
 from pathlib import Path
@@ -17,18 +17,18 @@ from sspec.core import (
 
 console = Console()
 
-SPEC_DIR = 'spec'
+SPEC_DIR = 'spec-docs'
 
 
 @click.group()
-def spec() -> None:
-    """Project specification management (list, new)."""
+def doc() -> None:
+    """Project specification document management (list, new)."""
     pass
 
 
-@spec.command(name='list')
+@doc.command(name='list')
 def list_specs() -> None:
-    """List all project specifications."""
+    """List all project specification documents."""
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
@@ -38,17 +38,17 @@ def list_specs() -> None:
 
     spec_dir = sspec_root / SPEC_DIR
     if not spec_dir.exists():
-        console.print('[dim]No spec/ directory found.[/dim]')
+        console.print('[dim]No spec-docs/ directory found.[/dim]')
         console.print()
-        console.print('Create one with: sspec spec new <name>')
+        console.print('Create one with: sspec doc new <name>')
         return
 
     specs = _collect_specs(spec_dir)
 
     if not specs:
-        console.print('[dim]No specifications found.[/dim]')
+        console.print('[dim]No specification documents found.[/dim]')
         console.print()
-        console.print('Create one with: sspec spec new <name>')
+        console.print('Create one with: sspec doc new <name>')
         return
 
     table = Table(show_header=True, header_style='bold')
@@ -125,11 +125,11 @@ def _parse_spec_frontmatter(file_path: Path) -> dict | None:
         return {'name': file_path.stem}
 
 
-@spec.command()
+@doc.command()
 @click.argument('name')
 @click.option('--dir', 'is_dir', is_flag=True, help='Create as directory with index.md')
 def new(name: str, is_dir: bool) -> None:
-    """Create a new project specification."""
+    """Create a new project specification document."""
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
@@ -144,7 +144,7 @@ def new(name: str, is_dir: bool) -> None:
     safe_name = name.lower().replace(' ', '-')
     today = datetime.now().strftime('%Y-%m-%d')
 
-    template_dir = get_template_dir() / 'spec'
+    template_dir = get_template_dir() / 'spec-docs'
     replacements = {
         'SPEC_NAME': name,
         'DATE': today,
@@ -154,7 +154,7 @@ def new(name: str, is_dir: bool) -> None:
         # Create directory with index.md
         target_dir = spec_dir / safe_name
         if target_dir.exists():
-            raise click.ClickException(f"Specification '{safe_name}/' already exists.")
+            raise click.ClickException(f"Specification document '{safe_name}/' already exists.")
 
         target_dir.mkdir()
         template_file = template_dir / 'index.md'
@@ -165,7 +165,7 @@ def new(name: str, is_dir: bool) -> None:
         target_file.write_text(content, encoding='utf-8')
 
         rel_path = target_dir.relative_to(sspec_root.parent)
-        console.print(f'[green]✓[/green] Created specification: {rel_path}/')
+        console.print(f'[green]✓[/green] Created specification document: {rel_path}/')
         console.print()
         console.print('[cyan]Structure:[/cyan]')
         console.print(f'  {rel_path}/')
@@ -179,7 +179,7 @@ def new(name: str, is_dir: bool) -> None:
         # Create single file
         target_file = spec_dir / f'{safe_name}.md'
         if target_file.exists():
-            raise click.ClickException(f"Specification '{safe_name}.md' already exists.")
+            raise click.ClickException(f"Specification document '{safe_name}.md' already exists.")
 
         template_file = template_dir / 'template.md'
         content = template_file.read_text(encoding='utf-8')
@@ -187,7 +187,7 @@ def new(name: str, is_dir: bool) -> None:
         target_file.write_text(content, encoding='utf-8')
 
         rel_path = target_file.relative_to(sspec_root.parent)
-        console.print(f'[green]✓[/green] Created specification: {rel_path}')
+        console.print(f'[green]✓[/green] Created specification document: {rel_path}')
         console.print()
         console.print('[yellow]Next:[/yellow]')
         console.print('  1. Add description in frontmatter')

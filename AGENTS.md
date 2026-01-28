@@ -32,8 +32,8 @@ New-Item -ItemType Directory test_<feature_name>
 cd test_<feature_name>
 
 # Test using the editable install
-..\..\..\.venv\Scripts\sspec.exe project init [--options]
-..\..\..\.venv\Scripts\sspec.exe change new example
+..\..\.venv\Scripts\sspec.exe project init [--options]
+..\..\.venv\Scripts\sspec.exe change new example
 # ... test other commands
 ```
 

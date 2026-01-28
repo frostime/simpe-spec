@@ -65,7 +65,7 @@ def init(force: bool, skill_loc: str) -> None:
     (sspec_path / 'changes' / 'archive').mkdir(exist_ok=True)
     (sspec_path / 'requests').mkdir(exist_ok=True)
     (sspec_path / 'skills').mkdir(exist_ok=True)
-    (sspec_path / 'spec').mkdir(exist_ok=True)  # Project-level specifications
+    (sspec_path / 'spec-docs').mkdir(exist_ok=True)  # Project-level specification documents
 
     # Copy skills to specified location (and .sspec for backward compatibility)
     template_skills = list_template_skills()
@@ -146,7 +146,7 @@ def init(force: bool, skill_loc: str) -> None:
     console.print('[cyan]Structure:[/cyan]')
     console.print('  .sspec/')
     console.print('  ├── project.md      # Project overview')
-    console.print('  ├── spec/           # Project-level specifications')
+    console.print('  ├── spec-docs/      # Project-level specification documents')
     console.print('  ├── changes/        # Active change proposals')
     console.print('  └── requests/       # Ad-hoc AI requests')
     console.print()
@@ -515,7 +515,7 @@ def update_root_agents_block(dry_run: bool = False) -> bool:
     if start_marker not in content:
         if not dry_run:
             with open(root_agents, 'a', encoding='utf-8') as f:
-                f.write('\\n\\n' + rendered)
+                f.write('\n\n' + rendered)
         return True
 
     pattern = re.compile(

@@ -21,7 +21,7 @@ SSPEC is a document-driven AI collaboration framework. All planning, tracking, a
 | Term | Definition |
 |------|------------|
 | **Change** | Unit of work (feature/bugfix/refactor) with its own spec/tasks/handover |
-| **Spec** | Project-level specification (persistent design docs, not tied to changes) |
+| **Spec-doc** | Project-level specification document (persistent design docs, not tied to changes) |
 | **Directive** | User command via `@xxx` syntax—Agent MUST NOT auto-trigger |
 | **Status** | Lifecycle: PLANNING → DOING → REVIEW → DONE (or BLOCKED) |
 | **SKILL** | Deep reference for status rules, quality standards, edge cases |
@@ -56,21 +56,21 @@ ELSE:
 
 ---
 
-### `@spec <name>`
+### `@doc <name>`
 
-Create or edit project specification to persistent design docs (architecture, API contracts, standards)
+Create or edit project specification documents (architecture, API contracts, standards)
 
 ```
-IF user wants to create new spec:
+IF user wants to create new spec-doc:
     User request the concet needs
-    Run if need: sspec spec new "<name>" [--dir]
-    Consult: SKILL "write-spec"
-      IF not found: see .sspec/skills/write-spec/SKILL.md
+    Run if need: sspec doc new "<name>" [--dir]
+    Consult: SKILL "write-spec-doc"
+      IF not found: see .sspec/skills/write-spec-doc/SKILL.md
     Write spec document
 
-ELSE IF updating existing spec:
-    Find spec, by "sspec spec list" or user specified.
-    Apply write-spec SKILL guidelines -> Update.
+ELSE IF updating existing spec-doc:
+    Find spec-doc, by "sspec doc list" or user specified.
+    Apply write-spec-doc SKILL guidelines -> Update.
 ```
 
 ---
@@ -186,7 +186,7 @@ User disagrees with approach during implementation.
 ```
 .sspec/
 ├── project.md              # Project overview, tech stack, conventions
-├── spec/                   # Project-level specifications (persistent)
+├── spec-docs/              # Project-level specification documents (persistent)
 │   ├── README.md           # Spec usage guide
 │   └── <name>.md           # Individual specs (or <name>/index.md for multi-file)
 ├── skills/sspec/SKILL.md   # Status rules, quality standards, edge cases
@@ -213,10 +213,10 @@ sspec change new <name>      # Create change
 sspec change list            # List all changes
 sspec change archive <name>  # Archive completed change
 
-# Specifications
-sspec spec list              # List project specifications
-sspec spec new <name>        # Create single-file spec
-sspec spec new <name> --dir  # Create directory-based spec (complex subsystems)
+# Specification Documents
+sspec doc list               # List project specification documents
+sspec doc new <name>         # Create single-file spec-doc
+sspec doc new <name> --dir   # Create directory-based spec-doc (complex subsystems)
 ```
 
 ---

@@ -307,23 +307,23 @@ scope:
 
 ## Implementation
 
-```typescript
+\`\`\`typescript
 // /src/middleware/rate-limit.ts
 interface RateLimitConfig {
   limit: number;    // Tokens per window
   window: number;   // Seconds
   burst: number;    // Max bucket size
 }
-```
+\`\`\`
 
 **Storage**: Redis sorted set (`rl:{ip}:{endpoint}`)
 
 ## Error Response
 
 HTTP 429, `Retry-After` header:
-```json
+\`\`\`json
 { "error": "Rate limit exceeded", "retryAfter": 847 }
-```
+\`\`\`
 ```
 
 ### ❌ Bad Spec

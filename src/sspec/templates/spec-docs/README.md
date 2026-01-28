@@ -40,7 +40,7 @@ updated: 2026-01-27
 当规范内容较多时，使用目录组织：
 
 ```
-spec/
+spec-docs/
 └── api/
     ├── index.md        # 入口，包含 frontmatter
     ├── authentication.md
@@ -73,7 +73,7 @@ files:
 
 ## 与 change/spec.md 的区别
 
-| | change/spec.md | spec/ |
+| | change/spec.md | spec-docs/ |
 |---|----------------|-------|
 | 范围 | 单次变更 | 整个项目 |
 | 生命周期 | 临时（归档后移除） | 持久（持续演进） |

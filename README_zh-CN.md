@@ -14,7 +14,7 @@ sspec 通过结构化文件（`.sspec/`）提供跨会话持久化：
 - **spec.md**: 问题、方案、设计决策
 - **tasks.md**: 可执行任务及进度跟踪
 - **handover.md**: 会话桥梁——已完成内容、下一步工作
-- **spec/**: 项目级规范（架构、API、标准）
+- **spec-docs/**: 项目级规范（架构、API、标准）
 
 ## 安装
 
@@ -31,7 +31,7 @@ sspec project init
 
 创建 `.sspec/` 目录：
 - `project.md` - 项目上下文（技术栈、约束）
-- `spec/` - 规范目录
+- `spec-docs/` - 规范目录
 - `changes/` - 活跃变更（功能、bug、重构）
 - `skills/` - 自定义 AI 技能和指导
 
@@ -98,8 +98,8 @@ sspec spec list                     # 列出全部
 | `sspec change new <name>` | 创建变更 |
 | `sspec change list` | 列出变更 |
 | `sspec change archive <name>` | 归档已完成变更 |
-| `sspec spec new <name>` | 创建规范 |
-| `sspec spec list` | 列出规范 |
+| `sspec doc new <name>` | 创建规范文档 |
+| `sspec doc list` | 列出规范文档 |
 | `sspec skill new <name>` | 创建技能 |
 | `sspec skill list` | 列出技能 |
 
@@ -108,7 +108,7 @@ sspec spec list                     # 列出全部
 ```
 .sspec/
 ├── project.md              # 项目上下文
-├── spec/                   # 项目规范
+├── spec-docs/                   # 项目规范文档
 ├── changes/<name>/
 │   ├── spec.md             # 变更规格
 │   ├── tasks.md            # 任务和进度

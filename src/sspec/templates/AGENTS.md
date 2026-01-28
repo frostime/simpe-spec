@@ -25,6 +25,8 @@ SSPEC is a document-driven AI collaboration framework. All planning, tracking, a
 | **Directive** | User command via `@xxx` syntax—Agent MUST NOT auto-trigger |
 | **Status** | Lifecycle: PLANNING → DOING → REVIEW → DONE (or BLOCKED) |
 | **SKILL** | Deep reference for status rules, quality standards, edge cases |
+| **@AGENT: RULE/** | Inline constraint in templates—defines what to include in that section |
+| **@AGENT: REPLACE-FOR-EDIT/** | Section marker—replace entire section, don't append |
 
 ---
 
@@ -152,6 +154,40 @@ User disagrees with approach during implementation.
 
 ---
 
+## Template Markers
+
+Change documents (spec.md, tasks.md, handover.md) use `@AGENT:` markers to guide editing:
+
+### `@AGENT: RULE/<topic>`
+
+Constraints for filling in sections. Example:
+```markdown
+<!-- @AGENT: RULE/quantify-pain
+Describe current pain points with metrics.
+-->
+```
+
+### `@AGENT: REPLACE-FOR-EDIT/<section>`
+
+Indicates section should be **replaced**, not appended to:
+```markdown
+<!-- @AGENT: REPLACE-FOR-EDIT/problem-statement -->
+```
+
+📚 **For detailed editing patterns**: Consult sspec SKILL section "Core Editing Patterns"
+
+---
+
+## File Update Rules
+
+| File | Update When | Edit Pattern |
+|------|-------------|-------------|
+| **spec.md** | Status change, strategy pivot, design decision, blocker | Use REPLACE-FOR-EDIT markers; append to Section D for blockers |
+| **tasks.md** | Task completion (immediately!), task discovery, replanning | Replace task checkboxes, replace Progress Tracking section |
+| **handover.md** | **Every session end**—this is the **memory** between sessions | Replace entire content after markers |
+
+---
+
 ## Quick Reference
 
 ### Status Transitions
@@ -239,16 +275,6 @@ User message received
 Session ending?
     └─ Remind: "Run @handover to save progress"
 ```
-
----
-
-## File Update Rules
-
-| File | Update When |
-|------|-------------|
-| **spec.md** | Status change, strategy pivot, design decision |
-| **tasks.md** | Task completion (immediately!), task discovery, replanning |
-| **handover.md** | **Every session end**—this is the memory between sessions |
 
 ---
 

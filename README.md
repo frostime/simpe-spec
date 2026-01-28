@@ -14,7 +14,7 @@ sspec provides structured files (`.sspec/`) that persist across sessions:
 - **spec.md**: Problem, solution, design decisions
 - **tasks.md**: Executable tasks with progress tracking
 - **handover.md**: Session bridge—what was done, what's next
-- **spec/**: Project-level specifications (architecture, APIs, standards)
+- **spec-docs/**: Project-level specifications (architecture, APIs, standards)
 
 ## Install
 
@@ -31,7 +31,7 @@ sspec project init
 
 Creates `.sspec/` with:
 - `project.md` - Project context (tech stack, constraints)
-- `spec/` - Specifications directory
+- `spec-docs/` - Specifications directory
 - `changes/` - Active changes (features, bugs, refactors)
 - `skills/` - Custom AI skills and guidance
 
@@ -98,8 +98,8 @@ sspec spec list                       # List all
 | `sspec change new <name>` | Create change |
 | `sspec change list` | List changes |
 | `sspec change archive <name>` | Archive completed |
-| `sspec spec new <name>` | Create spec |
-| `sspec spec list` | List specs |
+| `sspec doc new <name>` | Create spec doc |
+| `sspec doc list` | List specs doc |
 | `sspec skill new <name>` | Create skill |
 | `sspec skill list` | List skills |
 
@@ -108,7 +108,7 @@ sspec spec list                       # List all
 ```
 .sspec/
 ├── project.md              # Project context
-├── spec/                   # Project specifications
+├── spec-docs/                   # Project specifications document
 ├── changes/<name>/
 │   ├── spec.md             # Change specification
 │   ├── tasks.md            # Tasks and progress

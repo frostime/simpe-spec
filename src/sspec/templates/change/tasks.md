@@ -5,59 +5,41 @@ updated: ""
 
 # Implementation Tasks
 
-<!-- @AGENT: Task Organization Principles
-- Each task < 2 hours to complete
-- Each task has clear verification criteria
-- Organize by implementation phase
-- Done = implemented + tested
-
-For detailed guidance, consult sspec SKILL.
+<!-- @AGENT: RULE/task-granularity
+Each task <2h, has verification criteria. Done = implemented + tested.
+For quality guidelines, import and read sspec SKILL.
 -->
 
 ## Task Legend
-
 | Marker | Meaning |
 |--------|---------|
 | `[ ]` | Todo |
 | `[x]` | Done (implemented + verified) |
+
 ## Task List
+<!-- @AGENT: REPLACE-FOR-EDIT/tasks -->
+<!-- @AGENT: RULE/phase-organization
+Organize by phases from spec.md Section C. Each phase has verification.
 
-<!-- @AGENT: Organize tasks by phases from spec.md Section C
-
-Format:
-
-### Phase 1: <Phase Name>
-
-- [ ] <Task description> `path/to/file.py`
-- [ ] <Task description> `path/to/file.py`
-
-**Verification**: <How to verify this phase is complete>
-
----
-
-Concrete Example:
-
+Example:
 ### Phase 1: Infrastructure ✅
-
 - [x] Add redis dependency `requirements.txt`
-- [x] Create Redis connection pool `src/cache/redis.py`
-
+- [x] Create Redis pool `src/cache/redis.py`
 **Verification**: `pytest tests/test_cache.py` passes
 
 ### Phase 2: Core Logic 🚧
-
-- [x] Modify auth middleware `src/auth/middleware.py`
-- [ ] Add token refresh logic `src/auth/jwt.py`
-- [ ] Handle cache failure fallback `src/auth/fallback.py`
-
-**Verification**: Auth response time <100ms
+- [x] Modify middleware `src/auth/middleware.py`
+- [ ] Add token refresh `src/auth/jwt.py`
+**Verification**: Auth response <100ms
 -->
 
 ---
 
 ## Progress Tracking
-
-<!-- @AGENT: Update this section after each task completion -->
+<!-- @AGENT: REPLACE-FOR-EDIT/progress -->
+<!-- @AGENT: RULE/update-after-completion
+Update after EACH task completion, not batched.
+-->
 
 **Overall Progress**: 0%
 

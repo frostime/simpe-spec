@@ -1,6 +1,6 @@
 ---
 name: write-spec
-description: Guide for writing project specifications in .sspec/spec/. MUST Use this when creating or updating spec documents under  SSPEC system.
+description: Guide for writing project specifications in .sspec/spec-docs/. MUST Use this when creating or updating spec documents under  SSPEC system.
 ---
 
 # Write-Spec
@@ -208,13 +208,13 @@ When design becomes obsolete:
 
 ```yaml
 deprecated: true
-replacement: /spec/auth-v2.md
+replacement: /spec-docs/auth-v2.md
 ```
 
 ### 2. Move to Archive
 
 ```
-spec/
+spec-docs/
 ├── auth.md              # Current
 └── archive/
     └── auth-v1.md       # Deprecated
@@ -238,7 +238,7 @@ Keep only: what it was, why deprecated, link to replacement.
 For complex subsystems, use directory structure:
 
 ```
-spec/payment-system/
+spec-docs/payment-system/
 ├── index.md          # Entry point
 ├── gateway.md        # Stripe integration
 ├── webhooks.md       # Event handling

@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 
 import click
+import yaml
 from dotenv import load_dotenv
 from rich.console import Console
 from rich.table import Table
@@ -87,12 +88,16 @@ def normalize_name(name: str) -> str:
 @click.option('--show', '-s', 'show_name', help='Show specific request')
 @click.option('--link', 'link_change', help='Link request to a change')
 @click.option('--all', '-a', 'show_all', is_flag=True, help='Include done requests in list')
+@click.option('--archive', 'archive_requests', is_flag=True, help='Archive requests interactively')
+@click.option('--yes', '-y', 'auto_yes', is_flag=True, help='Skip confirmation prompts')
 def request(
     name: str | None,
     list_requests: bool,
     show_name: str | None,
     link_change: str | None,
     show_all: bool,
+    archive_requests: bool,
+    auto_yes: bool,
 ) -> None:
     """Create or manage user requests.
 
@@ -105,6 +110,8 @@ def request(
         sspec request --list              # List open requests
         sspec request --show <name>       # Show request content
         sspec request <name> --link <change>  # Link request to change
+        sspec request --archive           # Archive requests interactively
+        sspec request --archive --yes     # Archive all without prompt
     """
     try:
         sspec_root = get_sspec_root()
@@ -125,6 +132,10 @@ def request(
         if not name:
             raise click.ClickException('Request name required for --link')
         _link_request_to_change(requests_dir, name, link_change, sspec_root)
+        return
+
+    if archive_requests:
+        _archive_requests(requests_dir, auto_yes)
         return
 
     # Create mode
@@ -343,3 +354,99 @@ def _link_request_to_change(requests_dir: Path, request_name: str, change_name: 
     request_path.write_text(new_content, encoding='utf-8')
 
     console.print(f'[green]✓[/green] Linked {request_path.stem} → {change_name}')
+
+
+def _archive_requests(requests_dir: Path, auto_yes: bool) -> None:
+    """Archive requests interactively or all at once."""
+    import shutil
+
+    import questionary
+
+    # Collect archivable requests (OPEN or DOING status)
+    archivable = []
+    for f in requests_dir.glob('*.md'):
+        content = f.read_text(encoding='utf-8')
+        if content.startswith('---'):
+            parts = content.split('---', 2)
+            if len(parts) >= 3:
+                try:
+                    meta = yaml.safe_load(parts[1])
+                    status = str(meta.get('status', RequestStatus.OPEN.value)).strip().upper()
+                    # Normalize status
+                    normalized = {
+                        'DOING': RequestStatus.DOING.value,
+                        'IN_PROGRESS': RequestStatus.DOING.value,
+                        'TODO': RequestStatus.OPEN.value,
+                    }.get(status, status)
+
+                    if normalized in [RequestStatus.OPEN.value, RequestStatus.DOING.value]:
+                        archivable.append({
+                            'path': f,
+                            'name': f.stem,
+                            'status': normalized,
+                            'tldr': meta.get('tldr', _extract_summary(parts[2]))
+                        })
+                except yaml.YAMLError:
+                    pass
+
+    if not archivable:
+        console.print('[dim]No requests to archive[/dim]')
+        return
+
+    # Interactive mode or auto-yes
+    if auto_yes:
+        to_archive = archivable
+    else:
+        # Use questionary for multi-select
+        choices = [
+            questionary.Choice(
+                title=f"{r['name']} [{r['status']}] - {r['tldr'][:50]}",
+                value=r,
+                checked=True  # Default all selected
+            )
+            for r in archivable
+        ]
+
+        console.print()
+        console.print('[bold]Select requests to archive:[/bold]')
+        console.print('[dim](Use arrow keys, space to toggle, enter to confirm)[/dim]')
+        console.print()
+
+        selected = questionary.checkbox(
+            '',
+            choices=choices
+        ).ask()
+
+        if selected is None:  # User cancelled
+            console.print('[yellow]Cancelled[/yellow]')
+            return
+
+        to_archive = selected
+
+    if not to_archive:
+        console.print('[yellow]No requests selected[/yellow]')
+        return
+
+    # Create archive directory
+    archive_dir = requests_dir / 'archive'
+    archive_dir.mkdir(exist_ok=True)
+
+    # Archive selected requests
+    archived_count = 0
+    for req in to_archive:
+        src_path = req['path']
+        dest_path = archive_dir / src_path.name
+
+        # Handle name conflicts
+        if dest_path.exists():
+            counter = 1
+            stem = dest_path.stem
+            while dest_path.exists():
+                dest_path = archive_dir / f'{stem}_{counter}.md'
+                counter += 1
+
+        shutil.move(str(src_path), str(dest_path))
+        archived_count += 1
+
+    console.print()
+    console.print(f'[green]✓[/green] Archived {archived_count} request(s) to {archive_dir.relative_to(requests_dir.parent)}')

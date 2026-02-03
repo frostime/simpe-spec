@@ -200,30 +200,95 @@ def _show_change_detail(change_path: Path) -> None:
 @click.option('--yes', '-y', is_flag=True, help='Skip confirmation')
 @click.option('--force', '-f', is_flag=True, help='Archive even if not DONE')
 def archive(name: str | None, yes: bool, force: bool) -> None:
-    """Archive a completed change."""
+    """Archive a completed change.
+
+    Without arguments, shows interactive multi-select for archivable changes.
+    With name argument, archives single change (original behavior).
+    """
+    import questionary
+
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
         raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
-    # If no name provided, try to auto-select
+    # If no name provided, use interactive multi-select
     if not name:
         changes = list_changes(sspec_root)
         active = [c for c in changes if not c['archived']]
 
         if not active:
             raise click.ClickException('No active changes to archive')
-        elif len(active) == 1:
-            name = active[0]['name']
-            console.print(f'[dim]Auto-selected: {name}[/dim]')
-        else:
-            console.print('[cyan]Active changes:[/cyan]')
-            for c in active:
-                console.print(f"  - {c['name']}")
-            name = click.prompt('Which change to archive?')
 
+        # Filter to archivable changes (DONE or all if --force)
+        if force:
+            archivable = active
+        else:
+            archivable = [c for c in active if c['status'] == ChangeStatus.DONE.value]
+
+            if not archivable:
+                console.print('[yellow]No DONE changes to archive[/yellow]')
+                console.print('[dim]Use --force to archive changes with other statuses[/dim]')
+                return
+
+        if len(archivable) == 1 and not yes:
+            # Single change: ask confirmation
+            name = archivable[0]['name']
+            if click.confirm(f"Archive '{name}'?"):
+                _archive_single_change(sspec_root, name, yes=True, force=force)
+            else:
+                console.print('[yellow]Cancelled[/yellow]')
+            return
+
+        # Multi-select mode
+        choices = [
+            questionary.Choice(
+                title=f"{c['name']} [{c['status']}] - {c['progress']['done']}/{c['progress']['total']} tasks",
+                value=c['name'],
+                checked=(c['status'] == ChangeStatus.DONE.value)  # Default check DONE changes
+            )
+            for c in archivable
+        ]
+
+        console.print()
+        console.print('[bold]Select changes to archive:[/bold]')
+        console.print('[dim](Use arrow keys, space to toggle, enter to confirm)[/dim]')
+        console.print()
+
+        selected = questionary.checkbox(
+            '',
+            choices=choices
+        ).ask()
+
+        if selected is None:  # User cancelled
+            console.print('[yellow]Cancelled[/yellow]')
+            return
+
+        if not selected:
+            console.print('[yellow]No changes selected[/yellow]')
+            return
+
+        # Archive selected changes
+        archived_count = 0
+        for change_name in selected:
+            try:
+                _archive_single_change(sspec_root, change_name, yes=True, force=force)
+                archived_count += 1
+            except Exception as e:
+                console.print(f'[red]Failed to archive {change_name}: {e}[/red]')
+
+        console.print()
+        console.print(f'[green]✓[/green] Archived {archived_count}/{len(selected)} change(s)')
+        return
+
+    # Single change mode (original behavior)
+    _archive_single_change(sspec_root, name, yes, force)
+
+
+def _archive_single_change(sspec_root: Path, name: str, yes: bool, force: bool) -> None:
+    """Archive a single change (extracted from original archive command)."""
     # Check current status
-    change_path = sspec_root / 'changes' / name  # type: ignore
+    change_path = sspec_root / 'changes' / name
     if not change_path.exists():
         raise click.ClickException(f"Change '{name}' not found")
 
@@ -276,7 +341,7 @@ def archive(name: str | None, yes: bool, force: bool) -> None:
             return
 
     try:
-        archive_path = archive_change(sspec_root, name, force=force) # type: ignore
+        archive_path = archive_change(sspec_root, name, force=force)
         rel_path = archive_path.relative_to(sspec_root.parent)
         console.print(f'[green]+[/green] Archived to: {rel_path}')
     except ChangeNotFoundError as e:

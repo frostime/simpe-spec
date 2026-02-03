@@ -234,7 +234,7 @@ def archive(name: str | None, yes: bool, force: bool) -> None:
         if len(archivable) == 1 and not yes:
             # Single change: ask confirmation
             name = archivable[0]['name']
-            if click.confirm(f"Archive '{name}'?"):
+            if questionary.confirm(f"Archive '{name}'?", default=True).ask():
                 _archive_single_change(sspec_root, name, yes=True, force=force)
             else:
                 console.print('[yellow]Cancelled[/yellow]')
@@ -298,21 +298,21 @@ def _archive_single_change(sspec_root: Path, name: str, yes: bool, force: bool) 
     # Interactive prompt if status is not DONE and not forced
     if current_status != ChangeStatus.DONE.value and not force:
         console.print()
-        console.print(f'[yellow]Warning: Change \"{name}\" status is {current_status}, not DONE[/yellow]')
+        console.print(f'[yellow]Warning: Change "{name}" status is {current_status}, not DONE[/yellow]')
         console.print()
-        console.print('[cyan]Options:[/cyan]')
-        console.print('  1. Force archive (keep current status)')
-        console.print('  2. Mark as DONE and archive')
-        console.print('  3. Cancel')
-        console.print()
+        import questionary
 
-        choice = click.prompt(
-            'Select option',
-            type=click.Choice(['1', '2', '3']),
-            default='3'
-        )
+        choice = questionary.select(
+            "Select option:",
+            choices=[
+                questionary.Choice("Force archive (keep current status)", value="1"),
+                questionary.Choice("Mark as DONE and archive", value="2"),
+                questionary.Choice("Cancel", value="3"),
+            ],
+            default="3"
+        ).ask()
 
-        if choice == '3':
+        if not choice or choice == '3':
             console.print('[yellow]Cancelled[/yellow]')
             return
         elif choice == '1':
@@ -336,7 +336,7 @@ def _archive_single_change(sspec_root: Path, name: str, yes: bool, force: bool) 
 
     # Confirm if not --yes
     if not yes:
-        if not click.confirm(f"Archive '{name}'?"):
+        if not questionary.confirm(f"Archive '{name}'?", default=True).ask():
             console.print('[yellow]Cancelled[/yellow]')
             return
 

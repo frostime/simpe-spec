@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 
 import click
+import questionary
 from rich.console import Console
 from rich.table import Table
 
@@ -53,45 +54,30 @@ def _interactive_skill_selection(project_root: Path) -> list[str]:
     console.print('[bold cyan]Skill Installation Location Selection[/bold cyan]')
     console.print()
 
-    if existing_dirs:
-        console.print(f'[green]Detected existing directories:[/green] {", ".join(existing_dirs)}')
-    else:
-        console.print('[yellow]No existing workspace directories found.[/yellow]')
+    choices = [
+        questionary.Choice(
+            title=f"{loc} {' (existing)' if loc in existing_dirs else ''}",
+            value=loc,
+            checked=loc in existing_dirs
+        )
+        for loc in available_locations
+    ]
 
-    console.print()
-    console.print('[dim]Available locations:[/dim]')
-    for i, loc in enumerate(available_locations, 1):
-        exists_marker = '[green]+[/green]' if loc in existing_dirs else '[dim]o[/dim]'
-        console.print(f'  {i}. {exists_marker} {loc}')
+    selected = questionary.checkbox(
+        "Select skill installation locations:",
+        choices=choices,
+        instruction="(Use arrow keys, space to toggle, enter to confirm)"
+    ).ask()
 
-    console.print()
-    console.print('[dim]Enter numbers separated by commas (e.g., 1,3) or press Enter to select detected directories[/dim]')
-
-    # Default to existing directories
-    default_indices = ','.join(str(available_locations.index(loc) + 1) for loc in existing_dirs)
-    user_input = click.prompt(
-        'Select locations',
-        default=default_indices if existing_dirs else '',
-        show_default=True
-    ).strip()
-
-    if not user_input:
-        return existing_dirs if existing_dirs else ['.claude']  # Fallback to .claude
-
-    # Parse user input
-    selected = []
-    try:
-        indices = [int(x.strip()) for x in user_input.split(',')]
-        for idx in indices:
-            if 1 <= idx <= len(available_locations):
-                selected.append(available_locations[idx - 1])
-    except ValueError:
-        console.print('[yellow]Invalid input, using default (.claude)[/yellow]')
+    if selected is None:  # User cancelled
+        console.print('[yellow]Selection cancelled, using default (.claude)[/yellow]')
         return ['.claude']
 
     if not selected:
-        console.print('[yellow]No valid selection, using default (.claude)[/yellow]')
-        return ['.claude']
+        # If nothing selected, fallback to detected existing or .claude
+        fallback = existing_dirs if existing_dirs else ['.claude']
+        console.print(f'[yellow]No locations selected, using fallback: {", ".join(fallback)}[/yellow]')
+        return fallback
 
     return selected
 
@@ -605,7 +591,7 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
         dest_path = upd['dest_path']
 
         if interactive:
-            if not click.confirm(f'Update {path}?'):
+            if not questionary.confirm(f'Update {path}?', default=True).ask():
                 console.print(f'  [dim]Skipped {path}[/dim]')
                 continue
 

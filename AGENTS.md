@@ -73,9 +73,9 @@ uv pip install -e .
 1. **Human-in-the-loop**——关键决策点引入人类确认，降低幻觉和方向性错误
 2. **省钱**——避免提前结束对话轮次，提高单轮效率
 
-**重要：在 Invoke 之前，必须要查看** SKILL `ask-prompt`
+**重要, 请必须要查看**  `ask-prompt` SKILL 详细内容，了解 ask prompt 的用法。
 
-**核心原理**：Copilot 按对话轮次计费。工具调用序列中使用 `ask-prompt` SKILL 可在不结束当前轮次的情况下获取用户输入。
+**核心原理**：Copilot 按对话轮次计费。工具调用序列中使用 `ask-prompt` **SKILL** 可在不结束当前轮次的情况下获取用户输入。
 
 **推荐调用方案 ：** 阅读 Ask-Prompt Skill → 创建 `tmp_<ask>.py` 临时文件 → 运行 → 获取回复 → 删除临时文件
 

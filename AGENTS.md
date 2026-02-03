@@ -37,19 +37,14 @@ uv run sspec <command>  # Use UV to run sspec command
 # ... test other commands
 ```
 
-**Verification checklist**:
-- ✅ Generated files match templates in `src/sspec/templates/`
-- ✅ CLI output is clear and helpful
-- ✅ File structure is correct
-- ✅ Error handling works as expected
-
 ### 🛠️ Development Setup
 
 **Tech Stack**:
 - Python 3.11+
-- uv for package management
+- **uv** for package management
 - Click for CLI
 - Rich for terminal output
+- Questionary for user input
 
 **Key directories**:
 - `src/sspec/` - Source code
@@ -102,9 +97,6 @@ uv pip install -e .
 - Verify generated output matches templates
 - Test both happy path and error cases
 
-**Commit Message Style**:
-- Prefix: `feat:`, `fix:`, `refactor:`, `docs:`, `test:`
-- Example: `feat: add --skill-loc parameter to project init`
 
 ---
 
@@ -140,15 +132,6 @@ uv pip install -e .
 | `src/sspec/commands/*.py` | CLI implementations | Adding/modifying commands |
 | `src/sspec/core.py` | Shared utilities | Cross-cutting functionality |
 | `pyproject.toml` | Package metadata | Dependencies, version, entry points |
-
-### Common Development Tasks
-
-```powershell
-.venv/Scripts/activate
-# Test in clean environment
-cd tmp; mkdir test_xyz; cd test_xyz
-uv run sspec project init
-```
 
 ---
 

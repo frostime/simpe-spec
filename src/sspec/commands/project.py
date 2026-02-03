@@ -31,6 +31,16 @@ from sspec.core import (
 console = Console()
 
 
+DEFAULT_GITIGNORE = '''
+!spec-docs/**
+!project.md
+changes/**
+requests/**
+skills/**
+.meta.json
+'''.strip()
+
+
 def _interactive_skill_selection(project_root: Path) -> list[str]:
     """Interactive skill location selection.
 
@@ -173,7 +183,7 @@ def init(force: bool, skill_loc: tuple[str, ...]) -> None:
     # Create .gitignore
     gitignore_path = sspec_path / '.gitignore'
     if not gitignore_path.exists():
-        gitignore_path.write_text('*', encoding='utf-8')
+        gitignore_path.write_text(DEFAULT_GITIGNORE, encoding='utf-8')
 
     # Create initial .meta.json
     meta_data = {

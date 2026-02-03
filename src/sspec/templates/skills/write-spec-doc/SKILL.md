@@ -31,7 +31,7 @@ scope:
   - /src/middleware/auth.ts
   - /config/security.ts
 deprecated: false
-replacement: ""    # see [Deprecation](#deprecation
+replacement: ""    # see [Deprecation](#deprecation)
 ---
 ```
 
@@ -158,6 +158,18 @@ Bad scope → Agent searches entire codebase
 - **Imperative mood**: "Validate tokens" not "The system should validate"
 - **Direct**: Avoid "It's worth noting...", "As mentioned earlier..."
 - **Precise**: "Use Redis (5min TTL)" not "Consider using Redis"
+
+### File Link
+
+To ensure links are clickable in modern IDEs (VS Code) and easy to maintain:
+
+1. **Simple Relative Paths**: Use for same-level, sub-directories, or up to **2 levels** of parent directories.
+   - Same level: `[Link](./other-spec.md)`
+   - Sub-directory: `[Link](./sub/detail.md)`
+   - Parent level: `[Link](../../base.md)` (Max two `../`)
+2. **Workspace-Relative Paths**: Use for files in completely different directory branches or when parent traversal exceeds 2 levels. Start the path with `/`.
+   - `[Link](/src/core.py)` instead of `[Link](../../../../src/core.py)`
+3. **Consistency**: Use forward slashes `/` for cross-platform compatibility.
 
 ---
 

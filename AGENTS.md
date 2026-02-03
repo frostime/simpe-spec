@@ -66,6 +66,25 @@ cd test_<feature_name>
 uv pip install -e .
 ```
 
+## Ask-Prompt：轮内用户交互
+
+在 Agent 运行过程中，遇到困惑、需要用户决策、需注入信息的情况，使用 Ask-Prompt 咨询用户：
+
+1. **Human-in-the-loop**——关键决策点引入人类确认，降低幻觉和方向性错误
+2. **省钱**——避免提前结束对话轮次，提高单轮效率
+
+**重要：在 Invoke 之前，必须要查看** SKILL `ask-prompt`
+
+**核心原理**：Copilot 按对话轮次计费。工具调用序列中使用 `ask-prompt` SKILL 可在不结束当前轮次的情况下获取用户输入。
+
+**推荐调用方案 ：** 阅读 Ask-Prompt Skill → 创建 `tmp_<ask>.py` 临时文件 → 运行 → 获取回复 → 删除临时文件
+
+**触发条件**：
+
+- [ ] 信息缺失会阻碍后续工作可靠性
+- [ ] 后续步骤依赖方向性选择（不是微调）
+- [ ] Agent 认为已完成工作，需确认是否结束
+
 ### 📋 Conventions
 
 **Code Style**:

@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 
 import click
+import questionary
 from rich.console import Console
 from rich.table import Table
 
@@ -53,45 +54,30 @@ def _interactive_skill_selection(project_root: Path) -> list[str]:
     console.print('[bold cyan]Skill Installation Location Selection[/bold cyan]')
     console.print()
 
-    if existing_dirs:
-        console.print(f'[green]Detected existing directories:[/green] {", ".join(existing_dirs)}')
-    else:
-        console.print('[yellow]No existing workspace directories found.[/yellow]')
+    choices = [
+        questionary.Choice(
+            title=f"{loc} {' (existing)' if loc in existing_dirs else ''}",
+            value=loc,
+            checked=loc in existing_dirs
+        )
+        for loc in available_locations
+    ]
 
-    console.print()
-    console.print('[dim]Available locations:[/dim]')
-    for i, loc in enumerate(available_locations, 1):
-        exists_marker = '[green]+[/green]' if loc in existing_dirs else '[dim]o[/dim]'
-        console.print(f'  {i}. {exists_marker} {loc}')
+    selected = questionary.checkbox(
+        "Select skill installation locations:",
+        choices=choices,
+        instruction="(Use arrow keys, space to toggle, enter to confirm)"
+    ).ask()
 
-    console.print()
-    console.print('[dim]Enter numbers separated by commas (e.g., 1,3) or press Enter to select detected directories[/dim]')
-
-    # Default to existing directories
-    default_indices = ','.join(str(available_locations.index(loc) + 1) for loc in existing_dirs)
-    user_input = click.prompt(
-        'Select locations',
-        default=default_indices if existing_dirs else '',
-        show_default=True
-    ).strip()
-
-    if not user_input:
-        return existing_dirs if existing_dirs else ['.claude']  # Fallback to .claude
-
-    # Parse user input
-    selected = []
-    try:
-        indices = [int(x.strip()) for x in user_input.split(',')]
-        for idx in indices:
-            if 1 <= idx <= len(available_locations):
-                selected.append(available_locations[idx - 1])
-    except ValueError:
-        console.print('[yellow]Invalid input, using default (.claude)[/yellow]')
+    if selected is None:  # User cancelled
+        console.print('[yellow]Selection cancelled, using default (.claude)[/yellow]')
         return ['.claude']
 
     if not selected:
-        console.print('[yellow]No valid selection, using default (.claude)[/yellow]')
-        return ['.claude']
+        # If nothing selected, fallback to detected existing or .claude
+        fallback = existing_dirs if existing_dirs else ['.claude']
+        console.print(f'[yellow]No locations selected, using fallback: {", ".join(fallback)}[/yellow]')
+        return fallback
 
     return selected
 
@@ -155,17 +141,39 @@ def init(force: bool, skill_loc: tuple[str, ...]) -> None:
     template_skills = list_template_skills()
     skill_targets = _get_skill_targets_from_locations(project_root, skill_locations)
 
+    from sspec.skill_installer import SkillInstaller
+
+    skill_install_strategies: dict[str, str] = {}  # Track strategy per location
+
     for skill_dir in template_skills:
         skill_name = skill_dir.name
         for target_dir in skill_targets:
             dest_skill_dir = target_dir / skill_name
-            copy_template(skill_dir, dest_skill_dir, common_replacements)
+
+            # Use SkillInstaller with symlink preference
+            strategy = SkillInstaller.install_skill(
+                source_dir=skill_dir,
+                target_dir=dest_skill_dir,
+                prefer_symlink=True
+            )
+
+            # Record strategy for this location
+            try:
+                rel_target = target_dir.relative_to(project_root)
+                location_key = str(rel_target)
+                # Only record first skill's strategy (assume all skills same strategy per location)
+                if location_key not in skill_install_strategies:
+                    skill_install_strategies[location_key] = strategy
+            except ValueError:
+                pass
 
     if template_skills:
         for target_dir in skill_targets:
             if target_dir.exists():
                 rel_target = target_dir.relative_to(project_root)
-                console.print(f'  [green]+[/green] Installed skills to {rel_target}/')
+                location_key = str(rel_target)
+                strategy = skill_install_strategies.get(location_key, 'copy')
+                console.print(f'  [green]+[/green] Installed skills to {rel_target}/ ({strategy})')
 
     # Initialize templates
     for file_path in [*UPDATABLE_FILES, *USER_FILES]:
@@ -185,14 +193,28 @@ def init(force: bool, skill_loc: tuple[str, ...]) -> None:
     if not gitignore_path.exists():
         gitignore_path.write_text(DEFAULT_GITIGNORE, encoding='utf-8')
 
+    # Compute hashes for installed skills (for update tracking)
+    skill_hashes = {}
+    for skill_dir in template_skills:
+        skill_name = skill_dir.name
+        template_skill_file = skill_dir / 'SKILL.md'
+        if template_skill_file.exists():
+            # Read and apply replacements
+            template_content = template_skill_file.read_text(encoding='utf-8')
+            for old, new in common_replacements.items():
+                template_content = template_content.replace(f'{{{{{old}}}}}', new)
+            skill_hash = compute_hash(template_content)
+            skill_hashes[f'skills/{skill_name}/SKILL.md'] = skill_hash
+
     # Create initial .meta.json
     meta_data = {
         'schema_version': SCHEMA_VERSION,
         'sspec_version': __version__,
         'created_at': datetime.now().isoformat(),
         'updated_at': datetime.now().isoformat(),
-        'file_hashes': {},
+        'file_hashes': skill_hashes,  # Initialize with skill hashes
         'skill_locations': [],  # Track where skills are installed
+        'skill_install_strategies': skill_install_strategies,  # Track strategy per location
     }
 
     # Record skill installation locations (relative to project root)
@@ -416,17 +438,55 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
     # Collect skill update candidates
     project_root = sspec_root.parent
     skill_locations = meta.get('skill_locations', [])
+    skill_install_strategies = meta.get('skill_install_strategies', {})
     template_skills = list_template_skills()
+
+    from sspec.skill_installer import SkillInstaller
 
     for skill_dir in template_skills:
         skill_name = skill_dir.name
         for loc_str in skill_locations:
-            skill_dest = project_root / loc_str / skill_name / 'SKILL.md'
+            skill_dest_dir = project_root / loc_str / skill_name
+            skill_dest = skill_dest_dir / 'SKILL.md'
             template_skill_file = skill_dir / 'SKILL.md'
 
             if not template_skill_file.exists():
                 continue
 
+            # Get strategy for this location
+            strategy = skill_install_strategies.get(loc_str, 'copy')
+
+            # For symlinks, check if link is valid
+            if strategy == 'symlink':
+                if skill_dest_dir.is_symlink():
+                    # Symlink exists - check if it points to correct location
+                    try:
+                        if skill_dest_dir.resolve() == skill_dir.resolve():
+                            status = 'current'  # Link is valid
+                        else:
+                            status = 'updatable'  # Link points elsewhere
+                    except OSError:
+                        status = 'missing'  # Broken link
+                else:
+                    status = 'missing'  # Should be symlink but isn't
+
+                # For symlinks, we don't check content hash - just link validity
+                updates.append({
+                    'path': str(Path(loc_str) / skill_name),
+                    'is_user': False,
+                    'status': status,
+                    'template_path': skill_dir,
+                    'dest_path': skill_dest_dir,
+                    'template_content': '',  # Not used for symlinks
+                    'new_hash': None,
+                    'current_hash': None,
+                    'skill_hash_key': f'skills/{skill_name}/SKILL.md',
+                    'is_symlink': True,
+                    'strategy': strategy,
+                })
+                continue
+
+            # For copy strategy, check content hash
             # Read template
             template_content = template_skill_file.read_text(encoding='utf-8')
             for old, new in common_replacements.items():
@@ -440,18 +500,13 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
                 current_hash = None
             else:
                 current_hash = compute_file_hash(skill_dest)
-                # Use skill-specific hash key
-                skill_hash_key = f'skills/{skill_name}/SKILL.md'
-                old_hash = old_hashes.get(skill_hash_key)
-
-                if old_hash is None:
-                    status = 'unknown'
-                elif current_hash == new_hash:
+                # Skills are templates - compare directly with new version
+                # No need for old_hash check (always sync with template)
+                if current_hash == new_hash:
                     status = 'current'
-                elif current_hash == old_hash:
-                    status = 'updatable'
                 else:
-                    status = 'modified'
+                    # Content differs - should update to match template
+                    status = 'updatable'
 
             # Construct display path
             try:
@@ -464,12 +519,14 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
                     'path': str(display_path),
                     'is_user': False,
                     'status': status,
-                    'template_path': template_skill_file,
-                    'dest_path': skill_dest,
+                    'template_path': skill_dir,
+                    'dest_path': skill_dest_dir,
                     'template_content': template_content,
                     'new_hash': new_hash,
                     'current_hash': current_hash,
-                    'skill_hash_key': skill_hash_key,  # Special key for skills
+                    'skill_hash_key': f'skills/{skill_name}/SKILL.md',
+                    'is_symlink': False,
+                    'strategy': strategy,
                 }
             )
 
@@ -534,27 +591,57 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
         dest_path = upd['dest_path']
 
         if interactive:
-            if not click.confirm(f'Update {path}?'):
+            if not questionary.confirm(f'Update {path}?', default=True).ask():
                 console.print(f'  [dim]Skipped {path}[/dim]')
                 continue
 
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        dest_path.write_text(upd['template_content'], encoding='utf-8')
-
-        # Use skill_hash_key if this is a skill, otherwise use path
-        hash_key = upd.get('skill_hash_key', path)
-        new_hashes[hash_key] = upd['new_hash']
-
-        if 'skill_hash_key' in upd:
+        # Handle symlinks vs copies differently
+        if upd.get('is_symlink'):
+            # Symlink update
+            strategy = upd['strategy']
+            SkillInstaller.update_skill(
+                source_dir=upd['template_path'],
+                target_dir=upd['dest_path'],
+                strategy=strategy
+            )
             skill_updated_count += 1
+            console.print(f'  [green]+[/green] Updated symlink {path}')
         else:
-            updated_count += 1
+            # Regular file or copied skill
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
 
-        status = upd['status']
-        if status == 'missing':
-            console.print(f'  [green]+[/green] Created {path}')
-        else:
-            console.print(f'  [green]+[/green] Updated {path}')
+            # For skills with copy strategy, remove old directory and install fresh
+            if upd.get('strategy') == 'copy' and not upd.get('is_user', True):
+                # This is a copied skill - use SkillInstaller to re-copy
+                if upd['dest_path'].exists():
+                    import shutil
+                    shutil.rmtree(upd['dest_path'])
+
+                SkillInstaller.update_skill(
+                    source_dir=upd['template_path'],
+                    target_dir=upd['dest_path'],
+                    strategy='copy'
+                )
+                skill_updated_count += 1
+                status = upd['status']
+                if status == 'missing':
+                    console.print(f'  [green]+[/green] Created skill {path}')
+                else:
+                    console.print(f'  [green]+[/green] Updated skill {path}')
+            else:
+                # Regular file (AGENTS.md, project.md, etc.)
+                dest_path.write_text(upd['template_content'], encoding='utf-8')
+                updated_count += 1
+                status = upd['status']
+                if status == 'missing':
+                    console.print(f'  [green]+[/green] Created {path}')
+                else:
+                    console.print(f'  [green]+[/green] Updated {path}')
+
+        # Update hashes for non-symlink files
+        if not upd.get('is_symlink'):
+            hash_key = upd.get('skill_hash_key', path)
+            new_hashes[hash_key] = upd['new_hash']
 
     # Update metadata
     if updated_count or skill_updated_count:

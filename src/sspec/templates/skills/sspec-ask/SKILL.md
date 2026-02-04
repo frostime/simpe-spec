@@ -1,81 +1,156 @@
 ---
 skill: sspec-ask
-version: 1.0.0
-description: Use `sspec ask` to ask users questions mid-execution and persist the Q/A record under .sspec/asks/. Alais of the skill "sspec ask", "ask prompt", "user ask". This is very important SKILL, use this skill actively whenever Agents need user's feedback in-loop.
+version: 2.0.0
+description: Mid-execution user consultation with persistent Q&A records. Use actively when needing human input.
 ---
 
 # SSPEC Ask Skill
 
-## Purpose
+**When to consult**: First time using `sspec ask`, or need multi-line question syntax.
 
-Use `sspec ask` when Agent need user input mid-execution. It agents to ask users questions mid-execution without ending the current conversation turn, reducing billing costs by up to 50%.
+**Basic rule** (from AGENTS.md): Use when information missing, directional choice needed, completion check, or repeated failures.
 
-**Vibe coding  benefit:** Human-in-the-loop at decision points reduces hallucination and directional errors.
-**Cost benefit for copilot:**
-- Traditional: Turn 1 (5 tool calls) → Stop → 1 Credit + Turn 2 (5 tool calls) → 1 Credit = **2 Credits**
-- Ask-Prompt: Turn 1 (5 tool calls → ask user → 5 tool calls) = **1 Credit**
+---
 
-## Usage
+## Command Syntax
 
-Execute `sspec ask` CLI command under root directiory (where exists `.sspec`)
-
-```
->> sspec ask --help
-Usage: sspec ask [OPTIONS]
-
-  Ask user for input and save the Q/A record under .sspec/asks/.
-
-Options:
-  --name TEXT      Ask topic/name (used in filename)  [required]
-  --question TEXT  Question text (multi-line supported). Use '-' to read full
-                   stdin.  [required]
-  --why TEXT       Why this question is being asked (optional)
-  --help           Show this message and exit.
+```bash
+sspec ask --name "<topic>" --why "<reason>" --question "<question>"
 ```
 
-## Guidelines
+| Flag | Required | Description |
+|------|----------|-------------|
+| `--name` | Yes | Topic identifier (used in filename) |
+| `--why` | No (recommended) | Intent for future reference |
+| `--question` | Yes | Question text. Use `-` for stdin |
 
-- Always provide a short `--why` so future Agents understand the intent.
-- Use a stable `--name` so records are easy to search.
-- For multi-line questions:
-  - PowerShell: pass a here-string to `--question`.
-  - Bash/Zsh: use `--question -` and provide the question via stdin.
-  - If markdown is used in the question, limit headings to a maximum of Header 3 (`###`).
-- The command prompts the user for an answer (multi-line). The user finishes by typing `END` on a new line.
-- The result is saved to `.sspec/asks/<yymmddHHMMSS>_<name>.md`.
+**Output**: User prompted for answer. Record saved to `.sspec/asks/<timestamp>_<name>.md`
 
-## Use Conditions !IMPORTANT!
+---
 
-Use this when:
+## Multi-Line Questions
 
-- [ ] The user explicitly requests that Ask Prompt be recommended or required in certain scenarios.
-- [ ] Information is missing, leading to low reliability and high uncertainty in subsequent work.
-  - Example: Some terms in the user's request lack clear context, making it difficult to determine their specific meaning. In such cases, the Agent should ask the user to clarify the intended meaning.
-- [ ] Subsequent steps depend on directional choices (not minor adjustments).
-  - Example: When refactoring a component, multiple architectural styles can be applied. The Agent should consult the user for their preference.
-- [ ] The Agent believes the task is complete and needs to confirm with the user whether to end.
-  - Example: After modifying the code, if the Agent believes the user's instructions have been fulfilled, it should ask the user to verify and confirm satisfaction.
-- [ ] Multiple attempts at an operation have failed, requiring consultation with the user.
-  - Example: After multiple failed attempts to run a CLI command, the Agent consults the user and learns that the .venv environment must be activated first.
-
-## Examples
-
-### PowerShell (multi-line question)
+### PowerShell (here-string)
 
 ```powershell
-sspec ask --name "test_error" --why "无法理解为何 test 命令总是出错" --question @'
-请问：
-1) 你希望 test 运行哪些步骤？
-2) 你看到的错误日志是哪些？
+sspec ask --name "api_design" --why "Multiple valid approaches" --question @'
+Which API style do you prefer?
+
+1) REST with nested resources
+   `/users/{id}/orders/{orderId}`
+
+2) Flat endpoints with query params
+   `/orders?userId={id}&orderId={orderId}`
+
+Please explain your reasoning.
 '@
 ```
 
-### Bash/Zsh (stdin question)
+### Bash/Zsh (heredoc)
 
 ```bash
-sspec ask --name "test_error" --why "无法理解为何 test 命令总是出错" --question - << 'EOF'
-请问：
-1) 你希望 test 运行哪些步骤？
-2) 你看到的错误日志是哪些？
+sspec ask --name "api_design" --why "Multiple valid approaches" --question - << 'EOF'
+Which API style do you prefer?
+
+1) REST with nested resources
+   `/users/{id}/orders/{orderId}`
+
+2) Flat endpoints with query params
+   `/orders?userId={id}&orderId={orderId}`
+
+Please explain your reasoning.
 EOF
 ```
+
+---
+
+## Use Case Examples
+
+### 1. Missing Information
+
+```bash
+sspec ask --name "db_credentials" \
+  --why "Cannot proceed without connection info" \
+  --question "What are the database connection details? (host, port, user, password)"
+```
+
+### 2. Directional Choice
+
+```bash
+sspec ask --name "error_handling" \
+  --why "Architecture decision needed" \
+  --question @'
+How should we handle API errors?
+
+A) Return HTTP status codes only (400, 404, 500)
+B) Return JSON error objects with codes and messages
+C) Both: status codes + JSON body
+
+This affects all endpoint implementations.
+'@
+```
+
+### 3. Completion Check
+
+```bash
+sspec ask --name "feature_complete" \
+  --why "Verify before marking REVIEW" \
+  --question "I've completed the auth refactor. Please verify: 1) Login works 2) Token refresh works 3) Logout clears session. Ready to mark as REVIEW?"
+```
+
+### 4. Repeated Failures
+
+```bash
+sspec ask --name "test_failure" \
+  --why "Cannot diagnose after 3 attempts" \
+  --question @'
+`pytest tests/test_auth.py` fails repeatedly with:
+
+ConnectionRefusedError: [Errno 111] Connection refused
+
+I've tried:
+1. Checking if Redis is running (it is)
+2. Verifying connection string
+3. Running with verbose logging
+
+What am I missing?
+'@
+```
+
+---
+
+## Guidelines
+
+| Do | Don't |
+|----|-------|
+| Use specific `--name` for searchability | Use generic names like "question1" |
+| Include `--why` for future context | Omit why (makes records less useful) |
+| Ask one focused question | Bundle multiple unrelated questions |
+| Provide options when applicable | Leave question open-ended if choices exist |
+| Use markdown formatting in questions | Use headers above H3 (###) |
+
+---
+
+## Record Format
+
+Saved to `.sspec/asks/<yymmddHHMMSS>_<name>.md`:
+
+```markdown
+---
+name: api_design
+why: Multiple valid approaches
+timestamp: 2026-01-27T14:30:00
+---
+
+## Question
+
+Which API style do you prefer?
+...
+
+## Answer
+
+Option B - JSON error objects. We need structured errors for the mobile app to display localized messages.
+```
+
+Records persist for future reference and can be linked from change documents.
+

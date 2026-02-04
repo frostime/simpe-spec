@@ -47,7 +47,7 @@ packages = ["src/sspec"]
 source = "vcs"
 
 [tool.ruff]
-line-length = 120
+line-length = 100
 target-version = "py310"
 
 [tool.ruff.lint]

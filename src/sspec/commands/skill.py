@@ -23,9 +23,7 @@ def list_skills_cmd() -> None:
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException(
-            "Not a sspec project. Run 'sspec project init' first."
-        ) from None
+        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     _list_skills(sspec_root)
 
@@ -57,21 +55,15 @@ def _list_skills(sspec_root: Path) -> None:
 
 @skill.command()
 @click.argument('name')
-@click.option(
-    '--claude', 'to_claude', is_flag=True, help='Create skill under .claude/skills'
-)
-@click.option(
-    '--github', 'to_github', is_flag=True, help='Create skill under .github/skills'
-)
+@click.option('--claude', 'to_claude', is_flag=True, help='Create skill under .claude/skills')
+@click.option('--github', 'to_github', is_flag=True, help='Create skill under .github/skills')
 def new(name: str, to_claude: bool, to_github: bool) -> None:
     """Create a new skill directory with SKILL.md in workspace skill locations."""
 
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException(
-            "Not a sspec project. Run 'sspec project init' first."
-        ) from None
+        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     project_root = sspec_root.parent
 

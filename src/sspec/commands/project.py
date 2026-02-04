@@ -35,14 +35,14 @@ from sspec.services.project_update_service import collect_update_candidates
 console = Console()
 
 
-DEFAULT_GITIGNORE = '''
+DEFAULT_GITIGNORE = """
 !spec-docs/**
 !project.md
 changes/**
 requests/**
 skills/**
 .meta.json
-'''.strip()
+""".strip()
 
 
 def _interactive_skill_selection(project_root: Path) -> list[str]:
@@ -62,15 +62,15 @@ def _interactive_skill_selection(project_root: Path) -> list[str]:
         questionary.Choice(
             title=f"{loc} {' (existing)' if loc in existing_dirs else ''}",
             value=loc,
-            checked=loc in existing_dirs
+            checked=loc in existing_dirs,
         )
         for loc in available_locations
     ]
 
     selected = questionary.checkbox(
-        "Select skill installation locations:",
+        'Select skill installation locations:',
         choices=choices,
-        instruction="(Use arrow keys, space to toggle, enter to confirm)"
+        instruction='(Use arrow keys, space to toggle, enter to confirm)',
     ).ask()
 
     if selected is None:  # User cancelled
@@ -81,9 +81,7 @@ def _interactive_skill_selection(project_root: Path) -> list[str]:
         # If nothing selected, fallback to detected existing or .claude
         fallback = existing_dirs if existing_dirs else ['.claude']
         fallback_str = ', '.join(fallback)
-        console.print(
-            f'[yellow]No locations selected, using fallback: {fallback_str}[/yellow]'
-        )
+        console.print(f'[yellow]No locations selected, using fallback: {fallback_str}[/yellow]')
         return fallback
 
     return selected
@@ -101,15 +99,13 @@ def project() -> None:
     '--skill-loc',
     multiple=True,
     type=click.Choice(['.claude', '.github', '.agent'], case_sensitive=False),
-    help='Skill installation locations (can specify multiple, or use interactive mode)'
+    help='Skill installation locations (can specify multiple, or use interactive mode)',
 )
 def init(force: bool, skill_loc: tuple[str, ...]) -> None:
     """Initialize .sspec directory in current project."""
     project_root = Path.cwd()
     # Interactive skill location selection if not specified via CLI
-    skill_locations = (
-        list(skill_loc) if skill_loc else _interactive_skill_selection(project_root)
-    )
+    skill_locations = list(skill_loc) if skill_loc else _interactive_skill_selection(project_root)
 
     try:
         result = initialize_project(
@@ -139,9 +135,7 @@ def init(force: bool, skill_loc: tuple[str, ...]) -> None:
             rel_target = target_dir.relative_to(project_root)
             location_key = str(rel_target)
             strategy = result.skill_install_strategies.get(location_key, 'copy')
-            console.print(
-                f'  [green]+[/green] Installed skills to {rel_target}/ ({strategy})'
-            )
+            console.print(f'  [green]+[/green] Installed skills to {rel_target}/ ({strategy})')
 
     if result.created_or_updated_agents:
         console.print('  [green]+[/green] Created/Updated root AGENTS.md')
@@ -170,9 +164,7 @@ def status() -> None:
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException(
-            "Not a sspec project. Run 'sspec project init' first."
-        ) from None
+        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     _show_overview(sspec_root)
 
@@ -195,17 +187,14 @@ def _show_overview(sspec_root: Path) -> None:
             name = change['name']
 
             console.print(
-                f'{status_icon} [bold]{name}[/bold] '
-                f'[{_get_status_color(status)}]{status}[/]'
+                f'{status_icon} [bold]{name}[/bold] ' f'[{_get_status_color(status)}]{status}[/]'
             )
 
             if change.get('description'):
                 console.print(f'  [dim]{change["description"]}[/dim]')
             console.print()
 
-    console.print(
-        f'[dim]{len(active)} active, {len(changes) - len(active)} archived[/dim]'
-    )
+    console.print(f'[dim]{len(active)} active, {len(changes) - len(active)} archived[/dim]')
     console.print()
 
 
@@ -234,9 +223,7 @@ def _get_status_color(status: str) -> str:
 
 
 @project.command()
-@click.option(
-    '--dry-run', is_flag=True, help='Show what would be updated without making changes'
-)
+@click.option('--dry-run', is_flag=True, help='Show what would be updated without making changes')
 @click.option('--force', is_flag=True, help='Force update even if files were modified')
 @click.option('--interactive', '-i', is_flag=True, help='Prompt for each file')
 def update(dry_run: bool, force: bool, interactive: bool) -> None:
@@ -244,9 +231,7 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException(
-            "Not a sspec project. Run 'sspec project init' first."
-        ) from None
+        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     template_dir = get_template_dir()
     meta = load_meta(sspec_root)
@@ -334,17 +319,13 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
         # Handle skills (symlink/copy) vs regular files
         if upd.strategy == 'symlink':
             SkillInstaller.update_skill(
-                source_dir=upd.template_path,
-                target_dir=upd.dest_path,
-                strategy='symlink'
+                source_dir=upd.template_path, target_dir=upd.dest_path, strategy='symlink'
             )
             skill_updated_count += 1
             console.print(f'  [green]+[/green] Updated symlink {path}')
         elif upd.strategy == 'copy':
             SkillInstaller.update_skill(
-                source_dir=upd.template_path,
-                target_dir=upd.dest_path,
-                strategy='copy'
+                source_dir=upd.template_path, target_dir=upd.dest_path, strategy='copy'
             )
             skill_updated_count += 1
             if upd.status == 'missing':
@@ -385,4 +366,4 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
     total_updated = updated_count + skill_updated_count
     if agents_needs_update:
         total_updated += 1
-    console.print(f"[green]+[/green] Updated {total_updated} item(s)")
+    console.print(f'[green]+[/green] Updated {total_updated} item(s)')

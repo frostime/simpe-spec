@@ -32,9 +32,7 @@ def list_specs() -> None:
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException(
-            "Not a sspec project. Run 'sspec project init' first."
-        ) from None
+        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     spec_dir = sspec_root / SPEC_DIR
     if not spec_dir.exists():
@@ -133,9 +131,7 @@ def new(name: str, is_dir: bool) -> None:
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException(
-            "Not a sspec project. Run 'sspec project init' first."
-        ) from None
+        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     spec_dir = sspec_root / SPEC_DIR
     spec_dir.mkdir(exist_ok=True)

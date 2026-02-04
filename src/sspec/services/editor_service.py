@@ -35,18 +35,18 @@ def get_editor_command(
 
     env_map = env or os.environ
 
-    editor = env_map.get("SSPEC_EDITOR")
+    editor = env_map.get('SSPEC_EDITOR')
     if editor:
         return editor
 
-    env_path = (cwd or Path.cwd()) / ".env"
+    env_path = (cwd or Path.cwd()) / '.env'
     if env_path.exists():
         load_dotenv(env_path)
-        editor = os.environ.get("SSPEC_EDITOR")
+        editor = os.environ.get('SSPEC_EDITOR')
         if editor:
             return editor
 
-    return env_map.get("EDITOR")
+    return env_map.get('EDITOR')
 
 
 def open_in_editor(
@@ -63,10 +63,10 @@ def open_in_editor(
     if not editor_cmd:
         return False
 
-    if "{file}" in editor_cmd:
-        cmd = editor_cmd.replace("{file}", str(file_path))
+    if '{file}' in editor_cmd:
+        cmd = editor_cmd.replace('{file}', str(file_path))
     else:
-        cmd = f"{editor_cmd} {file_path}"
+        cmd = f'{editor_cmd} {file_path}'
 
     try:
         subprocess.run(cmd, shell=True, check=True)

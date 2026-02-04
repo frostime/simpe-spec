@@ -51,11 +51,11 @@ def get_skill_targets_from_locations(
     targets: list[Path] = []
 
     for loc in locations:
-        if loc == ".sspec":
+        if loc == '.sspec':
             continue
-        targets.append(project_root / loc / "skills")
+        targets.append(project_root / loc / 'skills')
 
-    targets.append(project_root / sspec_dir / "skills")
+    targets.append(project_root / sspec_dir / 'skills')
     return targets
 
 
@@ -76,19 +76,19 @@ def initialize_project(
 
     if sspec_path.exists() and not force:
         raise ProjectAlreadyInitializedError(
-            f"{SSPEC_DIR} already exists. Use --force to reinitialize."
+            f'{SSPEC_DIR} already exists. Use --force to reinitialize.'
         )
 
     template_dir = get_template_dir()
-    common_replacements = {"SCHEMA_VERSION": SCHEMA_VERSION, "SCHEMA": SCHEMA_VERSION}
+    common_replacements = {'SCHEMA_VERSION': SCHEMA_VERSION, 'SCHEMA': SCHEMA_VERSION}
 
     # Create directory structure
     sspec_path.mkdir(parents=True, exist_ok=True)
-    (sspec_path / "changes").mkdir(exist_ok=True)
-    (sspec_path / "changes" / "archive").mkdir(exist_ok=True)
-    (sspec_path / "requests").mkdir(exist_ok=True)
-    (sspec_path / "skills").mkdir(exist_ok=True)
-    (sspec_path / "spec-docs").mkdir(exist_ok=True)
+    (sspec_path / 'changes').mkdir(exist_ok=True)
+    (sspec_path / 'changes' / 'archive').mkdir(exist_ok=True)
+    (sspec_path / 'requests').mkdir(exist_ok=True)
+    (sspec_path / 'skills').mkdir(exist_ok=True)
+    (sspec_path / 'spec-docs').mkdir(exist_ok=True)
 
     # Install skills
     template_skills = list_template_skills()
@@ -135,33 +135,33 @@ def initialize_project(
         copy_template(template_path, dest_path, common_replacements)
 
     # Create .gitignore
-    gitignore_path = sspec_path / ".gitignore"
+    gitignore_path = sspec_path / '.gitignore'
     if not gitignore_path.exists():
-        gitignore_path.write_text(default_gitignore, encoding="utf-8")
+        gitignore_path.write_text(default_gitignore, encoding='utf-8')
 
     # Compute hashes for installed skills (for update tracking)
     skill_hashes: dict[str, str] = {}
     for skill_dir in template_skills:
         skill_name = skill_dir.name
-        template_skill_file = skill_dir / "SKILL.md"
+        template_skill_file = skill_dir / 'SKILL.md'
         if not template_skill_file.exists():
             continue
 
-        template_content = template_skill_file.read_text(encoding="utf-8")
+        template_content = template_skill_file.read_text(encoding='utf-8')
         for old, new in common_replacements.items():
-            template_content = template_content.replace(f"{{{{{old}}}}}", new)
+            template_content = template_content.replace(f'{{{{{old}}}}}', new)
 
-        skill_hashes[f"skills/{skill_name}/SKILL.md"] = compute_hash(template_content)
+        skill_hashes[f'skills/{skill_name}/SKILL.md'] = compute_hash(template_content)
 
     # Create initial .meta.json
     meta_data: dict[str, Any] = {
-        "schema_version": SCHEMA_VERSION,
-        "sspec_version": __version__,
-        "created_at": datetime.now().isoformat(),
-        "updated_at": datetime.now().isoformat(),
-        "file_hashes": skill_hashes,
-        "skill_locations": [],
-        "skill_install_strategies": skill_install_strategies,
+        'schema_version': SCHEMA_VERSION,
+        'sspec_version': __version__,
+        'created_at': datetime.now().isoformat(),
+        'updated_at': datetime.now().isoformat(),
+        'file_hashes': skill_hashes,
+        'skill_locations': [],
+        'skill_install_strategies': skill_install_strategies,
     }
 
     for target_dir in skill_targets:
@@ -171,20 +171,20 @@ def initialize_project(
             rel_loc = target_dir.relative_to(project_root)
         except ValueError:
             continue
-        meta_data["skill_locations"].append(str(rel_loc))
+        meta_data['skill_locations'].append(str(rel_loc))
 
     for file_path in UPDATABLE_FILES:
         dest_path = sspec_path / file_path
         if dest_path.exists():
-            meta_data["file_hashes"][file_path] = compute_hash(
-                dest_path.read_text(encoding="utf-8")
+            meta_data['file_hashes'][file_path] = compute_hash(
+                dest_path.read_text(encoding='utf-8')
             )
 
     save_meta(sspec_path, meta_data)
 
     created_or_updated_agents = update_root_agents_block(
         project_root=project_root,
-        template_agents_path=template_dir / "AGENTS.md",
+        template_agents_path=template_dir / 'AGENTS.md',
         replacements=common_replacements,
         dry_run=False,
     )

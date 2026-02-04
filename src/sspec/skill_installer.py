@@ -11,9 +11,7 @@ class SkillInstaller:
 
     @staticmethod
     def install_skill(
-        source_dir: Path,
-        target_dir: Path,
-        prefer_symlink: bool = True
+        source_dir: Path, target_dir: Path, prefer_symlink: bool = True
     ) -> SkillStrategy:
         """Install a skill directory using best available strategy.
 
@@ -37,6 +35,7 @@ class SkillInstaller:
                 target_dir.unlink()
             else:
                 import shutil
+
                 shutil.rmtree(target_dir)
 
         # Try symlink first if preferred
@@ -50,15 +49,12 @@ class SkillInstaller:
 
         # Fallback to copy
         import shutil
+
         shutil.copytree(source_dir, target_dir)
         return 'copy'
 
     @staticmethod
-    def update_skill(
-        source_dir: Path,
-        target_dir: Path,
-        strategy: SkillStrategy
-    ) -> None:
+    def update_skill(source_dir: Path, target_dir: Path, strategy: SkillStrategy) -> None:
         """Update an installed skill using recorded strategy.
 
         Args:
@@ -80,6 +76,7 @@ class SkillInstaller:
             elif target_dir.exists():
                 # Existing real directory/file at target path.
                 import shutil
+
                 shutil.rmtree(target_dir)
 
             target_dir.parent.mkdir(parents=True, exist_ok=True)
@@ -90,6 +87,8 @@ class SkillInstaller:
             # Copy strategy: re-copy to update
             if target_dir.exists():
                 import shutil
+
                 shutil.rmtree(target_dir)
             import shutil
+
             shutil.copytree(source_dir, target_dir)

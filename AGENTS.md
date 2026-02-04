@@ -8,6 +8,11 @@
 
 ---
 
+## Dev Tools
+
+- Use uv to manage the project
+- Use ruff for formatting
+
 ## For AI Agents Working on SSPEC
 
 ### 📍 Ground Truth

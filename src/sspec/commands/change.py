@@ -245,7 +245,7 @@ def archive(name: str | None, yes: bool, force: bool) -> None:
             questionary.Choice(
                 title=f"{c['name']} [{c['status']}] - {c['progress']['done']}/{c['progress']['total']} tasks",
                 value=c['name'],
-                checked=(c['status'] == ChangeStatus.DONE.value)  # Default check DONE changes
+                checked=(c['status'] == ChangeStatus.DONE.value),  # Default check DONE changes
             )
             for c in archivable
         ]
@@ -255,10 +255,7 @@ def archive(name: str | None, yes: bool, force: bool) -> None:
         console.print('[dim](Use arrow keys, space to toggle, enter to confirm)[/dim]')
         console.print()
 
-        selected = questionary.checkbox(
-            '',
-            choices=choices
-        ).ask()
+        selected = questionary.checkbox('', choices=choices).ask()
 
         if selected is None:  # User cancelled
             console.print('[yellow]Cancelled[/yellow]')
@@ -298,17 +295,19 @@ def _archive_single_change(sspec_root: Path, name: str, yes: bool, force: bool) 
     # Interactive prompt if status is not DONE and not forced
     if current_status != ChangeStatus.DONE.value and not force:
         console.print()
-        console.print(f'[yellow]Warning: Change "{name}" status is {current_status}, not DONE[/yellow]')
+        console.print(
+            f'[yellow]Warning: Change "{name}" status is {current_status}, not DONE[/yellow]'
+        )
         console.print()
 
         choice = questionary.select(
-            "Select option:",
+            'Select option:',
             choices=[
-                questionary.Choice("Force archive (keep current status)", value="1"),
-                questionary.Choice("Mark as DONE and archive", value="2"),
-                questionary.Choice("Cancel", value="3"),
+                questionary.Choice('Force archive (keep current status)', value='1'),
+                questionary.Choice('Mark as DONE and archive', value='2'),
+                questionary.Choice('Cancel', value='3'),
             ],
-            default="3"
+            default='3',
         ).ask()
 
         if not choice or choice == '3':
@@ -324,12 +323,8 @@ def _archive_single_change(sspec_root: Path, name: str, yes: bool, force: bool) 
                 # Update YAML front matter status
                 if content.startswith('---'):
                     import re
-                    content = re.sub(
-                        r'(status:\s*)[^\n]+',
-                        r'\1DONE',
-                        content,
-                        count=1
-                    )
+
+                    content = re.sub(r'(status:\s*)[^\n]+', r'\1DONE', content, count=1)
                     spec_file.write_text(content, encoding='utf-8')
                     console.print('[green]OK[/green] Updated status to DONE')
 

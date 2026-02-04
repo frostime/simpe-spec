@@ -235,11 +235,7 @@ def list_template_skills() -> list[Path]:
     if not template_skills_dir.exists():
         return []
 
-    return [
-        d
-        for d in template_skills_dir.iterdir()
-        if d.is_dir() and (d / 'SKILL.md').exists()
-    ]
+    return [d for d in template_skills_dir.iterdir() if d.is_dir() and (d / 'SKILL.md').exists()]
 
 
 def list_changes(sspec_root: Path, include_archived: bool = False) -> list[ChangeInfo]:
@@ -294,7 +290,7 @@ def list_skills(sspec_root: Path) -> list[SkillInfo]:
             if meta.get('skill'):
                 skills.append(
                     {
-                        'file': f"{entry.name}/SKILL.md",
+                        'file': f'{entry.name}/SKILL.md',
                         'path': skill_file,
                         'skill': str(meta['skill']),
                         'description': str(meta.get('description', '')),
@@ -396,7 +392,8 @@ def archive_change(sspec_root: Path, name: str, force: bool = False) -> Path:
         change = parse_change(change_path)
         if change['status'] != ChangeStatus.DONE.value:
             raise ValueError(
-                f"Change '{name}' status is {change['status']}, not DONE. " f"Use --force to archive anyway."
+                f"Change '{name}' status is {change['status']}, not DONE. "
+                f"Use --force to archive anyway."
             )
 
     archive_dir = sspec_root / CHANGES_DIR / ARCHIVE_DIR

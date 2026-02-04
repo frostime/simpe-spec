@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-META_FILE = ".meta.json"
+META_FILE = '.meta.json'
 
 
 def load_meta(sspec_root: Path) -> dict[str, Any]:
@@ -19,7 +19,7 @@ def load_meta(sspec_root: Path) -> dict[str, Any]:
         return {}
 
     try:
-        data = json.loads(meta_path.read_text(encoding="utf-8"))
+        data = json.loads(meta_path.read_text(encoding='utf-8'))
     except (json.JSONDecodeError, OSError):
         return {}
 
@@ -32,6 +32,4 @@ def load_meta(sspec_root: Path) -> dict[str, Any]:
 def save_meta(sspec_root: Path, meta: dict[str, Any]) -> None:
     """Save metadata to .meta.json."""
     meta_path = sspec_root / META_FILE
-    meta_path.write_text(
-        json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8"
-    )
+    meta_path.write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding='utf-8')

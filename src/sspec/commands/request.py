@@ -40,6 +40,7 @@ def request() -> None:
 # Subcommand: new
 # ============================================================================
 
+
 @request.command()
 @click.argument('name')
 def new(name: str) -> None:
@@ -47,9 +48,7 @@ def new(name: str) -> None:
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException(
-            "Not a sspec project. Run 'sspec project init' first."
-        ) from None
+        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     normalized = normalize_request_name(name)
     if not normalized:
@@ -82,6 +81,7 @@ def new(name: str) -> None:
 # Subcommand: list
 # ============================================================================
 
+
 @request.command(name='list')
 @click.option('--all', '-a', 'show_all', is_flag=True, help='Include done requests')
 def list_requests(show_all: bool) -> None:
@@ -89,9 +89,7 @@ def list_requests(show_all: bool) -> None:
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException(
-            "Not a sspec project. Run 'sspec project init' first."
-        ) from None
+        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     requests_dir = sspec_root / 'requests'
     _list_requests(requests_dir, show_all)
@@ -142,7 +140,7 @@ def _print_request_table(
 
     for r in sorted(requests, key=lambda x: x.created, reverse=True):
         created = r.created[:10] if r.created else ''
-        name = f"[dim]{r.name}[/dim]" if dim else r.name
+        name = f'[dim]{r.name}[/dim]' if dim else r.name
 
         row = [name, created]
         if show_changes:
@@ -159,6 +157,7 @@ def _print_request_table(
 # Subcommand: show
 # ============================================================================
 
+
 @request.command(name='show')
 @click.argument('name')
 def show_request(name: str) -> None:
@@ -166,9 +165,7 @@ def show_request(name: str) -> None:
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException(
-            "Not a sspec project. Run 'sspec project init' first."
-        ) from None
+        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     requests_dir = sspec_root / 'requests'
     _show_request(requests_dir, name)
@@ -189,17 +186,11 @@ def _resolve_request_file(requests_dir: Path, name: str, interactive: bool) -> P
 
 def _interactive_select_request(matches: list[Path], name: str) -> Path:
     """Interactive selection when multiple matches found."""
-    choices = [
-        questionary.Choice(
-            title=f"{m.stem}",
-            value=m
-        )
-        for m in matches
-    ]
+    choices = [questionary.Choice(title=f'{m.stem}', value=m) for m in matches]
 
     console.print()
     console.print(f"[yellow]Multiple matches for '{name}':[/yellow]")
-    console.print("[dim](Use arrow keys, enter to select)[/dim]")
+    console.print('[dim](Use arrow keys, enter to select)[/dim]')
     console.print()
 
     selected = questionary.select('', choices=choices).ask()
@@ -230,6 +221,7 @@ def _show_request(requests_dir: Path, name: str) -> None:
 # Subcommand: link
 # ============================================================================
 
+
 @request.command(name='link')
 @click.argument('request_name')
 @click.argument('change_name')
@@ -238,9 +230,7 @@ def link_request(request_name: str, change_name: str) -> None:
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException(
-            "Not a sspec project. Run 'sspec project init' first."
-        ) from None
+        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     requests_dir = sspec_root / 'requests'
     request_path = _resolve_request_file(requests_dir, request_name, interactive=False)
@@ -264,6 +254,7 @@ def link_request(request_name: str, change_name: str) -> None:
 # Subcommand: archive
 # ============================================================================
 
+
 @request.command(name='archive')
 @click.argument('name', required=False)
 @click.option('--yes', '-y', 'auto_yes', is_flag=True, help='Skip confirmation prompts')
@@ -284,9 +275,7 @@ def archive_request(name: str | None, auto_yes: bool, force_archive: bool) -> No
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException(
-            "Not a sspec project. Run 'sspec project init' first."
-        ) from None
+        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     requests_dir = sspec_root / 'requests'
 
@@ -310,9 +299,7 @@ def _archive_requests_interactive(
         archivable = items
     else:
         archivable = [
-            r
-            for r in items
-            if r.status in (RequestStatus.OPEN.value, RequestStatus.DOING.value)
+            r for r in items if r.status in (RequestStatus.OPEN.value, RequestStatus.DOING.value)
         ]
 
     if not archivable:
@@ -322,7 +309,7 @@ def _archive_requests_interactive(
     # Use questionary for multi-select
     choices = [
         questionary.Choice(
-            title=f"{r.name} [{r.status}] - {r.tldr[:50]}",
+            title=f'{r.name} [{r.status}] - {r.tldr[:50]}',
             value=r,
             checked=True,
         )

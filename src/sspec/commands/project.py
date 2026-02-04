@@ -1,8 +1,6 @@
 """sspec project command - project-level operations."""
 
-import hashlib
 import json
-import re
 from datetime import datetime
 from pathlib import Path
 
@@ -22,12 +20,17 @@ from sspec.core import (
     copy_template,
     get_sspec_root,
     get_template_dir,
-    get_workspace_skill_targets,
     list_changes,
     list_template_skills,
-    parse_skill_metadata,
-    render_template,
 )
+from sspec.services.agents_service import update_root_agents_block
+from sspec.services.meta_service import load_meta, save_meta
+from sspec.services.project_init_service import (
+    ProjectAlreadyInitializedError,
+    get_skill_targets_from_locations,
+    initialize_project,
+)
+from sspec.services.project_update_service import collect_update_candidates
 
 console = Console()
 
@@ -45,7 +48,8 @@ skills/**
 def _interactive_skill_selection(project_root: Path) -> list[str]:
     """Interactive skill location selection.
 
-    Detects existing workspace directories and prompts user to select skill installation locations.
+    Detects existing workspace directories and prompts user to select skill
+    installation locations.
     """
     available_locations = ['.claude', '.github', '.agent']
     existing_dirs = [loc for loc in available_locations if (project_root / loc).is_dir()]
@@ -76,26 +80,13 @@ def _interactive_skill_selection(project_root: Path) -> list[str]:
     if not selected:
         # If nothing selected, fallback to detected existing or .claude
         fallback = existing_dirs if existing_dirs else ['.claude']
-        console.print(f'[yellow]No locations selected, using fallback: {", ".join(fallback)}[/yellow]')
+        fallback_str = ', '.join(fallback)
+        console.print(
+            f'[yellow]No locations selected, using fallback: {fallback_str}[/yellow]'
+        )
         return fallback
 
     return selected
-
-
-def _get_skill_targets_from_locations(project_root: Path, locations: list[str]) -> list[Path]:
-    """Get skill target paths from location names.
-
-    Always includes .sspec/skills for backward compatibility.
-    """
-    targets = []
-    for loc in locations:
-        if loc == '.sspec':
-            continue  # Will be added later
-        targets.append(project_root / loc / 'skills')
-
-    # Always include .sspec/skills for backward compatibility
-    targets.append(project_root / SSPEC_DIR / 'skills')
-    return targets
 
 
 @click.group()
@@ -115,136 +106,47 @@ def project() -> None:
 def init(force: bool, skill_loc: tuple[str, ...]) -> None:
     """Initialize .sspec directory in current project."""
     project_root = Path.cwd()
-    sspec_path = project_root / SSPEC_DIR
-
-    if sspec_path.exists() and not force:
-        raise click.ClickException(
-            f'{SSPEC_DIR} already exists. Use --force to reinitialize, '
-            f"or 'sspec project update' to update templates."
-        )
-
-    template_dir = get_template_dir()
-    common_replacements = {'SCHEMA_VERSION': SCHEMA_VERSION, 'SCHEMA': SCHEMA_VERSION}
-
-    # Create directory structure
-    sspec_path.mkdir(parents=True, exist_ok=True)
-    (sspec_path / 'changes').mkdir(exist_ok=True)
-    (sspec_path / 'changes' / 'archive').mkdir(exist_ok=True)
-    (sspec_path / 'requests').mkdir(exist_ok=True)
-    (sspec_path / 'skills').mkdir(exist_ok=True)
-    (sspec_path / 'spec-docs').mkdir(exist_ok=True)  # Project-level specification documents
-
     # Interactive skill location selection if not specified via CLI
-    skill_locations = list(skill_loc) if skill_loc else _interactive_skill_selection(project_root)
+    skill_locations = (
+        list(skill_loc) if skill_loc else _interactive_skill_selection(project_root)
+    )
 
-    # Copy skills to specified location (and .sspec for backward compatibility)
+    try:
+        result = initialize_project(
+            project_root=project_root,
+            force=force,
+            skill_locations=skill_locations,
+            default_gitignore=DEFAULT_GITIGNORE,
+            prefer_symlink=True,
+        )
+    except ProjectAlreadyInitializedError as e:
+        raise click.ClickException(
+            f"{e} Or run 'sspec project update' to update templates."
+        ) from None
+
+    # Print skill installation locations
     template_skills = list_template_skills()
-    skill_targets = _get_skill_targets_from_locations(project_root, skill_locations)
-
-    from sspec.skill_installer import SkillInstaller
-
-    skill_install_strategies: dict[str, str] = {}  # Track strategy per location
-
-    for skill_dir in template_skills:
-        skill_name = skill_dir.name
-        for target_dir in skill_targets:
-            dest_skill_dir = target_dir / skill_name
-
-            # Use SkillInstaller with symlink preference
-            strategy = SkillInstaller.install_skill(
-                source_dir=skill_dir,
-                target_dir=dest_skill_dir,
-                prefer_symlink=True
-            )
-
-            # Record strategy for this location
-            try:
-                rel_target = target_dir.relative_to(project_root)
-                location_key = str(rel_target)
-                # Only record first skill's strategy (assume all skills same strategy per location)
-                if location_key not in skill_install_strategies:
-                    skill_install_strategies[location_key] = strategy
-            except ValueError:
-                pass
+    skill_targets = get_skill_targets_from_locations(
+        project_root=project_root,
+        locations=skill_locations,
+        sspec_dir=SSPEC_DIR,
+    )
 
     if template_skills:
         for target_dir in skill_targets:
-            if target_dir.exists():
-                rel_target = target_dir.relative_to(project_root)
-                location_key = str(rel_target)
-                strategy = skill_install_strategies.get(location_key, 'copy')
-                console.print(f'  [green]+[/green] Installed skills to {rel_target}/ ({strategy})')
+            if not target_dir.exists():
+                continue
+            rel_target = target_dir.relative_to(project_root)
+            location_key = str(rel_target)
+            strategy = result.skill_install_strategies.get(location_key, 'copy')
+            console.print(
+                f'  [green]+[/green] Installed skills to {rel_target}/ ({strategy})'
+            )
 
-    # Initialize templates
-    for file_path in [*UPDATABLE_FILES, *USER_FILES]:
-        template_path = template_dir / file_path
-        dest_path = sspec_path / file_path
-
-        if not template_path.exists():
-            console.print(f'[yellow]Warning: Template not found: {file_path}[/yellow]')
-            continue
-
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-
-        copy_template(template_path, dest_path, common_replacements)
-
-    # Create .gitignore
-    gitignore_path = sspec_path / '.gitignore'
-    if not gitignore_path.exists():
-        gitignore_path.write_text(DEFAULT_GITIGNORE, encoding='utf-8')
-
-    # Compute hashes for installed skills (for update tracking)
-    skill_hashes = {}
-    for skill_dir in template_skills:
-        skill_name = skill_dir.name
-        template_skill_file = skill_dir / 'SKILL.md'
-        if template_skill_file.exists():
-            # Read and apply replacements
-            template_content = template_skill_file.read_text(encoding='utf-8')
-            for old, new in common_replacements.items():
-                template_content = template_content.replace(f'{{{{{old}}}}}', new)
-            skill_hash = compute_hash(template_content)
-            skill_hashes[f'skills/{skill_name}/SKILL.md'] = skill_hash
-
-    # Create initial .meta.json
-    meta_data = {
-        'schema_version': SCHEMA_VERSION,
-        'sspec_version': __version__,
-        'created_at': datetime.now().isoformat(),
-        'updated_at': datetime.now().isoformat(),
-        'file_hashes': skill_hashes,  # Initialize with skill hashes
-        'skill_locations': [],  # Track where skills are installed
-        'skill_install_strategies': skill_install_strategies,  # Track strategy per location
-    }
-
-    # Record skill installation locations (relative to project root)
-    for target_dir in skill_targets:
-        if target_dir.exists():
-            try:
-                rel_loc = target_dir.relative_to(project_root)
-                meta_data['skill_locations'].append(str(rel_loc))
-            except ValueError:
-                # target_dir is outside project_root, skip
-                pass
-
-    # Compute initial hashes for updatable files
-    for file_path in UPDATABLE_FILES:
-        dest_path = sspec_path / file_path
-        if dest_path.exists():
-            content = dest_path.read_text(encoding='utf-8')
-            file_hash = hashlib.sha256(content.encode('utf-8')).hexdigest()[:16]
-            meta_data['file_hashes'][file_path] = file_hash
-
-    meta_path = sspec_path / '.meta.json'
-    meta_path.write_text(
-        json.dumps(meta_data, indent=2, ensure_ascii=False), encoding='utf-8'
-    )
-
-    # Update root AGENTS.md
-    if update_root_agents_block():
+    if result.created_or_updated_agents:
         console.print('  [green]+[/green] Created/Updated root AGENTS.md')
 
-    rel_path = sspec_path.relative_to(Path.cwd())
+    rel_path = result.sspec_path.relative_to(Path.cwd())
 
     console.print()
     console.print(f'[green]+[/green] Initialized sspec project in {rel_path}/')
@@ -272,8 +174,6 @@ def status() -> None:
             "Not a sspec project. Run 'sspec project init' first."
         ) from None
 
-    project_root = sspec_root.parent
-
     _show_overview(sspec_root)
 
 
@@ -295,7 +195,8 @@ def _show_overview(sspec_root: Path) -> None:
             name = change['name']
 
             console.print(
-                f'{status_icon} [bold]{name}[/bold] [{_get_status_color(status)}]{status}[/]'
+                f'{status_icon} [bold]{name}[/bold] '
+                f'[{_get_status_color(status)}]{status}[/]'
             )
 
             if change.get('description'):
@@ -332,38 +233,6 @@ def _get_status_color(status: str) -> str:
     return colors.get(status, 'white')
 
 
-META_FILE = '.meta.json'
-
-
-def compute_hash(content: str) -> str:
-    """Compute SHA256 hash of content."""
-    return hashlib.sha256(content.encode('utf-8')).hexdigest()[:16]
-
-
-def compute_file_hash(path: Path) -> str | None:
-    """Compute hash of file content."""
-    if not path.exists():
-        return None
-    return compute_hash(path.read_text(encoding='utf-8'))
-
-
-def load_meta(sspec_root: Path) -> dict | None:
-    """Load metadata from .meta.json."""
-    meta_path = sspec_root / META_FILE
-    if not meta_path.exists():
-        return None
-    try:
-        return json.loads(meta_path.read_text(encoding='utf-8'))
-    except (json.JSONDecodeError, OSError):
-        return None
-
-
-def save_meta(sspec_root: Path, meta: dict) -> None:
-    """Save metadata to .meta.json."""
-    meta_path = sspec_root / META_FILE
-    meta_path.write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding='utf-8')
-
-
 @project.command()
 @click.option(
     '--dry-run', is_flag=True, help='Show what would be updated without making changes'
@@ -380,155 +249,17 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
         ) from None
 
     template_dir = get_template_dir()
-    meta = load_meta(sspec_root) or {}
-    old_hashes = meta.get('file_hashes', {})
+    meta = load_meta(sspec_root)
+    old_hashes = meta.get('file_hashes', {}) or {}
 
     common_replacements = {'SCHEMA_VERSION': SCHEMA_VERSION, 'SCHEMA': SCHEMA_VERSION}
 
-    # Collect update candidates (template files tracked via UPDATABLE_FILES)
-    updates = []
-    for file_path in UPDATABLE_FILES:
-        is_user = False
-        template_path = template_dir / file_path
-        dest_path = sspec_root / file_path
-
-        if not template_path.exists():
-            continue
-
-        # Read template content
-        if template_path.suffix == '.md':
-            template_content = template_path.read_text(encoding='utf-8')
-            for old, new in common_replacements.items():
-                template_content = template_content.replace(f'{{{{{old}}}}}', new)
-        else:
-            template_content = template_path.read_text(encoding='utf-8')
-
-        new_hash = compute_hash(template_content)
-
-        # Determine update status
-        if not dest_path.exists():
-            status = 'missing'
-            current_hash = None
-        else:
-            current_hash = compute_file_hash(dest_path)
-            old_hash = old_hashes.get(file_path)
-
-            if old_hash is None:
-                status = 'unknown'
-            elif current_hash == new_hash:
-                status = 'current'
-            elif current_hash == old_hash:
-                status = 'updatable'
-            else:
-                status = 'modified'
-
-        updates.append(
-            {
-                'path': file_path,
-                'is_user': is_user,
-                'status': status,
-                'template_path': template_path,
-                'dest_path': dest_path,
-                'template_content': template_content,
-                'new_hash': new_hash,
-                'current_hash': current_hash,
-            }
-        )
-
-    # Collect skill update candidates
-    project_root = sspec_root.parent
-    skill_locations = meta.get('skill_locations', [])
-    skill_install_strategies = meta.get('skill_install_strategies', {})
-    template_skills = list_template_skills()
-
-    from sspec.skill_installer import SkillInstaller
-
-    for skill_dir in template_skills:
-        skill_name = skill_dir.name
-        for loc_str in skill_locations:
-            skill_dest_dir = project_root / loc_str / skill_name
-            skill_dest = skill_dest_dir / 'SKILL.md'
-            template_skill_file = skill_dir / 'SKILL.md'
-
-            if not template_skill_file.exists():
-                continue
-
-            # Get strategy for this location
-            strategy = skill_install_strategies.get(loc_str, 'copy')
-
-            # For symlinks, check if link is valid
-            if strategy == 'symlink':
-                if skill_dest_dir.is_symlink():
-                    # Symlink exists - check if it points to correct location
-                    try:
-                        if skill_dest_dir.resolve() == skill_dir.resolve():
-                            status = 'current'  # Link is valid
-                        else:
-                            status = 'updatable'  # Link points elsewhere
-                    except OSError:
-                        status = 'missing'  # Broken link
-                else:
-                    status = 'missing'  # Should be symlink but isn't
-
-                # For symlinks, we don't check content hash - just link validity
-                updates.append({
-                    'path': str(Path(loc_str) / skill_name),
-                    'is_user': False,
-                    'status': status,
-                    'template_path': skill_dir,
-                    'dest_path': skill_dest_dir,
-                    'template_content': '',  # Not used for symlinks
-                    'new_hash': None,
-                    'current_hash': None,
-                    'skill_hash_key': f'skills/{skill_name}/SKILL.md',
-                    'is_symlink': True,
-                    'strategy': strategy,
-                })
-                continue
-
-            # For copy strategy, check content hash
-            # Read template
-            template_content = template_skill_file.read_text(encoding='utf-8')
-            for old, new in common_replacements.items():
-                template_content = template_content.replace(f'{{{{{old}}}}}', new)
-
-            new_hash = compute_hash(template_content)
-
-            # Determine status
-            if not skill_dest.exists():
-                status = 'missing'
-                current_hash = None
-            else:
-                current_hash = compute_file_hash(skill_dest)
-                # Skills are templates - compare directly with new version
-                # No need for old_hash check (always sync with template)
-                if current_hash == new_hash:
-                    status = 'current'
-                else:
-                    # Content differs - should update to match template
-                    status = 'updatable'
-
-            # Construct display path
-            try:
-                display_path = skill_dest.relative_to(project_root)
-            except ValueError:
-                display_path = skill_dest
-
-            updates.append(
-                {
-                    'path': str(display_path),
-                    'is_user': False,
-                    'status': status,
-                    'template_path': skill_dir,
-                    'dest_path': skill_dest_dir,
-                    'template_content': template_content,
-                    'new_hash': new_hash,
-                    'current_hash': current_hash,
-                    'skill_hash_key': f'skills/{skill_name}/SKILL.md',
-                    'is_symlink': False,
-                    'strategy': strategy,
-                }
-            )
+    updates = collect_update_candidates(
+        sspec_root=sspec_root,
+        template_dir=template_dir,
+        meta=meta,
+        common_replacements=common_replacements,
+    )
 
     # Show status table
     table = Table(title='Update Status')
@@ -538,8 +269,8 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
 
     actions = []
     for upd in updates:
-        status = upd['status']
-        path = upd['path']
+        status = upd.status
+        path = upd.display_path
 
         if status == 'current':
             action = '[dim]skip[/dim]'
@@ -567,9 +298,12 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
     console.print()
     console.print(table)
     console.print()
-
-
-    agents_needs_update = update_root_agents_block(dry_run=True)
+    agents_needs_update = update_root_agents_block(
+        project_root=sspec_root.parent,
+        template_agents_path=get_template_dir() / 'AGENTS.md',
+        replacements={'SCHEMA_VERSION': SCHEMA_VERSION, 'SCHEMA': SCHEMA_VERSION},
+        dry_run=True,
+    )
 
     if not actions and not agents_needs_update:
         console.print('[green]+[/green] All files are up to date')
@@ -586,62 +320,49 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
     skill_updated_count = 0
     new_hashes = old_hashes.copy()
 
+    from sspec.skill_installer import SkillInstaller
+
     for upd in actions:
-        path = upd['path']
-        dest_path = upd['dest_path']
+        path = upd.display_path
+        dest_path = upd.dest_path
 
         if interactive:
             if not questionary.confirm(f'Update {path}?', default=True).ask():
                 console.print(f'  [dim]Skipped {path}[/dim]')
                 continue
 
-        # Handle symlinks vs copies differently
-        if upd.get('is_symlink'):
-            # Symlink update
-            strategy = upd['strategy']
+        # Handle skills (symlink/copy) vs regular files
+        if upd.strategy == 'symlink':
             SkillInstaller.update_skill(
-                source_dir=upd['template_path'],
-                target_dir=upd['dest_path'],
-                strategy=strategy
+                source_dir=upd.template_path,
+                target_dir=upd.dest_path,
+                strategy='symlink'
             )
             skill_updated_count += 1
             console.print(f'  [green]+[/green] Updated symlink {path}')
-        else:
-            # Regular file or copied skill
-            dest_path.parent.mkdir(parents=True, exist_ok=True)
-
-            # For skills with copy strategy, remove old directory and install fresh
-            if upd.get('strategy') == 'copy' and not upd.get('is_user', True):
-                # This is a copied skill - use SkillInstaller to re-copy
-                if upd['dest_path'].exists():
-                    import shutil
-                    shutil.rmtree(upd['dest_path'])
-
-                SkillInstaller.update_skill(
-                    source_dir=upd['template_path'],
-                    target_dir=upd['dest_path'],
-                    strategy='copy'
-                )
-                skill_updated_count += 1
-                status = upd['status']
-                if status == 'missing':
-                    console.print(f'  [green]+[/green] Created skill {path}')
-                else:
-                    console.print(f'  [green]+[/green] Updated skill {path}')
+        elif upd.strategy == 'copy':
+            SkillInstaller.update_skill(
+                source_dir=upd.template_path,
+                target_dir=upd.dest_path,
+                strategy='copy'
+            )
+            skill_updated_count += 1
+            if upd.status == 'missing':
+                console.print(f'  [green]+[/green] Created skill {path}')
             else:
-                # Regular file (AGENTS.md, project.md, etc.)
-                dest_path.write_text(upd['template_content'], encoding='utf-8')
-                updated_count += 1
-                status = upd['status']
-                if status == 'missing':
-                    console.print(f'  [green]+[/green] Created {path}')
-                else:
-                    console.print(f'  [green]+[/green] Updated {path}')
+                console.print(f'  [green]+[/green] Updated skill {path}')
+        else:
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
+            dest_path.write_text(upd.template_content, encoding='utf-8')
+            updated_count += 1
+            if upd.status == 'missing':
+                console.print(f'  [green]+[/green] Created {path}')
+            else:
+                console.print(f'  [green]+[/green] Updated {path}')
 
         # Update hashes for non-symlink files
-        if not upd.get('is_symlink'):
-            hash_key = upd.get('skill_hash_key', path)
-            new_hashes[hash_key] = upd['new_hash']
+        if not upd.is_symlink:
+            new_hashes[upd.hash_key] = upd.new_hash
 
     # Update metadata
     if updated_count or skill_updated_count:
@@ -652,52 +373,16 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
 
     # Update root AGENTS.md block
     if agents_needs_update:
-        update_root_agents_block(dry_run=False)
+        update_root_agents_block(
+            project_root=sspec_root.parent,
+            template_agents_path=get_template_dir() / 'AGENTS.md',
+            replacements={'SCHEMA_VERSION': SCHEMA_VERSION, 'SCHEMA': SCHEMA_VERSION},
+            dry_run=False,
+        )
         console.print('  [green]+[/green] Updated root AGENTS.md block')
 
     console.print()
-    console.print(
-        f"[green]+[/green] Updated {updated_count + skill_updated_count + (1 if agents_needs_update else 0)} item(s)"
-    )
-
-
-def update_root_agents_block(dry_run: bool = False) -> bool:
-    """Update the SSPEC block in root AGENTS.md."""
-    template_path = get_template_dir() / 'AGENTS.md'
-    if not template_path.exists():
-        return False
-
-    root_agents = Path.cwd() / 'AGENTS.md'
-    rendered = render_template(
-        template_path.read_text(encoding='utf-8'),
-        {'SCHEMA_VERSION': SCHEMA_VERSION, 'SCHEMA': SCHEMA_VERSION},
-    )
-
-    if not root_agents.exists():
-        if not dry_run:
-            root_agents.write_text(rendered, encoding='utf-8')
-        return True
-
-    content = root_agents.read_text(encoding='utf-8')
-
-    start_marker = '<!-- SSPEC:START -->'
-    end_marker = '<!-- SSPEC:END -->'
-
-    if start_marker not in content:
-        if not dry_run:
-            with open(root_agents, 'a', encoding='utf-8') as f:
-                f.write('\n\n' + rendered)
-        return True
-
-    pattern = re.compile(
-        rf'{re.escape(start_marker)}.*?{re.escape(end_marker)}', re.DOTALL
-    )
-
-    new_content = pattern.sub(rendered, content)
-
-    if new_content != content:
-        if not dry_run:
-            root_agents.write_text(new_content, encoding='utf-8')
-        return True
-
-    return False
+    total_updated = updated_count + skill_updated_count
+    if agents_needs_update:
+        total_updated += 1
+    console.print(f"[green]+[/green] Updated {total_updated} item(s)")

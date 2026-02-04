@@ -67,11 +67,25 @@ class SkillInstaller:
             strategy: Strategy to use ('symlink' or 'copy')
         """
         if strategy == 'symlink':
-            # Symlinked skills auto-update (pointing to template)
-            # Only verify the link is still valid
-            if not target_dir.exists():
-                # Link broken, recreate
-                target_dir.symlink_to(source_dir, target_is_directory=True)
+            # Symlinked skills auto-update (pointing to template).
+            # Ensure the link exists and points to the expected source.
+            if target_dir.is_symlink():
+                try:
+                    if target_dir.exists() and target_dir.resolve() == source_dir.resolve():
+                        return
+                except OSError:
+                    # Broken symlink or resolution error, recreate below.
+                    pass
+                target_dir.unlink(missing_ok=True)
+            elif target_dir.exists():
+                # Existing real directory/file at target path.
+                import shutil
+                shutil.rmtree(target_dir)
+
+            target_dir.parent.mkdir(parents=True, exist_ok=True)
+            target_dir.symlink_to(source_dir, target_is_directory=True)
+            return
+
         else:
             # Copy strategy: re-copy to update
             if target_dir.exists():

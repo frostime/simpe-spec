@@ -63,26 +63,31 @@ uv pip install -e .
 
 ## Ask-Prompt：轮内用户交互
 
-在 Agent 运行过程中，遇到困惑、需要用户决策、需注入信息的情况，使用 Ask-Prompt 咨询用户：
+如果 User 明确指定，或者遇到特定条件，必须使用 Ask-Prompt 咨询 User。
 
-1. **Human-in-the-loop**——关键决策点引入人类确认，降低幻觉和方向性错误
-2. **省钱**——避免提前结束对话轮次，提高单轮效率
+1. **触发条件**（满足以下任一情况时触发）：
 
-**重要, 请必须要查看**  `ask-prompt` SKILL 详细内容，了解 ask prompt 的用法。
+   - [ ] User 在请求时明确告知在某些情况下推荐/必须使用 Ask Prompt
+   - [ ] 信息缺失，导致后续工作可靠性低、不确定性高。
+     例：User请求中的部分术语缺乏明确上下文，难以确定具体含义，此时Agent需请User澄清具体所指。
+   - [ ] 后续步骤依赖方向性选择（非微调性选择）。
+     例：重构组件可采用多种程序架构风格，Agent需咨询User选择偏好。
+   - [ ] Agent认为工作已完成，需与User确认是否结束。
+     例：Agent完成代码修改后，认为已满足User指令，需请User核实确认是否满意。
+   - [ ] 多次尝试某项操作失败，需向User咨询。
+     例：多次尝试运行某CLI命令均失败，经咨询User后得知需先激活 .venv 环境。
+2. **先决条件**：查看`ask-prompt` SKILL 详细内容，了解 ask prompt 的用法。 **!IMPORTANT!**
+3. **推荐调用方案**:  阅读 Ask-Prompt Skill → 创建 `tmp_<ask>.py` 临时文件 → 运行 → 获取回复 → 删除临时文件
+4. **WHY Ask Prompt**
 
-**核心原理**：Copilot 按对话轮次计费。工具调用序列中使用 `ask-prompt` **SKILL** 可在不结束当前轮次的情况下获取用户输入。
+   1. Effective:  **Human-in-the-loop**——关键决策点引入人类确认，降低幻觉和方向性错误
+   2. Efficient: **节省费用**——Copilot 按对话轮次计费。工具调用序列中使用 `ask-prompt` SKILL可在不结束当前轮次的情况下获取用户输入。
 
-**推荐调用方案 ：** 阅读 Ask-Prompt Skill → 创建 `tmp_<ask>.py` 临时文件 → 运行 → 获取回复 → 删除临时文件
+规范: 请将新的 Ask File 放在 `tmp/ask_<name>.py` 中
 
-**触发条件**：
-
-- [ ] 信息缺失会阻碍后续工作可靠性
-- [ ] 后续步骤依赖方向性选择（不是微调）
-- [ ] Agent 认为已完成工作，需确认是否结束
-
-> [!WARNING]
+> [!WARNING] Agent 结束单轮对话之前必须发起 Ask Promp
 >
-> 严禁 Agent 私自结束对话，当发现做无可做的时候，请发起一个 Ask Prompt，询问用户是否已经满意，是否可以结束当前对话轮次
+> | match "Agent认为工作已完成" --> 请发起一个 Ask Prompt，询问用户是否已经满意，是否可以结束当前对话轮次
 
 ### 📋 Conventions
 

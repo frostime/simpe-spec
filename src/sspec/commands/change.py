@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import click
+import questionary
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -205,7 +206,6 @@ def archive(name: str | None, yes: bool, force: bool) -> None:
     Without arguments, shows interactive multi-select for archivable changes.
     With name argument, archives single change (original behavior).
     """
-    import questionary
 
     try:
         sspec_root = get_sspec_root()
@@ -300,7 +300,6 @@ def _archive_single_change(sspec_root: Path, name: str, yes: bool, force: bool) 
         console.print()
         console.print(f'[yellow]Warning: Change "{name}" status is {current_status}, not DONE[/yellow]')
         console.print()
-        import questionary
 
         choice = questionary.select(
             "Select option:",

@@ -6,7 +6,7 @@ updated: {{DATE}}
 
 # {{SPEC_NAME}}
 
-<!-- @AGENT: Specification Document Template
+<!-- @RULE: Specification Document Template
 
 Suggested Structure:
 1. Overview - Purpose and scope of this specification

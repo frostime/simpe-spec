@@ -25,18 +25,16 @@ SSPEC is a document-driven AI collaboration framework. All planning, tracking, a
 
 ## 1. Cold Start
 
-When entering project or after context reset, execute in order:
+When entering project in new session:
 
-```
-1. Read .sspec/project.md
-2. Run: sspec change list
-3. IF active change exists (status != DONE):
-     Read: .sspec/changes/<name>/handover.md
-     Then: tasks.md → spec.md
-     Output: "Resuming <name>: <status>, <progress>, next: <action>"
-4. ELSE:
-     Output: "No active changes. What would you like to work on?"
-```
+1. Read `.sspec/project.md`
+2. Determine action based on user message:
+
+| User Message | Action |
+|--------------|--------|
+| Contains `@resume` or `@change` | Load that change's context |
+| Vague request (idea/bug/feature) | Follow Request → Change Workflow (Section 2.0) |
+| Simple task, no directive | Do directly, skip sspec ceremony |
 
 ---
 
@@ -52,45 +50,20 @@ Changes live in `.sspec/changes/<name>/`.
 | reference/ | Design drafts, research, diagrams (pre-finalization workspace) | No |
 | script/ | Migration scripts, test data, one-off tools | No |
 
-### 2.0 Request Processing Workflow
+### 2.0 Request → Change Workflow
 
-When user provides vague request (idea, bug, feature), process BEFORE creating change:
+When user provides a vague request (idea, bug, feature), process BEFORE creating change:
 
-```
-Step 1: UNDERSTAND
-├─ Read user request, identify UNDERLYING NEED (not surface ask)
-├─ Apply first-principles thinking
-└─ Request may be confused; find the REAL PROBLEM
+1. **Understand**: Read the request carefully. Identify the underlying need, not the surface ask. Requests are often confused—apply first-principles thinking to find the real problem.
+2. **Research**:  Gather context from `.sspec/project.md` and relevant code. If unclear terms or missing info, **use `sspec ask` actively**—it saves cost and reduces guessing.
+3. **Design**:  Once requirements are clear:
+- Simple changes: Draft spec.md mentally
+- Complex changes: Write exploration to `reference/` first (design-draft.md, api-options.md, research.md)
+- Finalize: Distill into spec.md Sections A/B/C
+4. **Confirm**: Before implementation, **use `sspec ask`** to present your understanding and plan. Wait for explicit approval.
+5. **Execute**: Proceed per SSPEC protocol. Update tasks.md after each task.
 
-Step 2: RESEARCH
-├─ IF unclear terms or missing info:
-│    USE sspec ask create/prompt → Clarify (saves cost, persists record)
-├─ IF existing related change:
-│    Consider attaching instead of new change
-└─ Gather context from .sspec/project.md and code
-
-Step 3: DESIGN
-├─ Simple changes: Draft spec.md mentally
-├─ Complex changes: Write exploration to reference/
-│    - reference/design-draft.md — Architecture options
-│    - reference/api-comparison.md — API alternatives
-│    - reference/research-notes.md — External findings
-├─ Finalize: Distill into spec.md Section A/B/C
-└─ reference/ drafts: Keep for context or discard after finalization
-
-Step 4: CONFIRM
-├─ USE sspec ask create/prompt → Present understanding and plan:
-│    "Problem: [quantified problem]
-│     Solution: [approach]
-│     Files: [list]─ WAIT for explicit confirmation
-
-Step 5: EXECUTE (on confirmation)
-├─ Run: sspec change new <name>
-├─ Fill spec.md and tasks.md per confirmed plan
-└─ Proceed per SSPEC protocol
-```
-
-**Key principle**: Understand before acting. Wrong change costs more than extra questions.
+**Key principle**: Understand before acting. Wrong direction costs more than extra questions.
 
 ### 2.1 Status Transitions
 
@@ -110,19 +83,17 @@ Step 5: EXECUTE (on confirmation)
 
 #### `@change <name>`
 
-```
-IF .sspec/changes/<name>/ exists:
-    Read handover.md → tasks.md → spec.md
-    IF reference/ exists: Scan for context
-    Output: status, progress percentage, next 3 actions
-ELSE:
-    Run: sspec change new <name>
-    Follow Request Processing Workflow (Section 2.0)
-    Fill spec.md Sections A/B/C
-    Generate tasks.md from Section C
-    Output: "Plan ready. Approve to start? (y/n)"
-    WAIT for explicit "y" before status → DOING
-```
+If `.sspec/changes/<name>/` exists:
+- Read handover.md → tasks.md → spec.md
+- If reference/ exists: Scan for context
+- Output: status, progress percentage, next 3 actions
+
+If new:
+- Run `sspec change new <name>`
+- Follow Request → Change Workflow (Section 2.0)
+- Fill spec.md Sections A/B/C
+- Generate tasks.md from Section C
+- Ask for approval to execute
 
 #### `@resume`
 
@@ -132,7 +103,6 @@ Same as `@change <current_active_change>`.
 
 Execute at session end. No exceptions.
 
-```
 1. Update handover.md with:
    - Background: 1-sentence change description
    - Accomplished: List of completed tasks this session
@@ -141,11 +111,10 @@ Execute at session end. No exceptions.
    - Conventions: Patterns/naming discovered (if any)
 
 2. Update tasks.md:
-   - Mark completed tasks [x]
+   - Mark completed tasks `[x]`
    - Update progress percentage
 
-3. IF status changed: Update spec.md frontmatter
-```
+3. If status changed: Update spec.md frontmatter
 
 **Quality check**: Would a new Agent know exactly what to do in <30 seconds?
 
@@ -153,19 +122,16 @@ Execute at session end. No exceptions.
 
 After autonomous coding without tracking:
 
-```
 1. Identify changes: git diff or ask user
 2. Update tasks.md:
-   - Mark completed [x]
+   - Mark completed `[x]`
    - Add tasks for undocumented work done
 3. Check: All tasks done? → Suggest REVIEW
-```
 
 #### `@argue`
 
 User disagrees mid-implementation. STOP immediately.
 
-```
 1. STOP current work
 2. Clarify what's wrong:
    - Implementation detail → Revise task in tasks.md
@@ -173,18 +139,17 @@ User disagrees mid-implementation. STOP immediately.
    - Requirement itself → Revise spec.md Section A, add PIVOT marker
 3. Output revised plan
 4. WAIT for explicit confirmation before continuing
-```
 
 ### 2.3 Edit Rules
 
-Templates use `@AGENT:` markers:
+Templates use markers to guide editing:
 
 | Marker | Meaning | Action |
 |--------|---------|--------|
-| `@AGENT: RULE/<topic>` | Constraint for this section | Follow the rule when filling |
-| `@AGENT: REPLACE-FOR-EDIT/<section>` | Replace entirely | Do NOT append; replace whole section |
+| `<!-- @RULE: ... -->` | Constraint for this section | Follow the rule when filling |
+| `<!-- @REPLACE -->` | Replace entirely | Do NOT append; replace whole section |
 
-**Task markers**: `[ ]` todo, `[x]` done, `[-]` blocked, `[~]` needs rework
+**Task markers**: `[ ]` todo, `[x]` done
 
 📚 For quality standards and edge cases → Consult `sspec` SKILL
 
@@ -211,16 +176,15 @@ Project-level specifications (architecture, API contracts, standards). Location:
 
 #### `@doc <name>`
 
-```
-IF creating new:
-    Run: sspec doc new "<name>" [--dir]
-    Consult: write-spec-doc SKILL
-    Write specification following SKILL guidelines
-ELSE IF updating:
-    Read existing spec-doc
-    Apply changes per write-spec-doc SKILL
-    Update frontmatter `updated` field
-```
+If creating new:
+- Run `sspec doc new "<name>" [--dir]`
+- Consult write-spec-doc SKILL
+- Write specification following SKILL guidelines
+
+If updating:
+- Read existing spec-doc
+- Apply changes per write-spec-doc SKILL
+- Update frontmatter `updated` field
 
 📚 For writing guidelines → Consult `write-spec-doc` SKILL
 
@@ -228,7 +192,7 @@ ELSE IF updating:
 
 ## 5. SCOPE: sspec ask
 
-**USE ACTIVELY** - Don't hesitate to ask. Better to confirm than guess wrong.
+**USE ACTIVELY** — Don't hesitate to ask. Better to confirm than guess wrong.
 
 Use when needing user input mid-execution. Saves cost (1 turn instead of 2), reduces hallucination/directional errors, and persists Q&A record.
 
@@ -241,14 +205,16 @@ Use when needing user input mid-execution. Saves cost (1 turn instead of 2), red
 
 **Two-step workflow**:
 ```bash
-# Step 1: Create template; <name> should fit python file name rule
-sspec ask create [--name <name>]
-# Step 2: Agent edits .py file (REASON + QUESTION)
+# Step 1: Create template
+sspec ask create --name <topic>
+
+# Step 2: Edit the .py file (REASON + QUESTION)
+
 # Step 3: Execute prompt
 sspec ask prompt <path>
 ```
 
-**Active use principle**: When in doubt, ask. Guessing wastes more tokens than one ask. Agents should be proactive in seeking clarification.
+**Active use principle**: Guessing wastes more tokens than one ask. When in doubt, ask.
 
 📚 For detailed syntax and examples → Consult `sspec-ask` SKILL
 
@@ -260,16 +226,16 @@ sspec ask prompt <path>
 ON user_message:
     IF contains @directive     → Execute directive
     IF active change is DOING  → Continue tasks, update tasks.md after each
-    ELSE                       → Follow Request Processing Workflow (2.0)
+    ELSE                       → Follow Request → Change Workflow (2.0)
 
 ON need_user_input:
-    USE sspec ask create/prompt  → Persists record, saves cost
+    USE sspec ask              → Persists record, saves cost
 
 ON session_end:
-    MUST @handover               → No exceptions
+    MUST @handover             → No exceptions
 
 ON uncertainty:
-    Consult SKILL                → sspec, sspec-ask, write-spec-doc
+    Consult SKILL              → sspec, sspec-ask, write-spec-doc
     OR use sspec ask for guidance
 ```
 

@@ -1,7 +1,7 @@
 ---
 name: write-spec
 version: 1.5.0
-description: Guide for writing project specifications in .sspec/spec-docs/. MUST Use this when creating or updating spec documents under  SSPEC system.
+description: Guide for writing project specifications in .sspec/spec-docs/. Use when creating or updating spec documents.
 ---
 
 # Write-Spec
@@ -32,7 +32,7 @@ scope:
   - /src/middleware/auth.ts
   - /config/security.ts
 deprecated: false
-replacement: ""    # see [Deprecation](#deprecation)
+replacement: ""
 ---
 ```
 
@@ -49,7 +49,6 @@ replacement: ""    # see [Deprecation](#deprecation)
 
 ## Body Structure
 
-NOTE: This is an example, The specific structure of standards to be adopted is determined by project requirements.
 ```markdown
 # <Spec Name>
 
@@ -99,9 +98,6 @@ scope:
 **Include**: Primary implementation, tests, config
 **Omit**: Generic utilities unless domain-specific
 
-Good scope → Agent knows where to start
-Bad scope → Agent searches entire codebase
-
 ---
 
 ## Style Guide
@@ -116,42 +112,10 @@ Bad scope → Agent searches entire codebase
 ### ❌ MUST NOT Include
 
 1. **Change logs**: History lives in git, not specs
-   ```markdown
-   <!-- DON'T -->
-   ## History
-   ### v1 (2025-01) - Used sessions
-   ### v2 (2025-06) - Switched to JWT
-   ```
-
 2. **Multiple unrelated topics**: One doc = one topic
-   ```markdown
-   <!-- DON'T: Too broad -->
-   # Backend Architecture
-   ## Database Design
-   ## API Specification
-   ## Deployment Pipeline
-   ```
-
-3. **Marketing language**: No "revolutionary", "cutting-edge", "best practices"
-   ```markdown
-   <!-- DON'T -->
-   Our authentication leverages industry best practices...
-
-   <!-- DO -->
-   JWT tokens (RS256, 15min expiry) with refresh tokens (7d).
-   ```
-
+3. **Marketing language**: No "revolutionary", "cutting-edge"
 4. **Vague statements**: Quantify everything
-   ```markdown
-   <!-- DON'T --> "Fast response times"
-   <!-- DO -->    "P95 latency <100ms"
-
-   <!-- DON'T --> "High availability"
-   <!-- DO -->    "99.9% uptime (8.7h downtime/year)"
-   ```
-
 5. **Common knowledge**: Don't explain REST, HTTP, basic concepts
-
 6. **Future features**: Document current state only (YAGNI)
 
 ### Language
@@ -160,23 +124,20 @@ Bad scope → Agent searches entire codebase
 - **Direct**: Avoid "It's worth noting...", "As mentioned earlier..."
 - **Precise**: "Use Redis (5min TTL)" not "Consider using Redis"
 
-### File Link
+### File Links
 
-To ensure links are clickable in modern IDEs (VS Code) and easy to maintain:
-
-1. **Simple Relative Paths**: Use for same-level, sub-directories, or up to **2 levels** of parent directories.
-   - Same level: `[Link](./other-spec.md)`
-   - Sub-directory: `[Link](./sub/detail.md)`
-   - Parent level: `[Link](../../base.md)` (Max two `../`)
-2. **Workspace-Relative Paths**: Use for files in completely different directory branches or when parent traversal exceeds 2 levels. Start the path with `/`.
-   - `[Link](/src/core.py)` instead of `[Link](../../../../src/core.py)`
-3. **Consistency**: Use forward slashes `/` for cross-platform compatibility.
+1. **Simple Relative Paths**: For same-level, sub-directories, or up to 2 levels of parent.
+   - `[Link](./other-spec.md)`
+   - `[Link](../../base.md)` (Max two `../`)
+2. **Workspace-Relative Paths**: For different branches or >2 parent levels. Start with `/`.
+   - `[Link](/src/core.py)`
+3. Use forward slashes `/` for cross-platform compatibility.
 
 ---
 
 ## Diagramming
 
-Use Mermaid or PlantUML. Both render in GitHub, VS Code, IDEs.
+Use Mermaid or PlantUML.
 
 **Architecture**:
 ```mermaid
@@ -193,8 +154,6 @@ graph TD
 sequenceDiagram
     Client->>+API: POST /login
     API->>+Auth: validate(email, password)
-    Auth->>+DB: query user
-    DB-->>-Auth: user data
     Auth-->>-API: JWT token
     API-->>-Client: {accessToken}
 ```
@@ -205,11 +164,10 @@ stateDiagram-v2
     [*] --> Idle
     Idle --> Authenticating: login()
     Authenticating --> Authenticated: success
-    Authenticating --> Idle: failure
     Authenticated --> Idle: logout()
 ```
 
-Avoid ASCII art—wastes space, breaks with fonts, doesn't render.
+Avoid ASCII art.
 
 ---
 
@@ -217,38 +175,16 @@ Avoid ASCII art—wastes space, breaks with fonts, doesn't render.
 
 When design becomes obsolete:
 
-### 1. Mark in Frontmatter
-
-```yaml
-deprecated: true
-replacement: /spec-docs/auth-v2.md
-```
-
-### 2. Move to Archive
-
-```
-spec-docs/
-├── auth.md              # Current
-└── archive/
-    └── auth-v1.md       # Deprecated
-```
-
-### 3. Add Notice
-
-```markdown
-> ⚠️ **DEPRECATED**: Replaced by [Auth v2](../auth.md)
-> Last used: 2025-12-31
-```
-
-### 4. Strip Details
-
-Keep only: what it was, why deprecated, link to replacement.
+1. Mark in frontmatter: `deprecated: true`, `replacement: /path/to/new.md`
+2. Move to `spec-docs/archive/`
+3. Add notice: `> ⚠️ **DEPRECATED**: Replaced by [New Spec](../new.md)`
+4. Strip details, keep only: what it was, why deprecated, link to replacement
 
 ---
 
 ## Multi-File Specs
 
-For complex subsystems, use directory structure:
+For complex subsystems:
 
 ```
 spec-docs/payment-system/
@@ -271,22 +207,7 @@ files:
   - reconciliation.md
 scope:
   - /src/payment/**
-  - /src/webhooks/payment.ts
 ---
-
-# Payment System
-
-## Overview
-End-to-end payment processing with Stripe.
-
-## Components
-- [Gateway](./gateway.md) - Stripe API
-- [Webhooks](./webhooks.md) - Events
-- [Reconciliation](./reconciliation.md) - Ledger
-
-## Shared Concepts
-### Payment States
-...
 ```
 
 ---
@@ -320,23 +241,12 @@ scope:
 
 ## Implementation
 
-\`\`\`typescript
-// /src/middleware/rate-limit.ts
-interface RateLimitConfig {
-  limit: number;    // Tokens per window
-  window: number;   // Seconds
-  burst: number;    // Max bucket size
-}
-\`\`\`
-
 **Storage**: Redis sorted set (`rl:{ip}:{endpoint}`)
 
 ## Error Response
 
 HTTP 429, `Retry-After` header:
-\`\`\`json
-{ "error": "Rate limit exceeded", "retryAfter": 847 }
-\`\`\`
+`{ "error": "Rate limit exceeded", "retryAfter": 847 }`
 ```
 
 ### ❌ Bad Spec
@@ -348,14 +258,6 @@ HTTP 429, `Retry-After` header:
 Welcome to our revolutionary API! We've built this using cutting-edge
 best practices to ensure maximum scalability and performance.
 
-## Architecture
-Our system is designed to be highly modular and extensible, allowing
-for future enhancements and integrations.
-
-## Endpoints
-We have various endpoints for different operations. The authentication
-system is secure and follows industry standards.
-
 ## Future Plans
 We're planning to add ML and blockchain in future versions.
 ```
@@ -366,13 +268,8 @@ We're planning to add ML and blockchain in future versions.
 
 ## Maintenance Checklist
 
-When updating specs:
 - [ ] `updated` field current
 - [ ] `scope` matches actual files
 - [ ] Diagrams reflect current architecture
 - [ ] Code examples compile
 - [ ] Links to other specs valid
-
-**Review frequency**:
-- Critical specs (auth, data): Quarterly
-- Stable specs (coding standards): Annually

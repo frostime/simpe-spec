@@ -1,12 +1,12 @@
 ---
 skill: sspec-ask
-version: 3.0.0
-description: Mid-execution user consultation with file-based Q&A workflow. USE ACTIVELY to reduce errors and align with user intent.
+version: 3.1.0
+description: Mid-execution user consultation. USE ACTIVELY to reduce errors and save cost.
 ---
 
 # SSPEC Ask Skill
 
-**USE THIS SKILL ACTIVELY** - Don't hesitate to ask when uncertain. Better to confirm than guess.
+**USE ACTIVELY** — Guessing wastes more tokens than one ask. When in doubt, ask.
 
 ---
 
@@ -28,108 +28,69 @@ description: Mid-execution user consultation with file-based Q&A workflow. USE A
 
 ---
 
-## Workflow Overview
+## Workflow
 
-**Two-step process**:
-1. **Create template**: `sspec ask create [--name <name>]` → generates `.py` file
-2. **Execute prompt**: Edit template → `sspec ask prompt <path>` → prompts user and creates `.md` record
-
-**Why file-based?** Eliminates shell escaping, encoding issues, and multi-line fragility.
-
----
-
-## Command Syntax
-
-### Step 1: Create Template
-
+**Step 1**: Create template
 ```bash
-sspec ask create [--name <name>]
+sspec ask create --name <topic>
 ```
+Creates `.sspec/asks/<timestamp>_<topic>.py`
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--name` | "ask" | Ask identifier (lowercase letters and underscores only) |
+**Step 2**: Edit the `.py` file
+- Fill `REASON` (why asking)
+- Fill `QUESTION` (what to ask)
+- Do NOT edit `USER_ANSWER`
 
-**Output**: Creates `.sspec/asks/<timestamp>_<name>.py` with template:
+**Step 3**: Execute
+```bash
+sspec ask prompt <path>
+```
+**Output**: Use's answer, and creates `.sspec/asks/<timestamp>_<name>.py` with template as follow.
+
+## Template Format
 
 ```python
 CREATED = "<iso_timestamp>"
 
 REASON = r"""
-Ask user for <brief_reason>
+<why you're asking - for future reference>
 """
 
 QUESTION = r"""
-<YOUR_QUESTION_HERE>
+<your question here>
 """
 
-# AGENT SHOULD NOT EDIT THIS!
-# User can pre-fill answer here to skip terminal input.
+# User can pre-fill to skip terminal prompt
 USER_ANSWER = r""""""
 ```
-
-### Step 2: Edit Template
-
-Agent edits the .py file:
-- Fill in `REASON` (why asking)
-- Fill in `QUESTION` (what to ask)
-- Do NOT edit `USER_ANSWER` (user may pre-fill it)
-
-### Step 3: Execute Prompt
-
-```bash
-sspec ask prompt <path_to_py_file>
-```
-
-**Behavior**:
-- If `USER_ANSWER` has content → use it directly (no terminal prompt)
-- If `USER_ANSWER` empty → prompt user interactively in terminal
-- Appends answer to `.py` file
-- Converts to `.md` format and deletes `.py`
 
 ---
 
 ## Example: Directional Choice
 
-```bash
-# Step 1: Create template
-sspec ask create --name refactor_approach
-```
-
-Agent edits `.sspec/asks/260204120000_refactor_approach.py`:
 ```python
 REASON = r"""
-Multiple valid refactoring strategies exist for caching layer
+Multiple valid approaches for caching layer refactor
 """
 
 QUESTION = r"""
-I've identified 3 approaches to refactor the caching layer:
+I've identified 3 approaches:
 
-**Option A: Redis + In-Memory Fallback**
-Pros: High performance, resilient
-Cons: Operational complexity, external dependency
+**A) Redis + In-Memory Fallback**
+- Pros: High performance, resilient
+- Cons: Operational complexity
 
-**Option B: Pure In-Memory (with LRU eviction)**
-Pros: Simple, no external deps
-Cons: Lost on restart, limited by RAM
+**B) Pure In-Memory (LRU)**
+- Pros: Simple, no external deps
+- Cons: Lost on restart
 
-**Option C: SQLite Cache**
-Pros: Persistent, zero-config
-Cons: Slower than Redis, disk I/O
+**C) SQLite Cache**
+- Pros: Persistent, zero-config
+- Cons: Slower than Redis
 
-Which approach aligns with project priorities?
-(Consider: performance, simplicity, persistence needs)
+Which aligns with project priorities?
 """
-
-USER_ANSWER = r""""""  # Empty - will prompt user
 ```
-
-```bash
-# Step 3: Execute and get user's choice
-sspec ask prompt .sspec/asks/260204120000_refactor_approach.py
-```
-
-User responds in terminal or can pre-fill `USER_ANSWER` in the file before execution.
 
 ---
 
@@ -137,24 +98,12 @@ User responds in terminal or can pre-fill `USER_ANSWER` in the file before execu
 
 | Do | Don't |
 |----|-------|
-| Use descriptive `--name` (e.g., `api_design`) | Use generic names (`question1`) |
-| Fill `REASON` for future context | Leave `REASON` empty |
-| Ask one focused question | Bundle multiple unrelated questions |
-| Ask early when uncertain | Guess and risk wrong direction |
+| Use descriptive `--name` | Use generic names (`q1`, `ask`) |
+| Fill `REASON` for context | Leave `REASON` empty |
+| Ask one focused question | Bundle unrelated questions |
+| Ask early when uncertain | Guess and risk rework |
+| Provide options when applicable | Leave open-ended if choices exist |
 
----
-
-## File Lifecycle
-
-```
-1. create  → .sspec/asks/<timestamp>_<name>.py     (template)
-2. edit    → Agent fills REASON + QUESTION
-3. prompt  → Executes, collects answer
-           → Appends ANSWER to .py
-           → Converts to .md
-           → Deletes .py
-4. final   → .sspec/asks/<timestamp>_<name>.md     (persistent record)
-```
 
 ---
 
@@ -162,12 +111,12 @@ User responds in terminal or can pre-fill `USER_ANSWER` in the file before execu
 
 ```markdown
 ---
-created: '<iso_timestamp>'
-name: <name>
+created: '<timestamp>'
+name: <topic>
 why: <reason>
 ---
 
-# Ask: <name>
+# Ask: <topic>
 
 ## Question
 <question_text>
@@ -175,4 +124,3 @@ why: <reason>
 ## Answer
 <answer_text>
 ```
-

@@ -1,20 +1,189 @@
 # sspec
 
-[English](./README.md)
+**S**spec **S**ynthesizes **P**rograms from **E**xplicit **C**ontext
 
-文档驱动的 AI 协作框架。通过结构化文件实现跨会话持久记忆。
+一个简单的 spec 驱动 Vibe Coding 框架，为个人开发者设计。
 
-## 问题
+---
 
-AI 助手在对话结束后丢失上下文。你不断重复解释项目、决策和进度。
+## 为什么需要 sspec？
 
-## 解决方案
+你在用 AI 写代码。一开始很顺利——AI 理解你的意图，代码质量不错。
 
-sspec 通过结构化文件（`.sspec/`）提供跨会话持久化：
-- **spec.md**: 问题、方案、设计决策
-- **tasks.md**: 可执行任务及进度跟踪
-- **handover.md**: 会话桥梁——已完成内容、下一步工作
-- **spec-docs/**: 项目级规范（架构、API、标准）
+然后项目变大了。AI 开始：
+- 忘记你上周做的设计决策
+- 不知道哪些功能已经完成、哪些还在进行
+- 每次新会话都要重新解释项目背景
+- 在复杂任务上迷失方向，做出不一致的修改
+
+**根本问题**：AI 没有跨会话的记忆。每次对话都是从零开始。
+
+**sspec 的解法**：把项目状态写进文件。AI 每次启动时读取这些文件，就能"记住"一切。
+
+---
+
+## sspec 做了什么？
+
+运行 `sspec project init` 后，你的项目会多出：
+
+```
+your-project/
+├── AGENTS.md                    # AI 协议：告诉 AI 如何使用 sspec
+├── .sspec/
+│   ├── project.md               # 项目背景、技术栈、约定
+│   ├── spec-docs/               # 项目级设计文档
+│   ├── changes/                 # 进行中的变更
+│   ├── requests/                # 想法草稿
+│   └── asks/                    # 人机问答记录
+└── .claude/skills/              # AI 技能参考（也可以是 .github/skills/）
+    ├── sspec/SKILL.md
+    ├── sspec-ask/SKILL.md
+    └── write-spec-doc/SKILL.md
+```
+
+**AGENTS.md** 是关键——它定义了 AI 应该如何与 `.sspec/` 目录交互。把它放在根目录，AI 工具（Claude Code、Cursor、Copilot）会自动读取。
+
+---
+
+## 核心概念
+
+### Change（变更）
+
+Change 是 sspec 的核心工作单元。一个 feature、一个 bug fix、一次重构，都是一个 change。
+
+每个 change 有三个文件：
+
+```
+.sspec/changes/add-auth/
+├── spec.md      # 问题是什么？方案是什么？
+├── tasks.md     # 具体要做哪些事？每个任务 <2 小时
+└── handover.md  # 会话交接：做了什么、下一步做什么
+```
+
+**spec.md** 回答 WHY 和 WHAT：
+- Section A: 问题描述（量化的痛点）
+- Section B: 解决方案（为什么选这个方案）
+- Section C: 实施计划（具体改哪些文件）
+- Section D: 阻塞和反馈
+
+**tasks.md** 回答 HOW：
+- 可执行的任务清单
+- 每完成一个就标记 `[x]`
+- AI 每次都能看到进度
+
+**handover.md** 是会话间的桥梁：
+- Background: 这个变更在做什么
+- Accomplished: 本次会话完成了什么
+- Next Steps: 下次应该做什么
+
+AI 读完 handover.md，30 秒内就能继续工作。
+
+### Request（请求）
+
+Request 是变更之前的想法草稿。
+
+当你有个模糊的想法（"认证系统好像有点慢"），但还没想清楚怎么做时，先写成 request：
+
+```bash
+sspec request new slow-auth
+```
+
+Request 只需要描述问题和初步想法。等想清楚了，再转成 change：
+
+```bash
+sspec request link slow-auth auth-optimization
+```
+
+### Spec-doc（规范文档）
+
+Spec-doc 是项目级的设计文档，不绑定到具体的 change。
+
+比如 API 设计规范、数据库 schema、架构决策——这些文档应该长期存在，供所有 change 参考：
+
+```bash
+sspec doc new "API 设计规范"
+sspec doc new "支付系统" --dir  # 复杂主题用目录
+```
+
+存放在 `.sspec/spec-docs/`，AI 在做相关 change 时会参考。
+
+### sspec ask（人机协作）
+
+当 AI 在执行过程中需要你的输入时：
+
+```bash
+sspec ask --name "api_style" --why "两种方案都可行" --question "REST 还是 GraphQL？"
+```
+
+AI 会暂停等你回答。问答记录保存在 `.sspec/asks/`，下次 AI 还能看到。
+
+好处：
+- 减少 AI 在不确定时的瞎猜
+- 问答记录可追溯
+- 以 Credit 计费的 AI Coding 环境(如Copilot)下能省计费消耗
+  - Traditional: Turn 1 (5 tool calls) → Stop → 1 Credit + Turn 2 (5 tool calls) → 1 Credit = **2 Credits**
+  - Sspec ask: Turn 1 (5 tool calls → ask user → 5 tool calls) = **1 Credit**
+
+---
+
+## 工作流程
+
+### 开始新任务
+
+```bash
+# 1. 创建 change
+sspec change new add-user-auth
+
+# 2. AI 会帮你填写 spec.md 和 tasks.md
+#    它会用 sspec ask 来澄清不确定的地方
+
+# 3. 确认方案后，AI 开始执行任务
+```
+
+### 结束会话
+
+告诉 AI：`@handover`
+
+AI 会更新 handover.md，记录本次进度和下一步计划。
+
+### 恢复工作
+
+下次开始时：`@resume`
+
+AI 读取 handover.md，从上次中断的地方继续。
+
+### 任务完成
+
+当所有任务完成后，change 进入 REVIEW 状态。你确认没问题后：
+
+```bash
+sspec change archive add-user-auth
+```
+
+Change 被归档到 `.sspec/changes/.archive/`。
+
+---
+
+## 状态流转
+
+每个 change 有状态：
+
+```
+PLANNING ──→ DOING ──→ REVIEW ──→ DONE
+    ↑          │
+    │          ↓
+    └─────── BLOCKED
+```
+
+- **PLANNING**: 还在设计，spec.md 没定稿
+- **DOING**: 在实施，tasks.md 在更新
+- **BLOCKED**: 卡住了，等外部依赖
+- **REVIEW**: 做完了，等你验收
+- **DONE**: 归档
+
+AI 会根据状态决定该做什么。
+
+---
 
 ## 安装
 
@@ -22,136 +191,81 @@ sspec 通过结构化文件（`.sspec/`）提供跨会话持久化：
 pip install sspec
 ```
 
-## 快速开始
+## 初始化项目
 
 ```bash
 cd your-project
 sspec project init
 ```
 
-创建 `.sspec/` 目录：
-- `project.md` - 项目上下文（技术栈、约束）
-- `spec-docs/` - 规范目录
-- `changes/` - 活跃变更（功能、bug、重构）
-- `skills/` - 自定义 AI 技能和指导
+交互式选择 skill 安装位置（.claude、.github、.agent）。
 
-## 工作流
-
-### 1. 创建变更
+## CLI 速查
 
 ```bash
-sspec change new add-auth
+# 项目
+sspec project init          # 初始化
+sspec project status        # 查看状态
+sspec project update        # 更新模板
+
+# 变更
+sspec change new <name>     # 创建
+sspec change list           # 列表
+sspec change archive <name> # 归档
+
+# 请求
+sspec request new <name>    # 创建想法草稿
+sspec request link <req> <change>  # 关联到变更
+
+# 规范文档
+sspec doc new <name>        # 创建
+sspec doc list              # 列表
+
+# 人机协作
+sspec ask --name <n> --question <q>  # 提问
 ```
 
-AI 创建：
-```
-.sspec/changes/add-auth/
-├── spec.md      # 为什么（WHY）和做什么（WHAT）
-├── tasks.md     # 如何做（HOW），每个任务 <2 小时
-└── handover.md  # 会话连续性
-```
+---
 
-### 2. 实施
+## AI 指令
 
-AI 读取 spec.md，执行任务，在 tasks.md 中更新进度。
+在对话中使用这些指令控制 AI：
 
-可选的辅助文件：
-```
-.sspec/changes/add-auth/
-├── reference/   # 设计文档、调研笔记
-└── scripts/     # 迁移脚本、测试数据
-```
-
-### 3. 结束会话
-
-告诉 AI：`@handover`
-
-AI 更新 handover.md：
-- Background（变更背景）
-- Accomplished（本次完成内容）
-- Status（状态：PLANNING/DOING/BLOCKED/REVIEW）
-- Next Steps（下一步行动）
-
-### 4. 恢复工作
-
-下次会话：`@resume`
-
-AI 读取 handover.md，从上次中断处精确继续。
-
-## 规范文档
-
-创建项目级规范（持久化，不绑定到变更）：
-
-```bash
-sspec spec new "API 设计"           # 单文件
-sspec spec new "支付系统" --dir     # 目录
-sspec spec list                     # 列出全部
-```
-
-## CLI 参考
-
-| 命令 | 说明 |
+| 指令 | 作用 |
 |------|------|
-| `sspec project init` | 初始化 .sspec/ |
-| `sspec project status` | 显示概览 |
-| `sspec project update` | 更新模板 |
-| `sspec change new <name>` | 创建变更 |
-| `sspec change list` | 列出变更 |
-| `sspec change archive <name>` | 归档已完成变更 |
-| `sspec doc new <name>` | 创建规范文档 |
-| `sspec doc list` | 列出规范文档 |
-| `sspec skill new <name>` | 创建技能 |
-| `sspec skill list` | 列出技能 |
+| `@change <name>` | 切换到某个 change（或创建新的） |
+| `@resume` | 恢复上次的工作 |
+| `@handover` | 结束会话，写交接文档 |
+| `@sync` | 同步代码变更到 tasks.md |
+| `@argue` | 停下来，我有不同意见 |
 
-## 文件结构
-
-```
-.sspec/
-├── project.md              # 项目上下文
-├── spec-docs/                   # 项目规范文档
-├── changes/<name>/
-│   ├── spec.md             # 变更规格
-│   ├── tasks.md            # 任务和进度
-│   ├── handover.md         # 会话桥梁
-│   ├── reference/          # 可选：设计文档
-│   └── scripts/            # 可选：工具脚本
-└── skills/                 # AI 指导
-```
-
-## 状态生命周期
-
-```
-PLANNING → DOING → REVIEW → DONE
-     ↓        ↓
-  BLOCKED  BLOCKED
-```
-
-## Agent 指令
-
-| 指令 | 动作 |
-|------|------|
-| `@change <name>` | 切换到变更 |
-| `@resume` | 恢复活跃工作 |
-| `@handover` | 编写会话交接 |
-| `@sync` | 同步 .sspec/ 和代码 |
-
-完整协议见 `AGENTS.md` 模板。
+---
 
 ## 兼容性
 
-适用于任何读取 Markdown 上下文文件的 AI 工具：
-- Claude Code, Cursor, Windsurf, GitHub Copilot, VS Code Copilot
+sspec 生成的是 Markdown 文件。任何能读取项目文件的 AI 工具都能用：
 
-告诉你的 AI："先读取 `.sspec/AGENTS.md`"
+- Claude Code
+- Cursor
+- Windsurf
+- GitHub Copilot
+- VS Code Copilot
 
-## 何时不使用
+只需告诉 AI："先读 AGENTS.md"。
 
-- 快速 bug 修复
-- 错别字和格式调整
-- 简单配置更改
+---
 
-琐碎工作直接做，无需繁文缛节。
+## 什么时候不需要 sspec
 
-## 许可证
+- 改个错别字
+- 快速修个小 bug
+- 调整一下配置
 
-MIT
+简单的事情直接做，不需要走流程。sspec 是为那些"跨越多个会话、需要记住上下文"的任务设计的。
+
+---
+
+## License
+
+AGPL-V3.0
+

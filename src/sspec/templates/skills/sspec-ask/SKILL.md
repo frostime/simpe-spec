@@ -1,121 +1,135 @@
 ---
 skill: sspec-ask
-version: 2.0.0
-description: Mid-execution user consultation with persistent Q&A records. Use actively when needing human input.
+version: 3.0.0
+description: Mid-execution user consultation with file-based Q&A workflow. USE ACTIVELY to reduce errors and align with user intent.
 ---
 
 # SSPEC Ask Skill
 
-**When to consult**: First time using `sspec ask`, or need multi-line question syntax.
+**USE THIS SKILL ACTIVELY** - Don't hesitate to ask when uncertain. Better to confirm than guess.
 
-**Basic rule** (from AGENTS.md): Use when information missing, directional choice needed, completion check, or repeated failures.
+---
+
+## When to Trigger (Critical Decision Points)
+
+**REQUIRED use cases** - Agent MUST use sspec ask when:
+
+1. **User explicitly requested** - User mentions ask/confirmation in their request
+2. **Information missing** - Cannot proceed reliably without user clarification
+   - Example: User mentions ambiguous terms without context → Ask for specific meaning
+3. **Directional choice needed** - Multiple valid approaches exist (not minor tweaks)
+   - Example: Component refactor could use multiple architecture styles → Ask for user preference
+4. **Work completion check** - Agent believes task is done
+   - Example: Code changes completed → Ask user to verify satisfaction before ending turn
+5. **Repeated failures** - Multiple attempts failed, need user insight
+   - Example: CLI command fails 3+ times → Ask user for environment details
+
+**Why active use matters**: Reduces guessing, prevents directional errors, saves tokens by avoiding rework, ensures alignment with user intent.
+
+---
+
+## Workflow Overview
+
+**Two-step process**:
+1. **Create template**: `sspec ask create [--name <name>]` → generates `.py` file
+2. **Execute prompt**: Edit template → `sspec ask prompt <path>` → prompts user and creates `.md` record
+
+**Why file-based?** Eliminates shell escaping, encoding issues, and multi-line fragility.
 
 ---
 
 ## Command Syntax
 
+### Step 1: Create Template
+
 ```bash
-sspec ask --name "<topic>" --why "<reason>" --question "<question>"
+sspec ask create [--name <name>]
 ```
 
-| Flag | Required | Description |
-|------|----------|-------------|
-| `--name` | Yes | Topic identifier (used in filename) |
-| `--why` | No (recommended) | Intent for future reference |
-| `--question` | Yes | Question text. Use `-` for stdin |
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--name` | "ask" | Ask identifier (lowercase letters and underscores only) |
 
-**Output**: User prompted for answer. Record saved to `.sspec/asks/<timestamp>_<name>.md`
+**Output**: Creates `.sspec/asks/<timestamp>_<name>.py` with template:
+
+```python
+CREATED = "<iso_timestamp>"
+
+REASON = r"""
+Ask user for <brief_reason>
+"""
+
+QUESTION = r"""
+<YOUR_QUESTION_HERE>
+"""
+
+# AGENT SHOULD NOT EDIT THIS!
+# User can pre-fill answer here to skip terminal input.
+USER_ANSWER = r""""""
+```
+
+### Step 2: Edit Template
+
+Agent edits the .py file:
+- Fill in `REASON` (why asking)
+- Fill in `QUESTION` (what to ask)
+- Do NOT edit `USER_ANSWER` (user may pre-fill it)
+
+### Step 3: Execute Prompt
+
+```bash
+sspec ask prompt <path_to_py_file>
+```
+
+**Behavior**:
+- If `USER_ANSWER` has content → use it directly (no terminal prompt)
+- If `USER_ANSWER` empty → prompt user interactively in terminal
+- Appends answer to `.py` file
+- Converts to `.md` format and deletes `.py`
 
 ---
 
-## Multi-Line Questions
-
-### PowerShell (here-string)
-
-```powershell
-sspec ask --name "api_design" --why "Multiple valid approaches" --question @'
-Which API style do you prefer?
-
-1) REST with nested resources
-   `/users/{id}/orders/{orderId}`
-
-2) Flat endpoints with query params
-   `/orders?userId={id}&orderId={orderId}`
-
-Please explain your reasoning.
-'@
-```
-
-### Bash/Zsh (heredoc)
+## Example: Directional Choice
 
 ```bash
-sspec ask --name "api_design" --why "Multiple valid approaches" --question - << 'EOF'
-Which API style do you prefer?
-
-1) REST with nested resources
-   `/users/{id}/orders/{orderId}`
-
-2) Flat endpoints with query params
-   `/orders?userId={id}&orderId={orderId}`
-
-Please explain your reasoning.
-EOF
+# Step 1: Create template
+sspec ask create --name refactor_approach
 ```
 
----
+Agent edits `.sspec/asks/260204120000_refactor_approach.py`:
+```python
+REASON = r"""
+Multiple valid refactoring strategies exist for caching layer
+"""
 
-## Use Case Examples
+QUESTION = r"""
+I've identified 3 approaches to refactor the caching layer:
 
-### 1. Missing Information
+**Option A: Redis + In-Memory Fallback**
+Pros: High performance, resilient
+Cons: Operational complexity, external dependency
+
+**Option B: Pure In-Memory (with LRU eviction)**
+Pros: Simple, no external deps
+Cons: Lost on restart, limited by RAM
+
+**Option C: SQLite Cache**
+Pros: Persistent, zero-config
+Cons: Slower than Redis, disk I/O
+
+Which approach aligns with project priorities?
+(Consider: performance, simplicity, persistence needs)
+"""
+
+USER_ANSWER = r""""""  # Empty - will prompt user
+```
 
 ```bash
-sspec ask --name "db_credentials" \
-  --why "Cannot proceed without connection info" \
-  --question "What are the database connection details? (host, port, user, password)"
+# Step 3: Execute and get user's choice
+sspec ask prompt .sspec/asks/260204120000_refactor_approach.py
 ```
 
-### 2. Directional Choice
-
-```bash
-sspec ask --name "error_handling" \
-  --why "Architecture decision needed" \
-  --question @'
-How should we handle API errors?
-
-A) Return HTTP status codes only (400, 404, 500)
-B) Return JSON error objects with codes and messages
-C) Both: status codes + JSON body
-
-This affects all endpoint implementations.
-'@
-```
-
-### 3. Completion Check
-
-```bash
-sspec ask --name "feature_complete" \
-  --why "Verify before marking REVIEW" \
-  --question "I've completed the auth refactor. Please verify: 1) Login works 2) Token refresh works 3) Logout clears session. Ready to mark as REVIEW?"
-```
-
-### 4. Repeated Failures
-
-```bash
-sspec ask --name "test_failure" \
-  --why "Cannot diagnose after 3 attempts" \
-  --question @'
-`pytest tests/test_auth.py` fails repeatedly with:
-
-ConnectionRefusedError: [Errno 111] Connection refused
-
-I've tried:
-1. Checking if Redis is running (it is)
-2. Verifying connection string
-3. Running with verbose logging
-
-What am I missing?
-'@
-```
+User responds in terminal or can pre-fill `USER_ANSWER` in the file before execution.
 
 ---
 
@@ -123,34 +137,42 @@ What am I missing?
 
 | Do | Don't |
 |----|-------|
-| Use specific `--name` for searchability | Use generic names like "question1" |
-| Include `--why` for future context | Omit why (makes records less useful) |
+| Use descriptive `--name` (e.g., `api_design`) | Use generic names (`question1`) |
+| Fill `REASON` for future context | Leave `REASON` empty |
 | Ask one focused question | Bundle multiple unrelated questions |
-| Provide options when applicable | Leave question open-ended if choices exist |
-| Use markdown formatting in questions | Use headers above H3 (###) |
+| Ask early when uncertain | Guess and risk wrong direction |
 
 ---
 
-## Record Format
+## File Lifecycle
 
-Saved to `.sspec/asks/<yymmddHHMMSS>_<name>.md`:
+```
+1. create  → .sspec/asks/<timestamp>_<name>.py     (template)
+2. edit    → Agent fills REASON + QUESTION
+3. prompt  → Executes, collects answer
+           → Appends ANSWER to .py
+           → Converts to .md
+           → Deletes .py
+4. final   → .sspec/asks/<timestamp>_<name>.md     (persistent record)
+```
+
+---
+
+## Final Record Format
 
 ```markdown
 ---
-name: api_design
-why: Multiple valid approaches
-timestamp: 2026-01-27T14:30:00
+created: '<iso_timestamp>'
+name: <name>
+why: <reason>
 ---
 
-## Question
+# Ask: <name>
 
-Which API style do you prefer?
-...
+## Question
+<question_text>
 
 ## Answer
-
-Option B - JSON error objects. We need structured errors for the mobile app to display localized messages.
+<answer_text>
 ```
-
-Records persist for future reference and can be linked from change documents.
 

@@ -109,18 +109,27 @@ sspec doc new "支付系统" --dir  # 复杂主题用目录
 
 ### sspec ask（人机协作）
 
-当 AI 在执行过程中需要你的输入时：
+当 AI 在执行过程中需要你的输入时，它使用两步流程：
 
 ```bash
-sspec ask --name "api_style" --why "两种方案都可行" --question "REST 还是 GraphQL？"
+# 步骤 1：AI 创建问题模板
+sspec ask create --name api_style
+
+# 步骤 2：AI 编辑 .py 文件，填写 REASON + QUESTION
+# （或者你可以在文件中预先填写 USER_ANSWER）
+
+# 步骤 3：执行并收集回答
+sspec ask prompt .sspec/asks/<timestamp>_api_style.py
 ```
 
-AI 会暂停等你回答。问答记录保存在 `.sspec/asks/`，下次 AI 还能看到。
+AI 会暂停等待你的回答。问答记录保存在 `.sspec/asks/`，下次 AI 还能看到。
 
-好处：
-- 减少 AI 在不确定时的瞎猜
+**好处**：
+- 没有 shell 转义/编码问题（直接编辑 Python 文件）
+- 你可以在文件中预先填写回答（跳过终端提示）
+- 减少 AI 在不确定时的猜测
 - 问答记录可追溯
-- 以 Credit 计费的 AI Coding 环境(如Copilot)下能省计费消耗
+- 在以 Credit 计费的 AI Coding 环境(Copilot)下能省计费消耗
   - Traditional: Turn 1 (5 tool calls) → Stop → 1 Credit + Turn 2 (5 tool calls) → 1 Credit = **2 Credits**
   - Sspec ask: Turn 1 (5 tool calls → ask user → 5 tool calls) = **1 Credit**
 
@@ -222,7 +231,8 @@ sspec doc new <name>        # 创建
 sspec doc list              # 列表
 
 # 人机协作
-sspec ask --name <n> --question <q>  # 提问
+sspec ask create [--name <n>]  # 创建问题模板
+sspec ask prompt <path>        # 执行问题提示
 ```
 
 ---

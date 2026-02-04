@@ -28,7 +28,7 @@ main.add_command(change.change)
 main.add_command(skill.skill)
 main.add_command(request.request)
 main.add_command(doc.doc)
-main.add_command(ask.ask)
+main.add_command(ask.ask_group)
 
 
 if __name__ == '__main__':

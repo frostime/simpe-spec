@@ -109,15 +109,24 @@ Stored in `.sspec/spec-docs/`, AI references them when working on related change
 
 ### sspec ask (Human-in-the-loop)
 
-When AI needs your input mid-execution:
+When AI needs your input mid-execution, it uses a two-step workflow:
 
 ```bash
-sspec ask --name "api_style" --why "Both approaches work" --question "REST or GraphQL?"
+# Step 1: AI creates ask template
+sspec ask create --name api_style
+
+# Step 2: AI edits the .py file with REASON + QUESTION
+# (OR you can pre-fill USER_ANSWER in the file)
+
+# Step 3: Execute and collect answer
+sspec ask prompt .sspec/asks/<timestamp>_api_style.py
 ```
 
-AI pauses and waits for your answer. Q&A records are saved in `.sspec/asks/` for future reference.
+AI pauses for your answer. Q&A records saved in `.sspec/asks/` for future reference.
 
-Benefits:
+**Benefits**:
+- No shell escaping/encoding issues (edit Python file directly)
+- You can pre-fill answers in the file (skip terminal prompt)
 - Reduces AI guessing when uncertain
 - Q&A records are traceable
 - Reduces billing consumption in AI coding environments billed by credits (e.g., Copilot)
@@ -222,7 +231,8 @@ sspec doc new <n>        # Create
 sspec doc list              # List
 
 # Human-in-the-loop
-sspec ask --name <n> --question <q>  # Ask
+sspec ask create [--name <n>]  # Create ask template
+sspec ask prompt <path>        # Execute ask prompt
 ```
 
 ---

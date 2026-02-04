@@ -64,7 +64,7 @@ Step 1: UNDERSTAND
 
 Step 2: RESEARCH
 ├─ IF unclear terms or missing info:
-│    USE sspec ask → Clarify (saves cost, persists record)
+│    USE sspec ask create/prompt → Clarify (saves cost, persists record)
 ├─ IF existing related change:
 │    Consider attaching instead of new change
 └─ Gather context from .sspec/project.md and code
@@ -79,7 +79,7 @@ Step 3: DESIGN
 └─ reference/ drafts: Keep for context or discard after finalization
 
 Step 4: CONFIRM
-├─ USE sspec ask → Present understanding and plan:
+├─ USE sspec ask create/prompt → Present understanding and plan:
 │    "Problem: [quantified problem]
 │     Solution: [approach]
 │     Files: [list]─ WAIT for explicit confirmation
@@ -228,20 +228,29 @@ ELSE IF updating:
 
 ## 5. SCOPE: sspec ask
 
+**USE ACTIVELY** - Don't hesitate to ask. Better to confirm than guess wrong.
+
 Use when needing user input mid-execution. Saves cost (1 turn instead of 2), reduces hallucination/directional errors, and persists Q&A record.
 
-**When to use**:
-1. Information missing → Cannot proceed reliably
-2. Directional choice → Multiple valid approaches
-3. Completion check → Confirm task is done
-4. Repeated failures → Need user insight
+**When to use** (mandatory triggers):
+1. User explicitly requested ask/confirmation
+2. Information missing → Cannot proceed reliably
+3. Directional choice → Multiple valid approaches (not minor tweaks)
+4. Work completion check → Confirm task is done before ending turn
+5. Repeated failures (3+ attempts) → Need user insight
 
-**Syntax**:
+**Two-step workflow**:
 ```bash
-sspec ask --name "<topic>" --why "<reason>" --question "<question>"
+# Step 1: Create template; <name> should fit python file name rule
+sspec ask create [--name <name>]
+# Step 2: Agent edits .py file (REASON + QUESTION)
+# Step 3: Execute prompt
+sspec ask prompt <path>
 ```
 
-📚 For multi-line syntax and examples → Consult `sspec-ask` SKILL
+**Active use principle**: When in doubt, ask. Guessing wastes more tokens than one ask. Agents should be proactive in seeking clarification.
+
+📚 For detailed syntax and examples → Consult `sspec-ask` SKILL
 
 ---
 
@@ -254,13 +263,13 @@ ON user_message:
     ELSE                       → Follow Request Processing Workflow (2.0)
 
 ON need_user_input:
-    USE sspec ask              → Persists record, saves cost
+    USE sspec ask create/prompt  → Persists record, saves cost
 
 ON session_end:
-    MUST @handover             → No exceptions
+    MUST @handover               → No exceptions
 
 ON uncertainty:
-    Consult SKILL              → sspec, sspec-ask, write-spec-doc
+    Consult SKILL                → sspec, sspec-ask, write-spec-doc
     OR use sspec ask for guidance
 ```
 

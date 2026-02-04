@@ -1,250 +1,138 @@
 ---
 skill: sspec
-version: 3.0.0
-description: Deep reference for SSPEC workflow - document writing guidelines, status transition rules, edge cases. MUST read on first use of sspec workflow or when handling complex scenarios.
+version: 4.1.0
+description: Quality standards and edge cases for SSPEC workflow. Consult when writing change documents or handling complex scenarios.
 ---
 
 # SSPEC Skill
 
-**When to consult this SKILL**:
-- Unsure how to write spec.md / tasks.md / handover.md effectively
-- Status transitions are ambiguous (e.g., partial blockers)
-- Handling edge cases not covered in AGENTS.md
-- Need to edit existing change documents
+**When to consult**:
+- Writing spec.md / tasks.md / handover.md for the first time
+- Using reference/ or script/ directories
+- Handling edge cases (partial blockers, multi-change, mid-flight rejection)
+- Unsure about quality standards
 
-**Quick reference**: For basic usage, change templates have inline `@AGENT: RULE/` markers. Read this SKILL for quality guidelines and edge cases.
-
----
-
-## Table of Contents
-
-**Core Essentials** (Read first):
-- [Core Editing Patterns](#core-editing-patterns) — Understanding @AGENT markers
-- [Document Writing Guidelines](#document-writing-guidelines) — spec.md, tasks.md, handover.md quality standards
-- [Status Transition Rules](#status-transition-rules) — State machine and prohibited transitions
-
-**Reference**:
-- [spec-docs/ Directory](#spec-docs-directory) — Project-level specifications
-- [Change Auxiliary Files](#change-auxiliary-files) — reference/ and scripts/
-- [Edge Cases](#edge-cases) — Partial blockers, mid-flight rejection, multi-change
-- [Anti-Patterns](#anti-patterns) — Common mistakes to avoid
-- [Quick Reference](#quick-reference-document-checklist) — Checklists
+**Note**: Basic rules (status transitions, directives, edit markers) are in AGENTS.md. This SKILL covers quality depth.
 
 ---
 
-## Core Editing Patterns
+## Document Quality Standards
 
-### Understanding @AGENT Markers
+### spec.md
 
-**`@AGENT: RULE/<topic>`** — Constraint to follow when editing this section
-```markdown
-<!-- @AGENT: RULE/quantify-pain
-Describe current pain points with metrics.
--->
-```
+| Section | Quality Bar | ❌ Fail | ✅ Pass |
+|---------|-------------|---------|---------|
+| A. Problem | Quantified pain point | "Need to refactor" | "Auth takes 5s, 12% conversion drop" |
+| B. Solution | Approach + rationale | "Use caching" | "JWT + Redis: DB→memory lookup" |
+| C. Implementation | File-level breakdown | "Modify auth files" | "`src/auth/jwt.py` — add refresh_token()" |
+| D. Blockers | Dated, actionable | "Waiting on DevOps" | "Blocker (01-27): Need Redis host:port from DevOps" |
 
-**`@AGENT: REPLACE-FOR-EDIT/<section>`** — This section is meant to be replaced, not appended
-```markdown
-<!-- @AGENT: REPLACE-FOR-EDIT/problem-statement -->
-```
-
-### Common Editing Operations
-
-| Operation | When | How |
-|-----------|------|-----|
-| **Replace section** | Marker present | Use str_replace with full section content |
-| **Update progress** | After each task | Replace entire "Progress Tracking" section |
-| **Add blocker** | When stuck | Append new blocker entry to Section D |
-| **Update handover** | End of session | Replace entire handover content |
-
-**Anti-pattern**: Appending to a `REPLACE-FOR-EDIT` section creates duplication.
-
----
-
-## Document Writing Guidelines
-
-### spec.md — Specification
-
-**Purpose**: Let the next Agent (or future you) **quickly understand problem and solution**.
-
-#### Section A: Problem Statement
-
-Answer: **Why are we doing this?**
-
-✅ Quantifiable problem, explains urgency  
-❌ "Need to refactor" (missing why)
-
-Example: "Auth takes 5s average, causing 12% conversion drop. Reduce to <1s."
-
-#### Section B: Proposed Solution
-
-Answer: **How to solve? Why this approach?**
-
-✅ Core approach + key decisions  
-❌ Jumping to implementation details
-
-Example: "JWT + Redis caching: move token validation from DB to memory lookups."
-
-#### Section C: Implementation Strategy
-
-**Critical**: Break down to **file level**.
-
-✅ Lists specific files to create/modify  
-❌ "Modify related files" (not specific)
-
-Format:
+**Section C format**:
 ```markdown
 ### Phase 1: Infrastructure
-- `src/cache/redis.py` — create, Redis pool
-- `requirements.txt` — modify, add redis
+- `src/cache/redis.py` — create, connection pool
+- `requirements.txt` — modify, add redis>=4.0
+
+### Phase 2: Core Logic
+- `src/auth/jwt.py` — modify, add refresh_token()
+- `src/auth/middleware.py` — modify, cache-first lookup
 ```
 
-#### Section D: Blockers & Feedback
+### tasks.md
 
-Record blockers and user feedback with dates:
-```markdown
-### Blocker (2026-01-27)
-**Blocked**: Waiting for DevOps Redis info
-**Impact**: Cannot run integration tests
-**Needed**: Redis host, port, password
-```
+| Criterion | Requirement |
+|-----------|-------------|
+| Granularity | Each task <2h, independently executable |
+| Verification | Each phase has explicit verification criteria |
+| Progress | Updated after EACH task, not batched |
 
----
-
-### tasks.md — Task List
-
-**Purpose**: Each task **independently executable, verifiable, <2h to complete**.
-
-#### Task Granularity
-
-❌ Too broad: "Implement auth system"  
-✅ Appropriate: "Create Redis pool `src/cache/redis.py` — Verify: unit tests pass"
-
-#### Task Organization
-
-Organize by phases with clear verification:
+**Task format**:
 ```markdown
 ### Phase 1: Infrastructure ✅
 - [x] Add redis dependency `requirements.txt`
-- [x] Create `src/cache/redis.py` connection pool
+- [x] Create connection pool `src/cache/redis.py`
 **Verification**: `pytest tests/test_cache.py` passes
 
-### Phase 2: Auth Logic 🚧
-- [x] Modify `src/auth/middleware.py` cache-first
-- [ ] Add token refresh logic
+### Phase 2: Core Logic 🚧
+- [x] Cache-first lookup `src/auth/middleware.py`
+- [ ] Token refresh `src/auth/jwt.py`
 **Verification**: Auth response <100ms
 ```
 
-#### Progress Tracking
+### handover.md
 
-Update after **each task completion** (not batched).
-```markdown
-**Overall**: 60% (3/5 tasks)
-| Phase | Progress | Status |
-| Phase 1: Infrastructure | 100% | ✅ Done |
-| Phase 2: Auth Logic | 33% | 🚧 In Progress |
-```
+| Field | Bad | Good |
+|-------|-----|------|
+| Background | "Doing auth" | "JWT+Redis cache, target <1s auth" |
+| Accomplished | "Made progress" | "Phase 1 done: redis pool + middleware" |
+| Next steps | "Continue" | "1. Implement jwt.py:refresh_token() 2. Add tests" |
+| Conventions | (empty) | "Key format: `auth:{user_id}`, TTL: 900s" |
 
----
-
-### handover.md — Session Handover
-
-**Purpose**: Get the next Agent working in **30 seconds**.
-
-**Philosophy**: Time bridge. Bad handover = 30min wasted. Good handover = 30sec to start.
-
-#### Essential Content
-
-Must include:
-1. **Background** — What is this change about?
-2. **Accomplished** — What was done this session?
-3. **Current status** — PLANNING/DOING/BLOCKED/REVIEW
-4. **Next steps** — Specific, file-level actions
-5. **Conventions** — Patterns, naming, error codes
-
-#### Quality Comparison
-
-| Dimension | ❌ Poor | ✅ Good |
-|-----------|---------|---------|
-| Background | "Doing auth" | "JWT+Redis cache, <1s target" |
-| Progress | "Did some stuff" | "Phase 1 done, 60% complete" |
-| Next step | "Keep going" | "Implement jwt.py:refresh_token()" |
-| Conventions | None | Key format, expiry, error codes |
-
----
-
-## Status Transition Rules
-
-### Status Definitions
-
-| Status | Meaning | Enter When | Exit When |
-|--------|---------|------------|-----------|
-| **PLANNING** | Defining scope and approach | New change / major pivot | User approves plan |
-| **DOING** | Implementation in progress | Plan approved / blocker resolved | Tasks complete / blocked / pivot |
-| **BLOCKED** | Waiting for external | Missing info/resources/approval | Blocker resolved / pivot |
-| **REVIEW** | Complete, awaiting acceptance | All tasks done | User accepts / requests changes |
-| **DONE** | Completed and archived | User accepts | `sspec change archive` |
-
-### Prohibited Transitions
-
-| Prohibited | Reason |
-|------------|--------|
-| PLANNING → DONE | Cannot complete without implementation |
-| DOING → DONE | Must go through REVIEW |
-| BLOCKED → DONE | Blocker must be resolved first |
-
-### State Transition Flow
-
-**Normal**: PLANNING → DOING → REVIEW → DONE  
-**With blockers**: DOING ↔ BLOCKED → DOING  
-**Pivot**: DOING → PLANNING (scope changed)
-
----
-
-## spec-docs/ Directory
-
-`.sspec/spec-docs/` stores **project-level technical specs**, unrelated to individual changes.
-
-### Suitable Content
-
-| Type | Example |
-|------|---------|
-| Architecture | `architecture.md` — system design, module boundaries |
-| Dev standards | `coding-standards.md` — naming, style guidelines |
-| API specs | `api-spec.md` — interface definitions, data formats |
-| Tech decisions | `adr/` — Architecture Decision Records |
-
-### Difference from change
-
-- **change/spec.md**: Single change's problem and solution (temporary)
-- **spec-docs/**: Project-level specs and design (persistent)
-
-### Referencing
-
-```markdown
-## B. Proposed Solution
-Follow auth interface format defined in [API Spec](.sspec/spec-docs/api-spec.md).
-```
+**Quality test**: Can a new Agent start coding in <30 seconds?
 
 ---
 
 ## Change Auxiliary Files
 
-Beyond core trio (spec.md, tasks.md, handover.md), store supporting files:
+Beyond the core trio (spec.md, tasks.md, handover.md), changes can include optional directories:
 
 ```
-.sspec/changes/<name>/
+.sspec/changes/<n>/
 ├── spec.md, tasks.md, handover.md  # Required
-├── reference/                      # Optional: detailed design, research
-└── scripts/                        # Optional: migration scripts, test data
+├── reference/                       # Optional: design workspace
+└── script/                         # Optional: tooling
 ```
 
-| Directory | Purpose | Examples |
-|-----------|---------|----------|
-| `reference/` | Detailed design, research, drafts | Architecture diagrams, API design |
-| `scripts/` | One-off scripts, test data | Data migration, env setup, mock data |
+### reference/ — Design Workspace
 
-**Archive**: `sspec change archive <name>` archives entire directory including reference/ and scripts/.
+**Purpose**: Pre-finalization exploration space. Use for complex changes where design needs iteration before committing to spec.md.
+
+| Use Case | Example File | Content |
+|----------|--------------|---------|
+| Architecture exploration | `design-draft.md` | Multiple approaches with pros/cons |
+| API design | `api-options.md` | Endpoint alternatives, request/response shapes |
+| Research notes | `research.md` | External docs, library comparisons |
+| Diagrams | `architecture.mmd` | Mermaid/PlantUML source |
+| User feedback | `feedback-log.md` | Accumulated clarifications from sspec ask |
+
+**Workflow**:
+```
+1. PLANNING phase: Write drafts in reference/
+2. Iterate with user via sspec ask
+3. Finalize: Distill into spec.md Sections A/B/C
+4. Keep or discard: reference/ can stay for context or be cleaned up
+```
+
+**When to use reference/**:
+- Change involves architectural decisions
+- Multiple valid approaches need comparison
+- User feedback needs accumulation before finalizing
+- Design is too verbose for spec.md
+
+**When NOT to use**:
+- Simple bug fixes
+- Well-understood features
+- Changes with clear requirements from start
+
+### script/ — Change-Specific Tooling
+
+**Purpose**: One-off scripts and data specific to this change.
+
+| Use Case | Example File | Content |
+|----------|--------------|---------|
+| Data migration | `migrate-v2.py` | Schema migration script |
+| Test data | `fixtures.json` | Mock data for testing |
+| Environment setup | `setup-local.sh` | Dev environment bootstrap |
+| Analysis | `analyze-perf.py` | Performance measurement |
+
+**Lifecycle**:
+- Created during DOING phase as needed
+- May be promoted to project-level if reusable
+- Archived with change via `sspec change archive`
+
+**Difference from project scripts**:
+- `scripts/` in change = temporary, change-specific
+- Project-level scripts = permanent, shared tooling
 
 ---
 
@@ -252,81 +140,97 @@ Beyond core trio (spec.md, tasks.md, handover.md), store supporting files:
 
 ### Partial Blockers
 
-**Situation**: Some tasks blocked, others can continue.
+Some tasks blocked, others can continue.
 
-**Options**:
-1. **Split change**: Move blocked tasks to new change
-2. **Reorder tasks**: Move non-critical blocked tasks to end
-3. **Document and continue**: Record blocker in spec.md Section D, use workaround
+**Decision tree**:
+```
+IF blocked tasks are dependencies for remaining tasks:
+    → Status = BLOCKED, document in spec.md Section D
+ELSE IF blocked tasks are non-critical:
+    → Continue with other tasks, document blocker
+    → Move blocked tasks to end of task list
+ELSE:
+    → Split into two changes: one blocked, one active
+```
 
 ### REVIEW Spanning Multiple Sessions
 
-**Handling**:
-- Keep status as REVIEW
+```
+- Keep status = REVIEW
 - Update handover: "Awaiting user verification since <date>"
-- Can work on other changes simultaneously
+- Can work on other changes meanwhile
+- On next session: Prompt user for review result
+```
 
-### User Mid-Flight Rejection
+### Mid-Flight Rejection
 
-**Situation**: User says "this isn't what I wanted" during implementation.
+User says "this isn't what I wanted" during DOING.
 
-**Handling**:
-1. Stop implementation immediately
-2. Use `@argue` to clarify scope
-3. Update spec.md and tasks.md
-4. Get explicit approval before continuing
-5. Consider status change: DOING → PLANNING
+```
+1. STOP immediately
+2. Trigger @argue directive
+3. Determine rejection scope:
+   - Detail level → Revise tasks.md only
+   - Design level → Revise spec.md Section B + tasks.md
+   - Requirement level → Revise spec.md Section A, add PIVOT marker
+4. Status: Consider DOING → PLANNING if scope changed
+5. WAIT for explicit approval before resuming
+```
 
 ### Multiple Changes DOING Simultaneously
 
-**Problem**: Context switching causes errors.
+**Rule**: Avoid >2 changes in DOING status.
 
-**Best practices**:
-1. `@handover` current change before switching
-2. Use `@change <other>` to explicitly switch context
-3. Avoid having >2 changes in DOING status
+```
+Before switching changes:
+1. Run @handover on current change
+2. Run @change <other> to switch context
+3. Read other change's handover.md before any action
+```
+
+### Design Iteration in reference/
+
+When spec.md keeps getting revised:
+
+```
+1. Move current spec.md content to reference/spec-v1.md
+2. Create reference/design-exploration.md for new ideas
+3. Iterate with user via sspec ask
+4. Once stable: Write final version to spec.md
+5. Optional: Keep reference/ versions for decision history
+```
 
 ---
 
 ## Anti-Patterns
 
-| Anti-Pattern | Consequence | Correct Approach |
-|--------------|-------------|------------------|
-| Skip handover | Next session wastes 30min | Write handover every session |
-| Mark done without testing | False progress, later bugs | "Done" = implemented + verified |
-| No file-level breakdown | Don't know what to modify | Section C lists specific files |
-| Stay DOING when blocked | Waste time on workarounds | Change to BLOCKED, document |
-| DOING → DONE skip REVIEW | Missing user validation | Always go through REVIEW |
-| Update progress only at end | Lose track of what's done | Update after each task |
+| Pattern | Problem | Fix |
+|---------|---------|-----|
+| Skip handover | Next session wastes 30min | ALWAYS run @handover at session end |
+| Mark `[x]` without testing | False progress | "Done" = implemented + verified |
+| No file-level breakdown | Agent guesses what to modify | spec.md Section C MUST list files |
+| Stay DOING when blocked | Waste time on workarounds | Change to BLOCKED immediately |
+| DOING → DONE | Skip user validation | MUST go through REVIEW |
+| Batch progress updates | Lose track | Update tasks.md after EACH task |
+| Append to REPLACE-FOR-EDIT | Creates duplication | Replace entire section |
+| Over-engineering reference/ | Wastes time on simple changes | Only use for complex designs |
 
 ---
 
-## Quick Reference: Document Checklist
+## Checklist
 
-### When Creating New Change
-
-- [ ] spec.md Section A: Problem quantified
-- [ ] spec.md Section B: Solution rationale clear
-- [ ] spec.md Section C: File-level breakdown
-- [ ] tasks.md: Tasks <2h each with verification
+### New Change
+- [ ] Section A: Problem quantified with metrics
+- [ ] Section B: Solution approach + why this over alternatives
+- [ ] Section C: Every task maps to specific file
+- [ ] tasks.md: Each task <2h with verification
 - [ ] handover.md: Initial context set
+- [ ] Complex design? Consider using reference/
 
-### During Implementation
+### Before REVIEW
+- [ ] All tasks `[x]`
+- [ ] All verification criteria met
+- [ ] handover.md reflects completion
+- [ ] No undocumented blockers
+- [ ] scripts/ cleaned up or documented if kept
 
-- [ ] Update tasks.md progress after each task
-- [ ] Record blockers in spec.md Section D immediately
-- [ ] Update handover at end of each session
-- [ ] Change status when appropriate (DOING ↔ BLOCKED)
-
-### Before Moving to REVIEW
-
-- [ ] All tasks marked [x]
-- [ ] Verification criteria met
-- [ ] Handover reflects completion
-- [ ] spec.md Section D documents any remaining concerns
-
-### Before Archiving (DONE)
-
-- [ ] User has accepted the change
-- [ ] All documentation updated
-- [ ] No outstanding blockers or concerns

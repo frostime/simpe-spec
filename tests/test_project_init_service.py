@@ -25,6 +25,7 @@ def test_initialize_project_creates_sspec_structure_and_meta():
         assert result.sspec_path == project_root / SSPEC_DIR
         assert (project_root / SSPEC_DIR / "changes" / "archive").is_dir()
         assert (project_root / SSPEC_DIR / "requests").is_dir()
+        assert (project_root / SSPEC_DIR / "asks").is_dir()
         assert (project_root / SSPEC_DIR / "spec-docs").is_dir()
 
         meta_path = project_root / SSPEC_DIR / ".meta.json"

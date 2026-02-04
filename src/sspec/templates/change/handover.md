@@ -1,28 +1,23 @@
 # Handover: {{CHANGE_NAME}}
 
-<!-- @AGENT: RULE/update-timestamp
-Update timestamp at session end.
--->
-**Updated**:
-
-<!-- @AGENT: RULE/time-bridge-philosophy
-This is a TIME BRIDGE carrying context to next session.
-Bad handover = 30min wasted. Good handover = 30sec to start.
-Write for an Agent with ZERO memory of this session.
-
-For detailed handover guidelines, import and read sspec SKILL.
--->
+**Updated**: <!-- @AGENT: Update timestamp at session end -->
 
 ---
 
-<!-- @AGENT: REPLACE-FOR-EDIT/handover-content -->
-<!-- @AGENT: RULE/handover-structure
-MUST include:
-- Background (what is this change about)
-- Accomplished (what was done this session)
-- Current status (PLANNING/DOING/BLOCKED/REVIEW)
-- Next steps (specific, file-level)
-- Conventions (patterns, naming, error codes)
+## Background
+<!-- What is this change about? 1 ~ 3 paragraph. -->
 
-Style: Concise, LLM-optimized. No fluff.
+## Accomplished This Session
+<!-- List what got done. Be specific. -->
+
+## Current Status
+<!-- PLANNING / DOING / BLOCKED / REVIEW -->
+
+## Next Steps
+<!-- Specific, file-level actions. Example:
+1. Implement `src/auth/jwt.py:refresh_token()`
+2. Add tests in `tests/test_jwt.py`
 -->
+
+## Conventions Discovered
+<!-- Patterns, naming rules, error codes found this session -->

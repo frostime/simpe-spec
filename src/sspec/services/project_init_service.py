@@ -87,6 +87,7 @@ def initialize_project(
     (sspec_path / 'changes').mkdir(exist_ok=True)
     (sspec_path / 'changes' / 'archive').mkdir(exist_ok=True)
     (sspec_path / 'requests').mkdir(exist_ok=True)
+    (sspec_path / 'asks').mkdir(exist_ok=True)
     (sspec_path / 'skills').mkdir(exist_ok=True)
     (sspec_path / 'spec-docs').mkdir(exist_ok=True)
 

@@ -3,289 +3,266 @@
 
 SSPEC_SCHEMA::{{SCHEMA_VERSION}}
 
-## What is SSPEC?
+## 0. Protocol Overview
 
 SSPEC is a document-driven AI collaboration framework. All planning, tracking, and handover lives in `.sspec/`.
 
-**Core Design**:
-- **spec.md** = WHY/WHAT (problem, solution, decisions)
-- **tasks.md** = HOW (executable tasks <2h each)
-- **handover.md** = CONTINUITY (session bridge—update EVERY session end)
-
 **Goal**: Any Agent resumes work within 30 seconds by reading `.sspec/` files.
 
----
-
-## Glossary
-
-| Term | Definition |
-|------|------------|
-| **Change** | Unit of work (feature/bugfix/refactor) with its own spec/tasks/handover |
-| **Spec-doc** | Project-level specification document (persistent design docs, not tied to changes) |
-| **Directive** | User command via `@xxx` syntax—Agent MUST NOT auto-trigger |
-| **Status** | Lifecycle: PLANNING → DOING → REVIEW → DONE (or BLOCKED) |
-| **SKILL** | Deep reference for status rules, quality standards, edge cases |
-| **@AGENT: RULE/** | Inline constraint in templates—defines what to include in that section |
-| **@AGENT: REPLACE-FOR-EDIT/** | Section marker—replace entire section, don't append |
-
----
-
-## Hard Rules
-
-1. **`.sspec/` is authoritative**: Read from and update `.sspec/` files, not external notes
-2. **Directives require user input**: Never auto-execute `@xxx` commands
-3. **Handover every session**: Update `handover.md` before ending work—no exceptions
-4. **Respect status transitions**: See Quick Reference; consult SKILL for edge cases
-
----
-
-## User Directives
-
-### `@change <name>`
-
-Switch to existing change or create new one.
-
-```
-IF .sspec/changes/<name>/ exists:
-    Read: handover.md → tasks.md → spec.md
-    Output: context summary (status, progress, next actions)
-ELSE:
-    Run: sspec change new <name>
-    Help user fill spec.md (problem + solution)
-    Generate tasks.md
-    Wait for user approval
-```
-
----
-
-### `@doc <name>`
-
-Create or edit project specification documents (architecture, API contracts, standards)
-
-```
-IF user wants to create new spec-doc:
-    User request the concet needs
-    Run if need: sspec doc new "<name>" [--dir]
-    Consult: SKILL "write-spec-doc"
-      IF not found: see .sspec/skills/write-spec-doc/SKILL.md
-    Write spec document
-
-ELSE IF updating existing spec-doc:
-    Find spec-doc, by "sspec doc list" or user specified.
-    Apply write-spec-doc SKILL guidelines -> Update.
-```
-
----
-
-### `@resume`
-
-Resume work after session break.
-
-```
-candidates = changes WHERE status IN {DOING, BLOCKED, REVIEW}
-
-IF len(candidates) == 0:
-    Output: "No active changes. Use @change <name> or see 'sspec change list'"
-    STOP
-
-IF len(candidates) == 1:
-    Load that change (same as @change)
-ELSE:
-    Output: "Multiple active changes. Specify with @change <name>:"
-    List candidates with status
-    STOP
-```
-
----
-
-### `@handover`
-
-End session and write handover for next Agent.
-
-```
-1. Update handover.md with:
-   - Background: What is this change about?
-   - Accomplished: What got done this session?
-   - Current Status: PLANNING/DOING/BLOCKED/REVIEW
-   - Next Steps: Immediately actionable items
-   - Conventions: Project-specific patterns to follow
-
-2. Update tasks.md: Mark completed [x], update progress
-
-3. Update spec.md status if transitioning
-
-Quality bar: Next session starts coding in <30 seconds, not 30 minutes.
-```
-
----
-
-### `@sync`
-
-Reconcile `.sspec/` with code changes after autonomous coding.
-
-```
-1. Identify changes (ask user, git diff, or file timestamps)
-
-2. Update tasks.md:
-   - Mark completed tasks [x]
-   - Add new tasks for undocumented work
-
-3. Check status:
-   - All tasks done? → Suggest REVIEW
-   - Hit blocker? → Suggest BLOCKED
-```
-
----
-
-### `@argue`
-
-User disagrees with approach during implementation.
-
-```
-1. STOP implementation immediately
-
-2. Clarify scope:
-   - Detail (how to code) → Revise task in tasks.md
-   - Design (architecture) → Revise spec.md section B
-   - Requirement (what to build) → Revise spec.md section A + PIVOT marker
-
-3. Seek user confirmation before continuing
-```
-
----
-
-## Template Markers
-
-Change documents (spec.md, tasks.md, handover.md) use `@AGENT:` markers to guide editing:
-
-### `@AGENT: RULE/<topic>`
-
-Constraints for filling in sections. Example:
-```markdown
-<!-- @AGENT: RULE/quantify-pain
-Describe current pain points with metrics.
--->
-```
-
-### `@AGENT: REPLACE-FOR-EDIT/<section>`
-
-Indicates section should be **replaced**, not appended to:
-```markdown
-<!-- @AGENT: REPLACE-FOR-EDIT/problem-statement -->
-```
-
-📚 **For detailed editing patterns**: Consult sspec SKILL section "Core Editing Patterns"
-
----
-
-## File Update Rules
-
-| File | Update When | Edit Pattern |
-|------|-------------|-------------|
-| **spec.md** | Status change, strategy pivot, design decision, blocker | Use REPLACE-FOR-EDIT markers; append to Section D for blockers |
-| **tasks.md** | Task completion (immediately!), task discovery, replanning | Replace task checkboxes, replace Progress Tracking section |
-| **handover.md** | **Every session end**—this is the **memory** between sessions | Replace entire content after markers |
-
----
-
-## Quick Reference
-
-### Status Transitions
-
-| Status | Meaning | Next States | Trigger |
-|--------|---------|-------------|---------|
-| **PLANNING** | Defining scope, planning tasks | DOING | User approves plan |
-| **DOING** | Implementation in progress | BLOCKED, REVIEW, PLANNING | Blocker / Done / Pivot |
-| **BLOCKED** | Waiting on external dependency | DOING, PLANNING | Resolved / Pivot |
-| **REVIEW** | Done, awaiting verification | DONE, DOING | Accepted / Changes needed |
-| **DONE** | Completed | - | `sspec change archive <name>` |
-
-**Forbidden**: PLANNING→DONE (skip work), DOING→DONE (skip review), BLOCKED→DONE (unresolved)
-
-📚 **For detailed definitions, edge cases, quality standards**: Consult the **sspec SKILL** at `.claude/skills/sspec/SKILL.md` or `.sspec/skills/sspec/SKILL.md`
-
----
-
-### Task Markers
-
-| Marker | Meaning |
-|--------|---------|
-| `[ ]` | Todo |
-| `[x]` | Done (complete AND tested) |
-| `[-]` | Blocked |
-| `[~]` | Needs rework |
-
----
-
-### Folder Structure
-
+**Folder Structure**:
 ```
 .sspec/
 ├── project.md              # Project overview, tech stack, conventions
-├── spec-docs/              # Project-level specification documents (persistent)
-│   ├── README.md           # Spec usage guide
-│   └── <name>.md           # Individual specs (or <name>/index.md for multi-file)
-├── skills/sspec/SKILL.md   # Status rules, quality standards, edge cases
-├── changes/<name>/
-│   ├── spec.md             # Problem, solution, decisions
-│   ├── tasks.md            # Tasks (<2h each) + progress
-│   ├── handover.md         # Session continuity
-│   ├── reference/          # Optional: detailed design, research notes
-│   └── scripts/            # Optional: migration scripts, test data
-└── requests/               # Ad-hoc requests (optional)
+├── spec-docs/              # Project-level specifications (persistent)
+├── changes/<name>/         # Active change proposals
+│   ├── spec.md | tasks.md | handover.md  # Required
+│   └── reference/ | script/             # Optional
+├── requests/               # Lightweight proposals
+└── asks/                   # Human-in-the-loop Q&A records
 ```
 
 ---
 
-### CLI Commands
+## 1. Cold Start
 
-```shell
-# Project
-sspec project init           # Initialize .sspec/
-sspec project status         # Show overview
+When entering project or after context reset, execute in order:
 
-# Changes
-sspec change new <name>      # Create change
-sspec change list            # List all changes
-sspec change archive <name>  # Archive completed change
-
-# Specification Documents
-sspec doc list               # List project specification documents
-sspec doc new <name>         # Create single-file spec-doc
-sspec doc new <name> --dir   # Create directory-based spec-doc (complex subsystems)
+```
+1. Read .sspec/project.md
+2. Run: sspec change list
+3. IF active change exists (status != DONE):
+     Read: .sspec/changes/<name>/handover.md
+     Then: tasks.md → spec.md
+     Output: "Resuming <name>: <status>, <progress>, next: <action>"
+4. ELSE:
+     Output: "No active changes. What would you like to work on?"
 ```
 
 ---
 
-## Workflow Decision Tree
+## 2. SCOPE: Changes
+
+Changes live in `.sspec/changes/<name>/`.
+
+| File/Dir | Contains | Required |
+|----------|----------|----------|
+| spec.md | Problem (A), Solution (B), Implementation (C), Blockers (D) | Yes |
+| tasks.md | Task list with `[ ]`/`[x]` markers + progress | Yes |
+| handover.md | Session context for next Agent | Yes |
+| reference/ | Design drafts, research, diagrams (pre-finalization workspace) | No |
+| script/ | Migration scripts, test data, one-off tools | No |
+
+### 2.0 Request Processing Workflow
+
+When user provides vague request (idea, bug, feature), process BEFORE creating change:
 
 ```
-User message received
-    │
-    ├─ Contains @directive? → Execute that directive
-    │
-    └─ No directive
-        │
-        ├─ Active change (status=DOING)?
-        │   └─ Continue tasks, update tasks.md as you go
-        │
-        └─ No active change
-            └─ Ask: "What to work on?" Suggest @resume or @change
+Step 1: UNDERSTAND
+├─ Read user request, identify UNDERLYING NEED (not surface ask)
+├─ Apply first-principles thinking
+└─ Request may be confused; find the REAL PROBLEM
 
-Session ending?
-    └─ Remind: "Run @handover to save progress"
+Step 2: RESEARCH
+├─ IF unclear terms or missing info:
+│    USE sspec ask → Clarify (saves cost, persists record)
+├─ IF existing related change:
+│    Consider attaching instead of new change
+└─ Gather context from .sspec/project.md and code
+
+Step 3: DESIGN
+├─ Simple changes: Draft spec.md mentally
+├─ Complex changes: Write exploration to reference/
+│    - reference/design-draft.md — Architecture options
+│    - reference/api-comparison.md — API alternatives
+│    - reference/research-notes.md — External findings
+├─ Finalize: Distill into spec.md Section A/B/C
+└─ reference/ drafts: Keep for context or discard after finalization
+
+Step 4: CONFIRM
+├─ USE sspec ask → Present understanding and plan:
+│    "Problem: [quantified problem]
+│     Solution: [approach]
+│     Files: [list]─ WAIT for explicit confirmation
+
+Step 5: EXECUTE (on confirmation)
+├─ Run: sspec change new <name>
+├─ Fill spec.md and tasks.md per confirmed plan
+└─ Proceed per SSPEC protocol
 ```
+
+**Key principle**: Understand before acting. Wrong change costs more than extra questions.
+
+### 2.1 Status Transitions
+
+| From | Trigger | To |
+|------|---------|-----|
+| PLANNING | user approves plan | DOING |
+| DOING | all tasks `[x]` | REVIEW |
+| DOING | missing info/resource | BLOCKED |
+| DOING | scope changed | PLANNING |
+| BLOCKED | blocker resolved | DOING |
+| REVIEW | user accepts | DONE |
+| REVIEW | user requests changes | DOING |
+
+**FORBIDDEN**: PLANNING→DONE, DOING→DONE, BLOCKED→DONE
+
+### 2.2 Directives
+
+#### `@change <name>`
+
+```
+IF .sspec/changes/<name>/ exists:
+    Read handover.md → tasks.md → spec.md
+    IF reference/ exists: Scan for context
+    Output: status, progress percentage, next 3 actions
+ELSE:
+    Run: sspec change new <name>
+    Follow Request Processing Workflow (Section 2.0)
+    Fill spec.md Sections A/B/C
+    Generate tasks.md from Section C
+    Output: "Plan ready. Approve to start? (y/n)"
+    WAIT for explicit "y" before status → DOING
+```
+
+#### `@resume`
+
+Same as `@change <current_active_change>`.
+
+#### `@handover`
+
+Execute at session end. No exceptions.
+
+```
+1. Update handover.md with:
+   - Background: 1-sentence change description
+   - Accomplished: List of completed tasks this session
+   - Status: Current status (PLANNING/DOING/BLOCKED/REVIEW)
+   - Next: 1-3 specific file-level actions
+   - Conventions: Patterns/naming discovered (if any)
+
+2. Update tasks.md:
+   - Mark completed tasks [x]
+   - Update progress percentage
+
+3. IF status changed: Update spec.md frontmatter
+```
+
+**Quality check**: Would a new Agent know exactly what to do in <30 seconds?
+
+#### `@sync`
+
+After autonomous coding without tracking:
+
+```
+1. Identify changes: git diff or ask user
+2. Update tasks.md:
+   - Mark completed [x]
+   - Add tasks for undocumented work done
+3. Check: All tasks done? → Suggest REVIEW
+```
+
+#### `@argue`
+
+User disagrees mid-implementation. STOP immediately.
+
+```
+1. STOP current work
+2. Clarify what's wrong:
+   - Implementation detail → Revise task in tasks.md
+   - Design decision → Revise spec.md Section B
+   - Requirement itself → Revise spec.md Section A, add PIVOT marker
+3. Output revised plan
+4. WAIT for explicit confirmation before continuing
+```
+
+### 2.3 Edit Rules
+
+Templates use `@AGENT:` markers:
+
+| Marker | Meaning | Action |
+|--------|---------|--------|
+| `@AGENT: RULE/<topic>` | Constraint for this section | Follow the rule when filling |
+| `@AGENT: REPLACE-FOR-EDIT/<section>` | Replace entirely | Do NOT append; replace whole section |
+
+**Task markers**: `[ ]` todo, `[x]` done, `[-]` blocked, `[~]` needs rework
+
+📚 For quality standards and edge cases → Consult `sspec` SKILL
 
 ---
 
-## Best Practices
+## 3. SCOPE: Requests
 
-1. **Read before acting**: Load `.sspec/` context first
-2. **Update as you go**: Mark tasks `[x]` immediately, don't batch
-3. **Handover is sacred**: Never skip; it's the only cross-session memory
-4. **Consult SKILL when uncertain**: Status edge cases, quality standards
-5. **Preserve history**: Append to handover.md, don't overwrite
+Lightweight proposals before becoming changes. Location: `.sspec/requests/`
 
-**Your goal**: Make the next Agent's life easy. Write handovers for your future self.
+```
+Create:  sspec request new <name>
+Link:    sspec request link <request> <change>  # When ready to implement
+Archive: sspec request archive <name>
+```
+
+Request = "I want X" (idea)
+Change = "Here's how we do X" (plan + execution)
+
+---
+
+## 4. SCOPE: Spec-Docs
+
+Project-level specifications (architecture, API contracts, standards). Location: `.sspec/spec-docs/`
+
+#### `@doc <name>`
+
+```
+IF creating new:
+    Run: sspec doc new "<name>" [--dir]
+    Consult: write-spec-doc SKILL
+    Write specification following SKILL guidelines
+ELSE IF updating:
+    Read existing spec-doc
+    Apply changes per write-spec-doc SKILL
+    Update frontmatter `updated` field
+```
+
+📚 For writing guidelines → Consult `write-spec-doc` SKILL
+
+---
+
+## 5. SCOPE: sspec ask
+
+Use when needing user input mid-execution. Saves cost (1 turn instead of 2), reduces hallucination/directional errors, and persists Q&A record.
+
+**When to use**:
+1. Information missing → Cannot proceed reliably
+2. Directional choice → Multiple valid approaches
+3. Completion check → Confirm task is done
+4. Repeated failures → Need user insight
+
+**Syntax**:
+```bash
+sspec ask --name "<topic>" --why "<reason>" --question "<question>"
+```
+
+📚 For multi-line syntax and examples → Consult `sspec-ask` SKILL
+
+---
+
+## 6. Behavior Summary
+
+```
+ON user_message:
+    IF contains @directive     → Execute directive
+    IF active change is DOING  → Continue tasks, update tasks.md after each
+    ELSE                       → Follow Request Processing Workflow (2.0)
+
+ON need_user_input:
+    USE sspec ask              → Persists record, saves cost
+
+ON session_end:
+    MUST @handover             → No exceptions
+
+ON uncertainty:
+    Consult SKILL              → sspec, sspec-ask, write-spec-doc
+    OR use sspec ask for guidance
+```
 
 <!-- SSPEC:END -->
+

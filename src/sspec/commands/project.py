@@ -41,6 +41,7 @@ DEFAULT_GITIGNORE = """
 changes/**
 requests/**
 skills/**
+asks/**
 .meta.json
 """.strip()
 

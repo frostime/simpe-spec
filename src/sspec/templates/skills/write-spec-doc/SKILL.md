@@ -1,5 +1,6 @@
 ---
 name: write-spec
+version: 1.5.0
 description: Guide for writing project specifications in .sspec/spec-docs/. MUST Use this when creating or updating spec documents under  SSPEC system.
 ---
 

@@ -66,9 +66,9 @@ uv run sspec <command>  # Use UV to run sspec command
 uv pip install -e .
 ```
 
-## Ask-Prompt：轮内用户交互
+## SSPEC Ask：轮内用户交互
 
-如果 User 明确指定，或者遇到特定条件，必须使用 Ask-Prompt 咨询 User。
+如果 User 明确指定，或者遇到特定条件，必须使用 SSPEC Ask (Ask Prompt) 咨询 User。
 
 1. **触发条件**（满足以下任一情况时触发）：
 
@@ -81,18 +81,16 @@ uv pip install -e .
      例：Agent完成代码修改后，认为已满足User指令，需请User核实确认是否满意。
    - [ ] 多次尝试某项操作失败，需向User咨询。
      例：多次尝试运行某CLI命令均失败，经咨询User后得知需先激活 .venv 环境。
-2. **先决条件**：查看`ask-prompt` SKILL 详细内容，了解 ask prompt 的用法。 **!IMPORTANT!**
-3. **推荐调用方案**:  阅读 Ask-Prompt Skill → 创建 `tmp_<ask>.py` 临时文件 → 运行 → 获取回复 → 删除临时文件
-4. **WHY Ask Prompt**
+2. **先决条件**：查看`sspec-ask` SKILL 详细内容，了解 sspec ask 的用法。 **!IMPORTANT!**
+3. **WHY Need Ask**
 
    1. Effective:  **Human-in-the-loop**——关键决策点引入人类确认，降低幻觉和方向性错误
-   2. Efficient: **节省费用**——Copilot 按对话轮次计费。工具调用序列中使用 `ask-prompt` SKILL可在不结束当前轮次的情况下获取用户输入。
+   2. Efficient: **节省费用**——Copilot 按对话轮次计费。工具调用序列中使用 `sspec-ask` SKILL可在不结束当前轮次的情况下获取用户输入。
 
-规范: 请将新的 Ask File 放在 `tmp/ask_<name>.py` 中
 
-> [!WARNING] Agent 结束单轮对话之前必须发起 Ask Promp
+> [!WARNING] Agent 结束单轮对话之前必须发起 Ask
 >
-> | match "Agent认为工作已完成" --> 请发起一个 Ask Prompt，询问用户是否已经满意，是否可以结束当前对话轮次
+> | match "Agent认为工作已完成" --> 请发起一个 SSPEC Ask，询问用户是否已经满意，是否可以结束当前对话轮次
 
 ### 📋 Conventions
 

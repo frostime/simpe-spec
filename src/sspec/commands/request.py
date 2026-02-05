@@ -136,6 +136,7 @@ def _print_request_table(
     table.add_column('Created')
     if show_changes:
         table.add_column('Changes')
+    table.add_column('Path')
     table.add_column('Summary')
 
     for r in sorted(requests, key=lambda x: x.created, reverse=True):
@@ -146,6 +147,7 @@ def _print_request_table(
         if show_changes:
             changes = r.attach_change or '-'
             row.append(changes)
+        row.append(str(r.path.relative_to(Path.cwd())))
         row.append(r.tldr)
 
         table.add_row(*row)

@@ -13,7 +13,7 @@ updated: ""
 <!-- @RULE: Organize by phases from spec.md Section C. Each phase has verification.
 
 ### Phase 1: <n> 🚧
-- [ ] <task> `path/file.py`
+- [ ] <Demo Task> `path/file.py`
 **Verification**: <how to verify>
 -->
 

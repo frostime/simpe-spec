@@ -142,6 +142,7 @@ def _print_changes_table(changes: list[ChangeInfo], dim: bool = False) -> None:
     table.add_column('Name')
     table.add_column('Status')
     table.add_column('Progress')
+    table.add_column('Spec')
     table.add_column('Flags')
 
     for change in changes:
@@ -154,6 +155,8 @@ def _print_changes_table(changes: list[ChangeInfo], dim: bool = False) -> None:
         progress_str = ''
         if progress['total'] > 0:
             progress_str = f"{progress['done']}/{progress['total']}"
+        else:
+            progress_str = '0/0'
 
         flags = []
         if change['has_pivot']:
@@ -165,6 +168,7 @@ def _print_changes_table(changes: list[ChangeInfo], dim: bool = False) -> None:
             f"[{color}]{change['name']}[/{color}]",
             f'[{color}]{icon} {status}[/{color}]',
             progress_str,
+            str(change['path'].relative_to(Path.cwd()) / 'spec.md'),
             ' '.join(flags),
         )
 
@@ -255,9 +259,8 @@ def archive(name: str | None, yes: bool, force: bool) -> None:
             archivable = [c for c in active if c['status'] == ChangeStatus.DONE.value]
 
             if not archivable:
-                console.print('[yellow]No DONE changes to archive[/yellow]')
-                console.print('[dim]Use --force to archive changes with other statuses[/dim]')
-                return
+                console.print('[yellow]No DONE changes to archive, Please manually select archivable.[/yellow]')
+                archivable = active  # Allow all for selection
 
         if len(archivable) == 1 and not yes:
             # Single change: ask confirmation

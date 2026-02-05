@@ -116,10 +116,12 @@ def parse_request_file(path: Path) -> RequestInfo | None:
     except OSError:
         return None
 
+    request_name = path.stem
     meta, body = parse_frontmatter(content)
     if not meta:
         return None
 
+    request_name = str(meta.get('name', request_name) or request_name)
     raw_status = str(meta.get('status', RequestStatus.OPEN.value))
     status = normalize_status(raw_status, RequestStatus)
 
@@ -131,7 +133,7 @@ def parse_request_file(path: Path) -> RequestInfo | None:
     attach_change_str = str(attach_change) if attach_change else None
 
     return RequestInfo(
-        name=path.stem,
+        name=request_name,
         status=status,
         created=str(meta.get('created', '') or ''),
         attach_change=attach_change_str,

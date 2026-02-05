@@ -308,6 +308,7 @@ def parse_change(change_path: Path, archived: bool = False) -> ChangeInfo:
     tasks_file = change_path / 'tasks.md'
 
     status = ChangeStatus.PLANNING.value
+    change_name = change_path.name
     change_type = ''
     description = ''
     progress = {'done': 0, 'total': 0}
@@ -323,19 +324,23 @@ def parse_change(change_path: Path, archived: bool = False) -> ChangeInfo:
             status = normalize_status(raw_status, ChangeStatus)
             change_type = meta.get('type', '') or ''
             description = meta.get('description', '') or ''
+            change_name = meta.get('name', change_name)
 
         has_pivot = bool(re.search(r'PIVOT', content, re.IGNORECASE))
         has_blockers = status == ChangeStatus.BLOCKED.value
 
     if tasks_file.exists():
         content = tasks_file.read_text(encoding='utf-8')
-        checkbox_pattern = r'- \[[ xX~\-]\]'
+        # Exclude template examples (lines containing <Demo Task>)
+        # See src/sspec/templates/change/tasks.md
+        checkbox_pattern = r'- \[[ xX~\-]](?!\s*<Demo Task>)'
+        done_pattern = r'- \[[xX]](?!\s*<Demo Task>)'
         total = len(re.findall(checkbox_pattern, content))
-        done = len(re.findall(r'- \[[xX]\]', content))
+        done = len(re.findall(done_pattern, content))
         progress = {'done': done, 'total': total}
 
     return {
-        'name': change_path.name,
+        'name': change_name,
         'path': change_path,
         'status': status,
         'type': change_type,
@@ -347,23 +352,23 @@ def parse_change(change_path: Path, archived: bool = False) -> ChangeInfo:
     }
 
 
-def create_change(sspec_root: Path, name: str) -> Path:
+def create_change(sspec_root: Path, change_name: str) -> Path:
     """Create a new change directory with spec.md, tasks.md, and handover.md."""
 
     # Normalize name: lowercase, replace spaces with hyphens, remove invalid chars
-    name = re.sub(r'\s+', '-', name.strip().lower())
-    name = re.sub(r'[^a-z0-9\-]', '', name)
+    change_name = re.sub(r'\s+', '-', change_name.strip().lower())
+    change_name = re.sub(r'[^a-z0-9\-]', '', change_name)
 
-    if not name:
+    if not change_name:
         raise InvalidChangeNameError('Invalid change name')
 
     # Generate timestamped name: <yy-MM-ddTHH-mm>_<name>
     timestamp = datetime.now().strftime('%y-%m-%dT%H-%M')
-    change_name = f'{timestamp}_{name}'
+    change_file_name = f'{timestamp}_{change_name}'
 
-    change_path = sspec_root / CHANGES_DIR / change_name
+    change_path = sspec_root / CHANGES_DIR / change_file_name
     if change_path.exists():
-        raise ChangeExistsError(f"Change '{change_name}' already exists")
+        raise ChangeExistsError(f"Change '{change_file_name}' already exists")
 
     template_dir = get_template_dir() / 'change'
     replacements = {

@@ -164,8 +164,8 @@ Templates use markers to guide editing:
 Lightweight proposals before becoming changes. Location: `.sspec/requests/`
 
 ```
-Create:  sspec request new <name>
-Link:    sspec request link <request> <change>  # When ready to implement
+Create:  sspec request new <name> | sspec request new --from <request>
+Manual Link:    sspec request link <request> <change>
 Archive: sspec request archive <name>
 ```
 

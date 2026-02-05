@@ -187,8 +187,8 @@ reference:
 ```
 
 ### Auto-populated
-- `sspec request link <req> <chg>`: Updates both request and change
 - `sspec change new --from <req>`: Creates change with request reference
+- `sspec request link <req> <chg>`: Updates both request and change
 
 ### Manual usage
 - Sub-change → Root: `{source: "changes/<root>", type: "sup-change"}`

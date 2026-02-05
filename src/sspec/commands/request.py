@@ -15,19 +15,83 @@ from sspec.core import (
     get_sspec_root,
     get_template_dir,
 )
+from sspec.services.change_service import find_change_matches
 from sspec.services.editor_service import open_in_editor
 from sspec.services.request_service import (
-    archive_request_file,
+    RequestInfo,
+    archive_request,
     create_request,
     find_request_matches,
     link_request_to_change,
+    list_requests,
     normalize_request_name,
-)
-from sspec.services.request_service import (
-    list_requests as list_requests_service,
+    parse_request_file,
 )
 
 console = Console()
+
+
+# ============================================================================
+# Helpers
+# ============================================================================
+
+
+def _resolve_request_file(requests_dir: Path, name: str, interactive: bool) -> Path:
+    """Resolve a request name to a single file path."""
+    matches = find_request_matches(requests_dir, name)
+    if not matches:
+        raise click.ClickException(f"Request '{name}' not found")
+    if len(matches) == 1:
+        return matches[0]
+    if interactive:
+        return _interactive_select_request(matches, name)
+
+    match_lines = '\n'.join(f'  - {m.stem}' for m in matches)
+    raise click.ClickException(f"Multiple matches for '{name}':\n{match_lines}")
+
+
+def _resolve_change_path(sspec_root: Path, name: str, interactive: bool) -> Path:
+    """Resolve a change name to a single directory path."""
+    changes_dir = sspec_root / 'changes'
+    matches = find_change_matches(changes_dir, name)
+    if not matches:
+        raise click.ClickException(f"Change '{name}' not found")
+    if len(matches) == 1:
+        return matches[0]
+    if interactive:
+        return _interactive_select_change(matches, name)
+
+    match_lines = '\n'.join(f'  - {m.name}' for m in matches)
+    raise click.ClickException(f"Multiple matches for '{name}':\n{match_lines}")
+
+
+def _interactive_select_request(matches: list[Path], name: str) -> Path:
+    """Interactive selection when multiple request matches found."""
+    choices = [questionary.Choice(title=m.stem, value=m) for m in matches]
+
+    console.print(f"\n[yellow]Multiple matches for '{name}':[/yellow]")
+    selected = questionary.select('Select request:', choices=choices).ask()
+
+    if selected is None:
+        raise click.ClickException('Cancelled')
+    return selected
+
+
+def _interactive_select_change(matches: list[Path], name: str) -> Path:
+    """Interactive selection when multiple change matches found."""
+    choices = [questionary.Choice(title=m.name, value=m) for m in matches]
+
+    console.print(f"\n[yellow]Multiple matches for '{name}':[/yellow]")
+    selected = questionary.select('Select change:', choices=choices).ask()
+
+    if selected is None:
+        raise click.ClickException('Cancelled')
+    return selected
+
+
+# ============================================================================
+# Command group
+# ============================================================================
 
 
 @click.group()
@@ -84,20 +148,20 @@ def new(name: str) -> None:
 
 @request.command(name='list')
 @click.option('--all', '-a', 'show_all', is_flag=True, help='Include done requests')
-def list_requests(show_all: bool) -> None:
+def list_requests_cmd(show_all: bool) -> None:
     """List all requests."""
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
         raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
-    requests_dir = sspec_root / 'requests'
-    _list_requests(requests_dir, show_all)
+    _list_requests(sspec_root, show_all)
 
 
-def _list_requests(requests_dir: Path, show_all: bool) -> None:
+def _list_requests(sspec_root: Path, show_all: bool) -> None:
     """List all requests grouped by status."""
-    items = list_requests_service(requests_dir)
+    items = list_requests(sspec_root)
+
     if not items:
         console.print('[dim]No requests found.[/dim]')
         console.print()
@@ -126,7 +190,7 @@ def _list_requests(requests_dir: Path, show_all: bool) -> None:
 
 
 def _print_request_table(
-    requests: list,
+    requests: list[RequestInfo],
     show_changes: bool = False,
     dim: bool = False,
 ) -> None:
@@ -170,41 +234,6 @@ def show_request(name: str) -> None:
         raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     requests_dir = sspec_root / 'requests'
-    _show_request(requests_dir, name)
-
-
-def _resolve_request_file(requests_dir: Path, name: str, interactive: bool) -> Path:
-    matches = find_request_matches(requests_dir, name)
-    if not matches:
-        raise click.ClickException(f"Request '{name}' not found")
-    if len(matches) == 1:
-        return matches[0]
-    if interactive:
-        return _interactive_select_request(matches, name)
-
-    match_lines = '\n'.join(f'  - {m.stem}' for m in matches)
-    raise click.ClickException(f"Multiple matches for '{name}':\n{match_lines}")
-
-
-def _interactive_select_request(matches: list[Path], name: str) -> Path:
-    """Interactive selection when multiple matches found."""
-    choices = [questionary.Choice(title=f'{m.stem}', value=m) for m in matches]
-
-    console.print()
-    console.print(f"[yellow]Multiple matches for '{name}':[/yellow]")
-    console.print('[dim](Use arrow keys, enter to select)[/dim]')
-    console.print()
-
-    selected = questionary.select('', choices=choices).ask()
-
-    if selected is None:
-        raise click.ClickException('Cancelled')
-
-    return selected
-
-
-def _show_request(requests_dir: Path, name: str) -> None:
-    """Show a specific request."""
     request_path = _resolve_request_file(requests_dir, name, interactive=False)
     content = request_path.read_text(encoding='utf-8')
 
@@ -227,29 +256,35 @@ def _show_request(requests_dir: Path, name: str) -> None:
 @request.command(name='link')
 @click.argument('request_name')
 @click.argument('change_name')
-def link_request(request_name: str, change_name: str) -> None:
-    """Link a request to a change."""
+def link_request_cmd(request_name: str, change_name: str) -> None:
+    """Link a request to a change.
+
+    Both REQUEST_NAME and CHANGE_NAME support fuzzy matching.
+    """
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
         raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
+    # Resolve request (fuzzy)
     requests_dir = sspec_root / 'requests'
-    request_path = _resolve_request_file(requests_dir, request_name, interactive=False)
+    request_path = _resolve_request_file(requests_dir, request_name, interactive=True)
+
+    # Resolve change (fuzzy)
+    change_path = _resolve_change_path(sspec_root, change_name, interactive=True)
 
     try:
         link_request_to_change(
             sspec_root=sspec_root,
-            requests_dir=requests_dir,
             request_file=request_path,
-            change_name=change_name,
+            change_path=change_path,
         )
     except FileNotFoundError as e:
         raise click.ClickException(str(e)) from None
     except ValueError as e:
         raise click.ClickException(str(e)) from None
 
-    console.print(f'[green]✓[/green] Linked {request_path.stem} → {change_name}')
+    console.print(f'[green]✓[/green] Linked {request_path.stem} → {change_path.name}')
 
 
 # ============================================================================
@@ -260,7 +295,7 @@ def link_request(request_name: str, change_name: str) -> None:
 @request.command(name='archive')
 @click.argument('name', required=False)
 @click.option('--yes', '-y', 'auto_yes', is_flag=True, help='Skip confirmation prompts')
-def archive_request(name: str | None, auto_yes: bool) -> None:
+def archive_request_cmd(name: str | None, auto_yes: bool) -> None:
     """Archive requests.
 
     Without arguments, shows interactive multi-select for archivable requests.
@@ -271,62 +306,47 @@ def archive_request(name: str | None, auto_yes: bool) -> None:
     except SspecNotFoundError:
         raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
-    requests_dir = sspec_root / 'requests'
-
-    # Single request mode
-    if name:
-        _archive_single_request(requests_dir, name, auto_yes)
-        return
-
     # Multi-select mode
-    _archive_requests_interactive(requests_dir)
+    if not name:
+        _archive_requests_interactive(sspec_root)
+        return
+
+    # Single request mode: resolve → parse → archive
+    requests_dir = sspec_root / 'requests'
+    request_path = _resolve_request_file(requests_dir, name, interactive=not auto_yes)
+    request_info = parse_request_file(request_path)
+    if not request_info:
+        raise click.ClickException(f"Cannot parse request '{name}'")
+
+    _archive_single_request(sspec_root, request_info, auto_yes)
 
 
-def _archive_requests_interactive(
-    requests_dir: Path,
-    # auto_yes: bool,
-) -> None:
+def _archive_requests_interactive(sspec_root: Path) -> None:
     """Interactive multi-select for archiving requests."""
-    items = list_requests_service(requests_dir)
+    items = list_requests(sspec_root)
+    active = [r for r in items if not r.archived]
 
-    if not items:
+    if not active:
         console.print('[dim]No requests to archive[/dim]')
         return
 
-    # Define archivable requests: DONE and CLOSED
-    archivable = [
-        r for r in items if r.status in (RequestStatus.DONE.value, RequestStatus.CLOSED.value)
-    ]
-    non_archivable = [
-        r for r in items if r.status not in (RequestStatus.DONE.value, RequestStatus.CLOSED.value)
-    ]
-
-    # Create choices with archivable first and checked by default
-    choices = []
-
-    # Add archivable requests first (checked by default)
-    for r in archivable:
-        choices.append(
-            questionary.Choice(
-                title=f'{r.name} [{r.status}] - {r.tldr[:50]}',
-                value=r,
-                checked=True,
-            )
-        )
-
-    # Add non-archivable requests (not checked by default)
-    for r in non_archivable:
-        choices.append(
-            questionary.Choice(
-                title=f'{r.name} [{r.status}] - {r.tldr[:50]}',
-                value=r,
-                checked=False,
-            )
-        )
-
-    if not choices:
-        console.print('[dim]No requests to archive[/dim]')
+    if len(active) == 1:
+        req = active[0]
+        if questionary.confirm(f"Archive '{req.name}'?", default=True).ask():
+            _archive_single_request(sspec_root, req, auto_yes=True)
+        else:
+            console.print('[yellow]Cancelled[/yellow]')
         return
+
+    # Multi-select: DONE/CLOSED pre-checked
+    choices = [
+        questionary.Choice(
+            title=f"{r.name} [{r.status}] - {r.tldr[:50]}",
+            value=r,
+            checked=(r.status in (RequestStatus.DONE.value, RequestStatus.CLOSED.value)),
+        )
+        for r in active
+    ]
 
     console.print()
     console.print('[bold]Select requests to archive:[/bold]')
@@ -346,31 +366,29 @@ def _archive_requests_interactive(
     # Archive selected requests
     archived_count = 0
     for req in selected:
-        _archive_single_request(
-            requests_dir,
-            req.name,
-            auto_yes=True,
-        )
-        archived_count += 1
+        try:
+            _archive_single_request(sspec_root, req, auto_yes=True)
+            archived_count += 1
+        except Exception as e:
+            console.print(f'[red]Failed to archive {req.name}: {e}[/red]')
 
     console.print()
-    console.print(f'[green]✓[/green] Archived {archived_count} request(s)')
+    console.print(f'[green]✓[/green] Archived {archived_count}/{len(selected)} request(s)')
 
 
 def _archive_single_request(
-    requests_dir: Path,
-    name: str,
+    sspec_root: Path,
+    request_info: RequestInfo,
     auto_yes: bool,
 ) -> None:
     """Archive a single request."""
-    request_path = _resolve_request_file(requests_dir, name, interactive=not auto_yes)
+    name = request_info.name
 
     if not auto_yes:
         if not questionary.confirm(f"Archive '{name}'?", default=True).ask():
             console.print('[yellow]Cancelled[/yellow]')
             return
 
-    dest_path = archive_request_file(requests_dir=requests_dir, request_file=request_path)
-
-    rel_path = dest_path.relative_to(requests_dir.parent)
+    dest_path = archive_request(sspec_root, request_info)
+    rel_path = dest_path.relative_to(sspec_root.parent)
     console.print(f'[green]✓[/green] Archived to: {rel_path}')

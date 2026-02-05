@@ -15,9 +15,12 @@ from sspec.core import (
     ChangeStatus,
     InvalidChangeNameError,
     SspecNotFoundError,
+    get_sspec_root,
+)
+from sspec.services.change_service import (
     archive_change,
     create_change,
-    get_sspec_root,
+    find_change_matches,
     list_changes,
     parse_change,
 )
@@ -33,53 +36,119 @@ STATUS_STYLES: dict[str, tuple[str, str]] = {
 }
 
 
+def _interactive_select_change(matches: list[Path], name: str) -> Path:
+    """Interactive selection when multiple change matches found."""
+    choices = [questionary.Choice(title=m.name, value=m) for m in matches]
+    console.print(f"\n[yellow]Multiple matches for '{name}':[/yellow]")
+    selected = questionary.select('Select change:', choices=choices).ask()
+    if selected is None:
+        raise click.ClickException('Cancelled')
+    return selected
+
+
 @click.group()
 def change() -> None:
     """Change management operations (new, list, archive)."""
     pass
 
 
+# ============================================================================
+# Subcommand: new
+# ============================================================================
+
+
+def _resolve_from_request(sspec_root: Path, from_value: str) -> Path:
+    """Resolve --from value to a request file path.
+
+    Accepts:
+    - Request name (fuzzy matched): "a", "my-feature"
+    - File path (absolute or relative): ".sspec/requests/26-02-05_a.md"
+    """
+    from sspec.services.request_service import find_request_matches
+
+    # Try as direct file path first
+    as_path = Path(from_value)
+    if as_path.exists() and as_path.suffix == '.md':
+        return as_path.resolve()
+
+    # Try relative to sspec_root
+    relative_path = sspec_root / from_value
+    if relative_path.exists() and relative_path.suffix == '.md':
+        return relative_path
+
+    # Fuzzy match by name
+    requests_dir = sspec_root / 'requests'
+    matches = find_request_matches(requests_dir, from_value)
+
+    if not matches:
+        raise click.ClickException(f"Request '{from_value}' not found")
+
+    if len(matches) == 1:
+        return matches[0]
+
+    # Multiple matches: interactive select
+    choices = [questionary.Choice(title=m.stem, value=m) for m in matches]
+    console.print(f"\n[yellow]Multiple requests match '{from_value}':[/yellow]")
+    selected = questionary.select('Select request:', choices=choices).ask()
+    if selected is None:
+        raise click.ClickException('Cancelled')
+    return selected
+
+
 @change.command()
-@click.argument('name')
-@click.option('--from', 'from_request', help='Link to existing request')
-def new(name: str, from_request: str | None = None) -> None:
-    """Create a new change proposal (spec, tasks, handover)."""
+@click.argument('name', required=False)
+@click.option('--from', 'from_request', help='Link to existing request (name or path)')
+def new(name: str | None = None, from_request: str | None = None) -> None:
+    """Create a new change proposal (spec, tasks, handover).
+
+    NAME is optional when --from is provided; the change name will be
+    derived from the request name.
+    """
+    if not name and not from_request:
+        raise click.ClickException(
+            "Provide a change name or use --from <request>.\n"
+            "  sspec change new my-feature\n"
+            "  sspec change new --from my-request\n"
+            "  sspec change new my-feature --from my-request"
+        )
+
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
         raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
+
+    # Resolve --from request
+    request_file: Path | None = None
+    if from_request:
+        request_file = _resolve_from_request(sspec_root, from_request)
+
+        # Derive change name from request if not provided
+        if not name:
+            from sspec.services.request_service import parse_request_file
+
+            req_info = parse_request_file(request_file)
+            name = req_info.name if req_info else request_file.stem
+
+    assert name is not None  # guaranteed by the check above
 
     try:
         change_path = create_change(sspec_root, name)
     except (InvalidChangeNameError, ChangeExistsError) as e:
         raise click.ClickException(str(e)) from e
 
-    # If --from specified, link to request
-    if from_request:
-        from sspec.services.request_service import (
-            find_request_matches,
-            link_request_to_change,
-        )
+    # Link to request if --from was specified
+    if request_file:
+        from sspec.services.request_service import link_request_to_change
 
-        requests_dir = sspec_root / 'requests'
-        matches = find_request_matches(requests_dir, from_request)
-
-        if not matches:
-            console.print(f'[yellow]Warning:[/yellow] Request "{from_request}" not found')
-        elif len(matches) > 1:
-            console.print(f'[yellow]Warning:[/yellow] Multiple requests match "{from_request}", skipping link')
-        else:
-            request_file = matches[0]
-            try:
-                link_request_to_change(
-                    sspec_root=sspec_root,
-                    requests_dir=requests_dir,
-                    request_file=request_file,
-                    change_name=change_path.name,
-                )
-                console.print(f'[green]✓[/green] Linked to request: {request_file.stem}')
-            except Exception as e:
-                console.print(f'[yellow]Warning:[/yellow] Failed to link request: {e}')
+        try:
+            link_request_to_change(
+                sspec_root=sspec_root,
+                request_file=request_file,
+                change_path=change_path,
+            )
+            console.print(f'[green]✓[/green] Linked to request: {request_file.stem}')
+        except Exception as e:
+            console.print(f'[yellow]Warning:[/yellow] Failed to link request: {e}')
 
     rel_path = change_path.relative_to(sspec_root.parent)
 
@@ -96,6 +165,11 @@ def new(name: str, from_request: str | None = None) -> None:
     console.print('  1. Fill in spec.md and tasks.md, follow the templates format')
     console.print('  2. Review with AI before implementation')
     console.print('  3. Update handover.md at end of each session')
+
+
+# ============================================================================
+# Subcommand: list
+# ============================================================================
 
 
 @change.command(name='list')
@@ -120,8 +194,8 @@ def _list_changes(sspec_root: Path, include_all: bool) -> None:
         console.print('Create one with: sspec change new <change-name>')
         return
 
-    active = [c for c in changes if not c['archived']]
-    archived = [c for c in changes if c['archived']]
+    active = [c for c in changes if not c.archived]
+    archived = [c for c in changes if c.archived]
 
     if active:
         console.print()
@@ -147,12 +221,12 @@ def _print_changes_table(changes: list[ChangeInfo], dim: bool = False) -> None:
     table.add_column('Flags')
 
     for change in changes:
-        status = change['status']
+        status = change.status
         color, icon = STATUS_STYLES.get(status, ('dim', '❓'))
         if dim:
             color = 'dim'
 
-        progress = change['progress']
+        progress = change.progress
         progress_str = ''
         if progress['total'] > 0:
             progress_str = f"{progress['done']}/{progress['total']}"
@@ -160,20 +234,25 @@ def _print_changes_table(changes: list[ChangeInfo], dim: bool = False) -> None:
             progress_str = '0/0'
 
         flags = []
-        if change['has_pivot']:
+        if change.has_pivot:
             flags.append('⚡pivot')
-        if change['has_blockers']:
+        if change.has_blockers:
             flags.append('🚧blocked')
 
         table.add_row(
-            f"[{color}]{change['name']}[/{color}]",
+            f"[{color}]{change.name}[/{color}]",
             f'[{color}]{icon} {status}[/{color}]',
             progress_str,
-            str(change['path'].relative_to(Path.cwd()) / 'spec.md'),
+            str(change.path.relative_to(Path.cwd()) / 'spec.md'),
             ' '.join(flags),
         )
 
     console.print(table)
+
+
+# ============================================================================
+# Subcommand: status
+# ============================================================================
 
 
 @change.command()
@@ -186,13 +265,20 @@ def status(name: str | None = None) -> None:
         raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     if not name:
-        # If no name, show list
         _list_changes(sspec_root, include_all=False)
         return
 
-    change_path = sspec_root / 'changes' / name
-    if not change_path.exists():
+    # Fuzzy lookup
+    changes_dir = sspec_root / 'changes'
+    matches = find_change_matches(changes_dir, name)
+
+    if not matches:
         raise click.ClickException(f"Change '{name}' not found")
+
+    if len(matches) > 1:
+        change_path = _interactive_select_change(matches, name)
+    else:
+        change_path = matches[0]
 
     _show_change_detail(change_path)
 
@@ -205,7 +291,6 @@ def _show_change_detail(change_path: Path) -> None:
     summary = ''
     if spec_file.exists():
         content = spec_file.read_text(encoding='utf-8')
-        # Extract first meaningful paragraph after ## Why
         in_why = False
         for line in content.split('\n'):
             if line.startswith('## Why'):
@@ -220,151 +305,112 @@ def _show_change_detail(change_path: Path) -> None:
     console.print()
     console.print(
         Panel(
-            f"[bold]{change['name']}[/bold]\n"
-            f"Status: {change['status']}\n"
-            f"Progress: {change['progress']['done']}/{change['progress']['total']}\n"
+            f"[bold]{change.name}[/bold]\n"
+            f"Status: {change.status}\n"
+            f"Progress: {change.progress['done']}/{change.progress['total']}\n"
             f"{summary}",
             title='Change Details',
         )
     )
 
 
+# ============================================================================
+# Subcommand: archive
+# ============================================================================
+
+
 @change.command()
 @click.argument('name', required=False)
 @click.option('--yes', '-y', is_flag=True, help='Skip confirmation')
-# @click.option('--force', '-f', is_flag=True, help='Archive even if not DONE')
 def archive(name: str | None, yes: bool) -> None:
     """Archive a completed change.
 
     Without arguments, shows interactive multi-select for archivable changes.
-    With name argument, archives single change (original behavior).
+    With name argument, archives single change.
     """
-
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
         raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
-    # If no name provided, use interactive multi-select
+    # Multi-select mode
     if not name:
-        changes = list_changes(sspec_root)
-        active = [c for c in changes if not c['archived']]
-
-        if not active:
-            raise click.ClickException('No active changes to archive')
-
-        # Filter to archivable changes (DONE or all if --force)
-        # if force:
-        #     archivable = active
-        # else:
-        #     archivable = [c for c in active if c['status'] == ChangeStatus.DONE.value]
-
-        #     if not archivable:
-        #         console.print('[yellow]No DONE changes to archive, Please manually select archivable.[/yellow]')
-        #         archivable = active  # Allow all for selection
-        archivable = active
-
-        if len(archivable) == 1 and not yes:
-            # Single change: ask confirmation
-            change_info = archivable[0]
-            name = change_info['name']
-            if questionary.confirm(f"Archive '{name}'?", default=True).ask():
-                _archive_single_change(sspec_root, change_info, yes=True)
-            else:
-                console.print('[yellow]Cancelled[/yellow]')
-            return
-
-        # Multi-select mode
-        choices = [
-            questionary.Choice(
-                title=f"{c['name']} [{c['status']}] - {c['progress']['done']}/{c['progress']['total']} tasks",
-                value=c,
-                checked=(c['status'] == ChangeStatus.DONE.value),  # Default check DONE changes
-            )
-            for c in archivable
-        ]
-
-        console.print()
-        console.print('[bold]Select changes to archive:[/bold]')
-        console.print('[dim](Use arrow keys, space to toggle, enter to confirm)[/dim]')
-        console.print()
-
-        selected = questionary.checkbox('', choices=choices).ask()
-
-        if selected is None:  # User cancelled
-            console.print('[yellow]Cancelled[/yellow]')
-            return
-
-        if not selected:
-            console.print('[yellow]No changes selected[/yellow]')
-            return
-
-        # Archive selected changes
-        archived_count = 0
-        for change_info in selected:
-            try:
-                _archive_single_change(sspec_root, change_info, yes=True)
-                archived_count += 1
-            except Exception as e:
-                console.print(f'[red]Failed to archive {change_info["name"]}: {e}[/red]')
-
-        console.print()
-        console.print(f'[green]✓[/green] Archived {archived_count}/{len(selected)} change(s)')
+        _archive_changes_interactive(sspec_root)
         return
 
-    # Single change mode (original behavior)
-    change_path = sspec_root / 'changes' / name
-    if not change_path.exists():
+    # Single change mode: fuzzy lookup → parse → archive
+    changes_dir = sspec_root / 'changes'
+    matches = find_change_matches(changes_dir, name)
+
+    if not matches:
         raise click.ClickException(f"Change '{name}' not found")
+
+    if len(matches) > 1:
+        change_path = _interactive_select_change(matches, name)
+    else:
+        change_path = matches[0]
 
     change_info = parse_change(change_path)
     _archive_single_change(sspec_root, change_info, yes)
 
 
+def _archive_changes_interactive(sspec_root: Path) -> None:
+    """Interactive multi-select for archiving changes."""
+    changes = list_changes(sspec_root)
+    active = [c for c in changes if not c.archived]
+
+    if not active:
+        raise click.ClickException('No active changes to archive')
+
+    if len(active) == 1:
+        change_info = active[0]
+        if questionary.confirm(f"Archive '{change_info.name}'?", default=True).ask():
+            _archive_single_change(sspec_root, change_info, yes=True)
+        else:
+            console.print('[yellow]Cancelled[/yellow]')
+        return
+
+    # Multi-select: DONE/CLOSED pre-checked
+    choices = [
+        questionary.Choice(
+            title=f"{c.name} [{c.status}] - {c.progress['done']}/{c.progress['total']} tasks",
+            value=c,
+            checked=(c.status in (ChangeStatus.DONE.value, ChangeStatus.CLOSED.value)),
+        )
+        for c in active
+    ]
+
+    console.print()
+    console.print('[bold]Select changes to archive:[/bold]')
+    console.print('[dim](Use arrow keys, space to toggle, enter to confirm)[/dim]')
+    console.print()
+
+    selected = questionary.checkbox('', choices=choices).ask()
+
+    if selected is None:
+        console.print('[yellow]Cancelled[/yellow]')
+        return
+
+    if not selected:
+        console.print('[yellow]No changes selected[/yellow]')
+        return
+
+    archived_count = 0
+    for change_info in selected:
+        try:
+            _archive_single_change(sspec_root, change_info, yes=True)
+            archived_count += 1
+        except Exception as e:
+            console.print(f'[red]Failed to archive {change_info.name}: {e}[/red]')
+
+    console.print()
+    console.print(f'[green]✓[/green] Archived {archived_count}/{len(selected)} change(s)')
+
+
 def _archive_single_change(sspec_root: Path, change_info: ChangeInfo, yes: bool) -> None:
-    """Archive a single change (extracted from original archive command)."""
-    # Check current status
-    change_path = change_info['path']
-    name = change_path.name
-    current_status = change_info['status']
+    """Archive a single change."""
+    name = change_info.path.name
 
-    # Interactive prompt if status is not DONE and not forced
-    # if current_status != ChangeStatus.DONE.value and not force:
-    #     console.print()
-    #     console.print(
-    #         f'[yellow]Warning: Change "{name}" status is {current_status}, not DONE[/yellow]'
-    #     )
-    #     console.print()
-
-    #     choice = questionary.select(
-    #         'Select option:',
-    #         choices=[
-    #             questionary.Choice('Force archive (keep current status)', value='1'),
-    #             questionary.Choice('Mark as DONE and archive', value='2'),
-    #             questionary.Choice('Cancel', value='3'),
-    #         ],
-    #         default='3',
-    #     ).ask()
-
-    #     if not choice or choice == '3':
-    #         console.print('[yellow]Cancelled[/yellow]')
-    #         return
-    #     elif choice == '1':
-    #         force = True
-    #     elif choice == '2':
-    #         # Update status to DONE in spec.md
-    #         spec_file = change_path / 'spec.md'
-    #         if spec_file.exists():
-    #             content = spec_file.read_text(encoding='utf-8')
-    #             # Update YAML front matter status
-    #             if content.startswith('---'):
-    #                 import re
-
-    #                 content = re.sub(r'(status:\s*)[^\n]+', r'\1DONE', content, count=1)
-    #                 spec_file.write_text(content, encoding='utf-8')
-    #                 console.print('[green]OK[/green] Updated status to DONE')
-
-    # Confirm if not --yes
     if not yes:
         if not questionary.confirm(f"Archive '{name}'?", default=True).ask():
             console.print('[yellow]Cancelled[/yellow]')

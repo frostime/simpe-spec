@@ -300,12 +300,18 @@ def _archive_requests_interactive(
     if force_archive:
         archivable = items
     else:
+        # Default: allow archiving DONE and CLOSED requests
+        # Use --force to archive OPEN/DOING/BLOCKED requests
         archivable = [
-            r for r in items if r.status in (RequestStatus.OPEN.value, RequestStatus.DOING.value)
+            r for r in items if r.status in (RequestStatus.DONE.value, RequestStatus.CLOSED.value)
         ]
 
     if not archivable:
-        console.print('[dim]No requests to archive[/dim]')
+        if force_archive:
+            console.print('[dim]No requests to archive[/dim]')
+        else:
+            console.print('[dim]No DONE or CLOSED requests to archive[/dim]')
+            console.print('[dim]Use --force to archive all requests regardless of status[/dim]')
         return
 
     # Use questionary for multi-select

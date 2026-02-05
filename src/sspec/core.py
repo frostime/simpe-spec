@@ -66,6 +66,7 @@ class ChangeStatus(str, Enum):
     BLOCKED = 'BLOCKED'
     REVIEW = 'REVIEW'
     DONE = 'DONE'
+    CLOSED = 'CLOSED'
 
 
 class RequestStatus(str, Enum):
@@ -74,16 +75,61 @@ class RequestStatus(str, Enum):
     OPEN = 'OPEN'
     DOING = 'DOING'
     DONE = 'DONE'
+    BLOCKED = 'BLOCKED'
+    CLOSED = 'CLOSED'
 
 
-# Status alias map (legacy compatibility)
+# Status alias map (legacy compatibility and common variants)
 STATUS_ALIASES: dict[str, str] = {
-    'HANGUP': ChangeStatus.PLANNING.value,
+    # ===== ChangeStatus Aliases =====
+    # PLANNING
+    'DESIGN': ChangeStatus.PLANNING.value,
+    '设计中': ChangeStatus.PLANNING.value,
+
+    # DOING
+    'DEV': ChangeStatus.DOING.value,
+    'IN_DEV': ChangeStatus.DOING.value,
     'IN_PROGRESS': ChangeStatus.DOING.value,
     'IN-PROGRESS': ChangeStatus.DOING.value,
+    'INPROGRESS': ChangeStatus.DOING.value,
+    '进行中': ChangeStatus.DOING.value,
+    '开发中': ChangeStatus.DOING.value,
+
+    # BLOCKED
+    'HANGUP': ChangeStatus.BLOCKED.value,
+    'WAIT': ChangeStatus.BLOCKED.value,
+    '已阻塞': ChangeStatus.BLOCKED.value,
+    '挂起': ChangeStatus.BLOCKED.value,
+
+    # REVIEW
+    'IN_REVIEW': ChangeStatus.REVIEW.value,
+    'IN-REVIEW': ChangeStatus.REVIEW.value,
+    'REVIEWING': ChangeStatus.REVIEW.value,
+    '待审核': ChangeStatus.REVIEW.value,
+    '审核中': ChangeStatus.REVIEW.value,
+
+    # DONE
+    'COMPLETED': ChangeStatus.DONE.value,
+    'FINISHED': ChangeStatus.DONE.value,
+    '已完成': ChangeStatus.DONE.value,
+
+    # CLOSED
+    'CANCELLED': ChangeStatus.CLOSED.value,
+    'CANCELED': ChangeStatus.CLOSED.value,
+    'ARCHIVED': ChangeStatus.CLOSED.value,
+    '已关闭': ChangeStatus.CLOSED.value,
+
+    # ===== RequestStatus Aliases =====
+    # OPEN
     'TODO': RequestStatus.OPEN.value,
-    'CLOSED': RequestStatus.DONE.value,
+    'TO_DO': RequestStatus.OPEN.value,
+    'TO-DO': RequestStatus.OPEN.value,
+    '待办': RequestStatus.OPEN.value,
+
+    # DONE
+    'RESOLVED': RequestStatus.DONE.value,
 }
+
 
 
 def normalize_status(raw: str, valid_enum: type[Enum]) -> str:
@@ -173,7 +219,9 @@ def render_template(content: str, replacements: Mapping[str, str]) -> str:
     return re.sub(r'{{\s*(.+?)\s*}}', _replace, content)
 
 
-def parse_skill_metadata(skill_path: Path, replacements: Mapping[str, str] | None = None) -> dict:
+def parse_skill_metadata(
+    skill_path: Path, replacements: Mapping[str, str] | None = None
+) -> dict:
     """Parse YAML front matter from a SKILL.md file."""
 
     if not skill_path.exists():
@@ -195,7 +243,9 @@ def parse_skill_metadata(skill_path: Path, replacements: Mapping[str, str] | Non
         return {}
 
 
-def get_workspace_skill_targets(project_root: Path, primary_loc: str | None = None) -> list[Path]:
+def get_workspace_skill_targets(
+    project_root: Path, primary_loc: str | None = None
+) -> list[Path]:
     """Return workspace directories that should host skills.
 
     Args:
@@ -235,7 +285,11 @@ def list_template_skills() -> list[Path]:
     if not template_skills_dir.exists():
         return []
 
-    return [d for d in template_skills_dir.iterdir() if d.is_dir() and (d / 'SKILL.md').exists()]
+    return [
+        d
+        for d in template_skills_dir.iterdir()
+        if d.is_dir() and (d / 'SKILL.md').exists()
+    ]
 
 
 def list_changes(sspec_root: Path, include_archived: bool = False) -> list[ChangeInfo]:
@@ -384,22 +438,22 @@ def create_change(sspec_root: Path, change_name: str) -> Path:
     return change_path
 
 
-def archive_change(sspec_root: Path, name: str, force: bool = False) -> Path:
+def archive_change(
+    sspec_root: Path, change_info: ChangeInfo, force: bool = False
+) -> Path:
     """Archive a completed change.
 
     Moves the change to archive/ directory and adds 'archived' timestamp to spec.md frontmatter.
     Name is preserved (no date prefix added).
     """
 
-    change_path = sspec_root / CHANGES_DIR / name
-    if not change_path.exists():
-        raise ChangeNotFoundError(f"Change '{name}' not found")
+    change_path = change_info['path']
+    name = change_path.name
 
     if not force:
-        change = parse_change(change_path)
-        if change['status'] != ChangeStatus.DONE.value:
+        if change_info['status'] != ChangeStatus.DONE.value:
             raise ValueError(
-                f"Change '{name}' status is {change['status']}, not DONE. "
+                f"Change '{name}' status is {change_info['status']}, not DONE. "
                 f"Use --force to archive anyway."
             )
 

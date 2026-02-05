@@ -92,7 +92,8 @@ def new(name: str, from_request: str | None = None) -> None:
     console.print('  └── handover.md  # Session continuity (update every session!)')
     console.print()
     console.print('[yellow]Next:[/yellow]')
-    console.print('  1. Fill in spec.md (proposal) and tasks.md (plan)')
+    console.print('  0. Read SSPEC skill (if not yet) for standards and best practices')
+    console.print('  1. Fill in spec.md and tasks.md, follow the templates format')
     console.print('  2. Review with AI before implementation')
     console.print('  3. Update handover.md at end of each session')
 
@@ -264,9 +265,10 @@ def archive(name: str | None, yes: bool, force: bool) -> None:
 
         if len(archivable) == 1 and not yes:
             # Single change: ask confirmation
-            name = archivable[0]['name']
+            change_info = archivable[0]
+            name = change_info['name']
             if questionary.confirm(f"Archive '{name}'?", default=True).ask():
-                _archive_single_change(sspec_root, name, yes=True, force=force)
+                _archive_single_change(sspec_root, change_info, yes=True, force=force)
             else:
                 console.print('[yellow]Cancelled[/yellow]')
             return
@@ -275,7 +277,7 @@ def archive(name: str | None, yes: bool, force: bool) -> None:
         choices = [
             questionary.Choice(
                 title=f"{c['name']} [{c['status']}] - {c['progress']['done']}/{c['progress']['total']} tasks",
-                value=c['name'],
+                value=c,
                 checked=(c['status'] == ChangeStatus.DONE.value),  # Default check DONE changes
             )
             for c in archivable
@@ -298,29 +300,31 @@ def archive(name: str | None, yes: bool, force: bool) -> None:
 
         # Archive selected changes
         archived_count = 0
-        for change_name in selected:
+        for change_info in selected:
             try:
-                _archive_single_change(sspec_root, change_name, yes=True, force=force)
+                _archive_single_change(sspec_root, change_info, yes=True, force=force)
                 archived_count += 1
             except Exception as e:
-                console.print(f'[red]Failed to archive {change_name}: {e}[/red]')
+                console.print(f'[red]Failed to archive {change_info["name"]}: {e}[/red]')
 
         console.print()
         console.print(f'[green]✓[/green] Archived {archived_count}/{len(selected)} change(s)')
         return
 
     # Single change mode (original behavior)
-    _archive_single_change(sspec_root, name, yes, force)
-
-
-def _archive_single_change(sspec_root: Path, name: str, yes: bool, force: bool) -> None:
-    """Archive a single change (extracted from original archive command)."""
-    # Check current status
     change_path = sspec_root / 'changes' / name
     if not change_path.exists():
         raise click.ClickException(f"Change '{name}' not found")
 
     change_info = parse_change(change_path)
+    _archive_single_change(sspec_root, change_info, yes, force)
+
+
+def _archive_single_change(sspec_root: Path, change_info: ChangeInfo, yes: bool, force: bool) -> None:
+    """Archive a single change (extracted from original archive command)."""
+    # Check current status
+    change_path = change_info['path']
+    name = change_path.name
     current_status = change_info['status']
 
     # Interactive prompt if status is not DONE and not forced
@@ -366,7 +370,7 @@ def _archive_single_change(sspec_root: Path, name: str, yes: bool, force: bool) 
             return
 
     try:
-        archive_path = archive_change(sspec_root, name, force=force)
+        archive_path = archive_change(sspec_root, change_info, force=force)
         rel_path = archive_path.relative_to(sspec_root.parent)
         console.print(f'[green]+[/green] Archived to: {rel_path}')
     except ChangeNotFoundError as e:

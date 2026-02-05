@@ -55,6 +55,34 @@ def extract_summary(body: str) -> str:
     return ''
 
 
+def extract_request_name_from_filename(filename: str) -> str:
+    """Extract pure request name from filename (remove timestamp prefix).
+
+    Supports both formats:
+    - Old: <yyMMddHHmmss>-<name>
+    - New: <yy-MM-ddTHH-mm>_<name>
+    """
+    # Try new format first: <yy-MM-ddTHH-mm>_<name>
+    if '_' in filename:
+        parts = filename.split('_')
+        if len(parts) > 1:
+            # Join all parts after the first underscore
+            return '_'.join(parts[1:])
+
+    # Try old format: <yyMMddHHmmss>-<name>
+    if '-' in filename:
+        parts = filename.split('-')
+        if len(parts) > 1:
+            # Check if first part looks like a timestamp (12-14 digits)
+            first_part = parts[0]
+            if len(first_part) >= 12 and len(first_part) <= 14 and first_part.isdigit():
+                # Join all parts after the timestamp
+                return '-'.join(parts[1:])
+
+    # If no timestamp pattern found, return original
+    return filename
+
+
 def create_request(
     *,
     sspec_root: Path,
@@ -116,12 +144,18 @@ def parse_request_file(path: Path) -> RequestInfo | None:
     except OSError:
         return None
 
-    request_name = path.stem
+    filename_stem = path.stem
     meta, body = parse_frontmatter(content)
     if not meta:
         return None
 
-    request_name = str(meta.get('name', request_name) or request_name)
+    # Try to get name from frontmatter first
+    request_name = meta.get('name')
+    if request_name:
+        request_name = str(request_name)
+    else:
+        # Extract pure name from filename (remove timestamp)
+        request_name = extract_request_name_from_filename(filename_stem)
     raw_status = str(meta.get('status', RequestStatus.OPEN.value))
     status = normalize_status(raw_status, RequestStatus)
 

@@ -64,7 +64,7 @@ def test_list_requests_parses_status_aliases_and_tldr():
         assert items["a"].tldr  # extracted from body
         assert items["b"].status == "DOING"
         assert items["b"].attach_change == "demo"
-        assert items["c"].status == "DONE"
+        assert items["c"].status == "CLOSED"  # CLOSED is a valid RequestStatus
         assert items["c"].tldr == "Done"
 
 

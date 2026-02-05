@@ -245,17 +245,21 @@ def link_request_to_change(
     *,
     sspec_root: Path,
     request_file: Path,
-    change_name: str,
+    change_path: Path,
 ) -> None:
     """Link a request to a change (bidirectional).
+
+    Args:
+        sspec_root: .sspec directory path
+        request_file: Resolved request file path
+        change_path: Resolved change directory path (already matched by caller)
 
     Updates:
     1. Request frontmatter: attach-change → spec.md path, status → DOING
     2. Change spec.md: adds reference entry
     """
-    change_path = sspec_root / 'changes' / change_name
     if not change_path.exists():
-        raise FileNotFoundError(f"Change '{change_name}' not found")
+        raise FileNotFoundError(f"Change '{change_path.name}' not found")
 
     # Store spec.md relative path in request
     spec_relative = (change_path / 'spec.md').relative_to(sspec_root).as_posix()

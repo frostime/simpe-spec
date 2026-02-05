@@ -50,12 +50,39 @@ def _resolve_request_file(requests_dir: Path, name: str, interactive: bool) -> P
     raise click.ClickException(f"Multiple matches for '{name}':\n{match_lines}")
 
 
+def _resolve_change_path(sspec_root: Path, name: str, interactive: bool) -> Path:
+    """Resolve a change name to a single directory path."""
+    changes_dir = sspec_root / 'changes'
+    matches = find_change_matches(changes_dir, name)
+    if not matches:
+        raise click.ClickException(f"Change '{name}' not found")
+    if len(matches) == 1:
+        return matches[0]
+    if interactive:
+        return _interactive_select_change(matches, name)
+
+    match_lines = '\n'.join(f'  - {m.name}' for m in matches)
+    raise click.ClickException(f"Multiple matches for '{name}':\n{match_lines}")
+
+
 def _interactive_select_request(matches: list[Path], name: str) -> Path:
-    """Interactive selection when multiple matches found."""
+    """Interactive selection when multiple request matches found."""
     choices = [questionary.Choice(title=m.stem, value=m) for m in matches]
 
     console.print(f"\n[yellow]Multiple matches for '{name}':[/yellow]")
     selected = questionary.select('Select request:', choices=choices).ask()
+
+    if selected is None:
+        raise click.ClickException('Cancelled')
+    return selected
+
+
+def _interactive_select_change(matches: list[Path], name: str) -> Path:
+    """Interactive selection when multiple change matches found."""
+    choices = [questionary.Choice(title=m.name, value=m) for m in matches]
+
+    console.print(f"\n[yellow]Multiple matches for '{name}':[/yellow]")
+    selected = questionary.select('Select change:', choices=choices).ask()
 
     if selected is None:
         raise click.ClickException('Cancelled')
@@ -230,28 +257,34 @@ def show_request(name: str) -> None:
 @click.argument('request_name')
 @click.argument('change_name')
 def link_request_cmd(request_name: str, change_name: str) -> None:
-    """Link a request to a change."""
+    """Link a request to a change.
+
+    Both REQUEST_NAME and CHANGE_NAME support fuzzy matching.
+    """
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
         raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
+    # Resolve request (fuzzy)
     requests_dir = sspec_root / 'requests'
-    request_path = _resolve_request_file(requests_dir, request_name, interactive=False)
-    # change = find_change_matches(sspec_root / 'changes', change_name)
+    request_path = _resolve_request_file(requests_dir, request_name, interactive=True)
+
+    # Resolve change (fuzzy)
+    change_path = _resolve_change_path(sspec_root, change_name, interactive=True)
 
     try:
         link_request_to_change(
             sspec_root=sspec_root,
             request_file=request_path,
-            change_name=change_name,
+            change_path=change_path,
         )
     except FileNotFoundError as e:
         raise click.ClickException(str(e)) from None
     except ValueError as e:
         raise click.ClickException(str(e)) from None
 
-    console.print(f'[green]✓[/green] Linked {request_path.stem} → {change_name}')
+    console.print(f'[green]✓[/green] Linked {request_path.stem} → {change_path.name}')
 
 
 # ============================================================================

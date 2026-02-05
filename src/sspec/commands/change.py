@@ -52,46 +52,103 @@ def change() -> None:
     pass
 
 
+# ============================================================================
+# Subcommand: new
+# ============================================================================
+
+
+def _resolve_from_request(sspec_root: Path, from_value: str) -> Path:
+    """Resolve --from value to a request file path.
+
+    Accepts:
+    - Request name (fuzzy matched): "a", "my-feature"
+    - File path (absolute or relative): ".sspec/requests/26-02-05_a.md"
+    """
+    from sspec.services.request_service import find_request_matches
+
+    # Try as direct file path first
+    as_path = Path(from_value)
+    if as_path.exists() and as_path.suffix == '.md':
+        return as_path.resolve()
+
+    # Try relative to sspec_root
+    relative_path = sspec_root / from_value
+    if relative_path.exists() and relative_path.suffix == '.md':
+        return relative_path
+
+    # Fuzzy match by name
+    requests_dir = sspec_root / 'requests'
+    matches = find_request_matches(requests_dir, from_value)
+
+    if not matches:
+        raise click.ClickException(f"Request '{from_value}' not found")
+
+    if len(matches) == 1:
+        return matches[0]
+
+    # Multiple matches: interactive select
+    choices = [questionary.Choice(title=m.stem, value=m) for m in matches]
+    console.print(f"\n[yellow]Multiple requests match '{from_value}':[/yellow]")
+    selected = questionary.select('Select request:', choices=choices).ask()
+    if selected is None:
+        raise click.ClickException('Cancelled')
+    return selected
+
+
 @change.command()
-@click.argument('name')
-@click.option('--from', 'from_request', help='Link to existing request')
-def new(name: str, from_request: str | None = None) -> None:
-    """Create a new change proposal (spec, tasks, handover)."""
+@click.argument('name', required=False)
+@click.option('--from', 'from_request', help='Link to existing request (name or path)')
+def new(name: str | None = None, from_request: str | None = None) -> None:
+    """Create a new change proposal (spec, tasks, handover).
+
+    NAME is optional when --from is provided; the change name will be
+    derived from the request name.
+    """
+    if not name and not from_request:
+        raise click.ClickException(
+            "Provide a change name or use --from <request>.\n"
+            "  sspec change new my-feature\n"
+            "  sspec change new --from my-request\n"
+            "  sspec change new my-feature --from my-request"
+        )
+
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
         raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
+
+    # Resolve --from request
+    request_file: Path | None = None
+    if from_request:
+        request_file = _resolve_from_request(sspec_root, from_request)
+
+        # Derive change name from request if not provided
+        if not name:
+            from sspec.services.request_service import parse_request_file
+
+            req_info = parse_request_file(request_file)
+            name = req_info.name if req_info else request_file.stem
+
+    assert name is not None  # guaranteed by the check above
 
     try:
         change_path = create_change(sspec_root, name)
     except (InvalidChangeNameError, ChangeExistsError) as e:
         raise click.ClickException(str(e)) from e
 
-    # If --from specified, link to request
-    if from_request:
-        from sspec.services.request_service import (
-            find_request_matches,
-            link_request_to_change,
-        )
+    # Link to request if --from was specified
+    if request_file:
+        from sspec.services.request_service import link_request_to_change
 
-        requests_dir = sspec_root / 'requests'
-        matches = find_request_matches(requests_dir, from_request)
-
-        if not matches:
-            console.print(f'[yellow]Warning:[/yellow] Request "{from_request}" not found')
-        elif len(matches) > 1:
-            console.print(f'[yellow]Warning:[/yellow] Multiple requests match "{from_request}", skipping link')
-        else:
-            request_file = matches[0]
-            try:
-                link_request_to_change(
-                    sspec_root=sspec_root,
-                    request_file=request_file,
-                    change_name=change_path.name,
-                )
-                console.print(f'[green]✓[/green] Linked to request: {request_file.stem}')
-            except Exception as e:
-                console.print(f'[yellow]Warning:[/yellow] Failed to link request: {e}')
+        try:
+            link_request_to_change(
+                sspec_root=sspec_root,
+                request_file=request_file,
+                change_path=change_path,
+            )
+            console.print(f'[green]✓[/green] Linked to request: {request_file.stem}')
+        except Exception as e:
+            console.print(f'[yellow]Warning:[/yellow] Failed to link request: {e}')
 
     rel_path = change_path.relative_to(sspec_root.parent)
 
@@ -108,6 +165,11 @@ def new(name: str, from_request: str | None = None) -> None:
     console.print('  1. Fill in spec.md and tasks.md, follow the templates format')
     console.print('  2. Review with AI before implementation')
     console.print('  3. Update handover.md at end of each session')
+
+
+# ============================================================================
+# Subcommand: list
+# ============================================================================
 
 
 @change.command(name='list')
@@ -188,6 +250,11 @@ def _print_changes_table(changes: list[ChangeInfo], dim: bool = False) -> None:
     console.print(table)
 
 
+# ============================================================================
+# Subcommand: status
+# ============================================================================
+
+
 @change.command()
 @click.argument('name', required=False)
 def status(name: str | None = None) -> None:
@@ -198,11 +265,10 @@ def status(name: str | None = None) -> None:
         raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     if not name:
-        # If no name, show list
         _list_changes(sspec_root, include_all=False)
         return
 
-    # Use fuzzy lookup to find change
+    # Fuzzy lookup
     changes_dir = sspec_root / 'changes'
     matches = find_change_matches(changes_dir, name)
 
@@ -210,7 +276,6 @@ def status(name: str | None = None) -> None:
         raise click.ClickException(f"Change '{name}' not found")
 
     if len(matches) > 1:
-        # Multiple matches: ask user to select
         change_path = _interactive_select_change(matches, name)
     else:
         change_path = matches[0]
@@ -226,7 +291,6 @@ def _show_change_detail(change_path: Path) -> None:
     summary = ''
     if spec_file.exists():
         content = spec_file.read_text(encoding='utf-8')
-        # Extract first meaningful paragraph after ## Why
         in_why = False
         for line in content.split('\n'):
             if line.startswith('## Why'):
@@ -250,6 +314,11 @@ def _show_change_detail(change_path: Path) -> None:
     )
 
 
+# ============================================================================
+# Subcommand: archive
+# ============================================================================
+
+
 @change.command()
 @click.argument('name', required=False)
 @click.option('--yes', '-y', is_flag=True, help='Skip confirmation')
@@ -259,7 +328,6 @@ def archive(name: str | None, yes: bool) -> None:
     Without arguments, shows interactive multi-select for archivable changes.
     With name argument, archives single change.
     """
-
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
@@ -327,7 +395,6 @@ def _archive_changes_interactive(sspec_root: Path) -> None:
         console.print('[yellow]No changes selected[/yellow]')
         return
 
-    # Archive selected changes
     archived_count = 0
     for change_info in selected:
         try:

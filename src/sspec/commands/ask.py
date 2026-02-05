@@ -25,7 +25,7 @@ def ask_group() -> None:
 @click.option(
     '--name',
     default='ask',
-    help='Ask name (lowercase letters and underscores only)',
+    help='Ask name (auto-converted to Python-safe identifier)',
 )
 def ask_create(name: str) -> None:
     """Create a new ask template (.py file) for editing."""
@@ -38,7 +38,7 @@ def ask_create(name: str) -> None:
         ) from None
 
     try:
-        py_path = create_ask_template(sspec_root=sspec_root, name=name)
+        py_path, warning = create_ask_template(sspec_root=sspec_root, name=name)
     except ValueError as e:
         raise click.ClickException(str(e)) from None
 
@@ -48,6 +48,10 @@ def ask_create(name: str) -> None:
     except ValueError:
         rel_str = str(py_path)
 
+    # Show warning if name was converted
+    if warning:
+        click.echo(f'⚠️  {warning}', err=True)
+
     click.echo(f'✓ Created ask template: {rel_str}')
     click.echo('')
     click.echo('Next steps:')
@@ -56,7 +60,7 @@ def ask_create(name: str) -> None:
 
 
 @ask_group.command(name='prompt')
-@click.argument('ask_file', type=click.Path(exists=True, path_type=Path))
+@click.argument('ask_file', type=click.Path(exists=False, path_type=Path))
 def ask_prompt(ask_file: Path) -> None:
     """Execute ask prompt, collect answer, and convert to .md."""
 
@@ -64,6 +68,12 @@ def ask_prompt(ask_file: Path) -> None:
         raise click.ClickException(
             f'Ask file must be .py file, got: {ask_file.suffix}'
         )
+
+    if not ask_file.exists():
+        md_file = ask_file.with_suffix('.md')
+        if md_file.exists():
+            click.echo(f'✓ Ask already completed, see record file: {md_file}')
+            return
 
     try:
         # Execute prompt and get answer

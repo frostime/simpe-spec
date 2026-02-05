@@ -31,20 +31,34 @@ def ask_prompt(q: str, tldr: str | None = None) -> str:
     return result
 
 
-def normalize_ask_name(name: str) -> str:
+def normalize_ask_name(name: str) -> tuple[str, str | None]:
     """
-    Validate ask name must be Python-safe identifier.
+    Normalize ask name to Python-safe identifier.
 
-    (lowercase letters and underscores only)
+    Converts hyphens and other characters to underscores.
+    Returns (normalized_name, warning_message).
 
-    Raises ValueError if name doesn't match pattern.
+    Raises ValueError if result is empty or invalid.
     """
-    if not re.match(r'^[a-z_]+$', name):
+    original = name
+
+    # Convert to lowercase, replace non-alphanumeric (except _) with _
+    normalized = re.sub(r'[^a-z0-9_]', '_', name.lower())
+    # Remove leading/trailing underscores, collapse multiple underscores
+    normalized = re.sub(r'_+', '_', normalized).strip('_')
+
+    if not normalized:
         raise ValueError(
             f'Invalid ask name: "{name}". '
-            'Must contain only lowercase letters and underscores.'
+            'Must contain at least one letter or number.'
         )
-    return name
+
+    # Check if conversion happened
+    warning = None
+    if normalized != original:
+        warning = f'Ask name converted: "{original}" → "{normalized}"'
+
+    return normalized, warning
 
 
 def collect_multiline_input(
@@ -75,21 +89,21 @@ def collect_multiline_input(
     return result
 
 
-def create_ask_template(sspec_root: Path, name: str) -> Path:
+def create_ask_template(sspec_root: Path, name: str) -> tuple[Path, str | None]:
     """
     Create a Python template file for sspec ask.
 
     Args:
         sspec_root: .sspec directory path
-        name: Ask name (must match ^[a-z_]+$)
+        name: Ask name (auto-converted to Python-safe identifier)
 
     Returns:
-        Path to created .py file
+        Tuple of (Path to created .py file, warning message if name was converted)
 
     Raises:
         ValueError: If name is invalid
     """
-    normalized = normalize_ask_name(name)
+    normalized, warning = normalize_ask_name(name)
 
     asks_dir = sspec_root / 'asks'
     asks_dir.mkdir(parents=True, exist_ok=True)
@@ -128,7 +142,7 @@ USER_ANSWER = r""""""
 '''
 
     py_path.write_text(template, encoding='utf-8')
-    return py_path
+    return py_path, warning
 
 
 def execute_ask_prompt(ask_file_path: Path) -> str:
@@ -239,16 +253,15 @@ def convert_ask_to_md(py_path: Path) -> Path:
     yaml_text = yaml.dump(meta, allow_unicode=True, sort_keys=False)
 
     body_parts = [
-        f'# Ask: {name}',
+        f'**Ask**: {name}',
         '',
-        '## Question',
-        '',
-        question,
-        '',
-        '## Answer',
+        '# User Answer #',
         '',
         answer,
         '',
+        '# Agent Question History #',
+        '',
+        question,
     ]
 
     content = f'---\n{yaml_text}---\n\n' + '\n'.join(body_parts)

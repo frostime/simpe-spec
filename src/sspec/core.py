@@ -302,6 +302,7 @@ def list_skills(sspec_root: Path) -> list[SkillInfo]:
 
 def parse_change(change_path: Path, archived: bool = False) -> ChangeInfo:
     """Parse change directory into structured data."""
+    from sspec.libs.md_yaml import parse_frontmatter
 
     spec_file = change_path / 'spec.md'
     tasks_file = change_path / 'tasks.md'
@@ -312,22 +313,16 @@ def parse_change(change_path: Path, archived: bool = False) -> ChangeInfo:
     progress = {'done': 0, 'total': 0}
     has_pivot = False
     has_blockers = False
-    # spec_progress: dict[str, int] | None = None
 
     if spec_file.exists():
         content = spec_file.read_text(encoding='utf-8')
+        meta, body = parse_frontmatter(content)
 
-        if content.startswith('---'):
-            parts = content.split('---', 2)
-            if len(parts) >= 3:
-                try:
-                    meta = yaml.safe_load(parts[1]) or {}
-                    raw_status = str(meta.get('status', ChangeStatus.PLANNING.value))
-                    status = normalize_status(raw_status, ChangeStatus)
-                    change_type = meta.get('type', '') or ''
-                    description = meta.get('description', '') or ''
-                except yaml.YAMLError:
-                    pass
+        if meta:
+            raw_status = str(meta.get('status', ChangeStatus.PLANNING.value))
+            status = normalize_status(raw_status, ChangeStatus)
+            change_type = meta.get('type', '') or ''
+            description = meta.get('description', '') or ''
 
         has_pivot = bool(re.search(r'PIVOT', content, re.IGNORECASE))
         has_blockers = status == ChangeStatus.BLOCKED.value
@@ -338,8 +333,6 @@ def parse_change(change_path: Path, archived: bool = False) -> ChangeInfo:
         total = len(re.findall(checkbox_pattern, content))
         done = len(re.findall(r'- \[[xX]\]', content))
         progress = {'done': done, 'total': total}
-    # elif spec_progress:
-    #     progress = spec_progress
 
     return {
         'name': change_path.name,
@@ -357,19 +350,24 @@ def parse_change(change_path: Path, archived: bool = False) -> ChangeInfo:
 def create_change(sspec_root: Path, name: str) -> Path:
     """Create a new change directory with spec.md, tasks.md, and handover.md."""
 
+    # Normalize name: lowercase, replace spaces with hyphens, remove invalid chars
     name = re.sub(r'\s+', '-', name.strip().lower())
     name = re.sub(r'[^a-z0-9\-]', '', name)
 
     if not name:
         raise InvalidChangeNameError('Invalid change name')
 
-    change_path = sspec_root / CHANGES_DIR / name
+    # Generate timestamped name: <yy-MM-ddTHH-mm>_<name>
+    timestamp = datetime.now().strftime('%y-%m-%dT%H-%M')
+    change_name = f'{timestamp}_{name}'
+
+    change_path = sspec_root / CHANGES_DIR / change_name
     if change_path.exists():
-        raise ChangeExistsError(f"Change '{name}' already exists")
+        raise ChangeExistsError(f"Change '{change_name}' already exists")
 
     template_dir = get_template_dir() / 'change'
     replacements = {
-        'CHANGE_NAME': name,
+        'CHANGE_NAME': change_name,
         'TIME': datetime.now().isoformat(timespec='seconds'),
     }
 
@@ -382,7 +380,11 @@ def create_change(sspec_root: Path, name: str) -> Path:
 
 
 def archive_change(sspec_root: Path, name: str, force: bool = False) -> Path:
-    """Archive a completed change."""
+    """Archive a completed change.
+
+    Moves the change to archive/ directory and adds 'archived' timestamp to spec.md frontmatter.
+    Name is preserved (no date prefix added).
+    """
 
     change_path = sspec_root / CHANGES_DIR / name
     if not change_path.exists():
@@ -396,16 +398,24 @@ def archive_change(sspec_root: Path, name: str, force: bool = False) -> Path:
                 f"Use --force to archive anyway."
             )
 
+    # Add archived timestamp to spec.md frontmatter
+    spec_file = change_path / 'spec.md'
+    if spec_file.exists():
+        from sspec.libs.md_yaml import update_frontmatter
+
+        content = spec_file.read_text(encoding='utf-8')
+        archived_time = datetime.now().isoformat(timespec='seconds')
+        updated_content = update_frontmatter(content, {'archived': archived_time})
+        spec_file.write_text(updated_content, encoding='utf-8')
+
     archive_dir = sspec_root / CHANGES_DIR / ARCHIVE_DIR
     archive_dir.mkdir(parents=True, exist_ok=True)
 
-    date_prefix = datetime.now().strftime('%Y-%m-%d')
-    archive_name = f'{date_prefix}_{name}'
-
-    archive_path = archive_dir / archive_name
+    # Preserve original name (no date prefix)
+    archive_path = archive_dir / name
     counter = 1
     while archive_path.exists():
-        archive_path = archive_dir / f'{archive_name}_{counter}'
+        archive_path = archive_dir / f'{name}_{counter}'
         counter += 1
 
     shutil.move(str(change_path), str(archive_path))

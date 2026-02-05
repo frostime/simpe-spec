@@ -47,6 +47,8 @@ sspec ask prompt <path>
 ```
 **Output**: Use's answer, and creates `.sspec/asks/<timestamp>_<name>.py` with template as follow.
 
+**Error Case**: `sspec ask prompt` output shows that do not exists the `<timestamp>_<name>.py` file -- might becasue the file has been achived to md, check if exsits `<timestamp>_<name>.md`.
+
 ## Template Format
 
 ```python
@@ -99,8 +101,8 @@ Which aligns with project priorities?
 | Do | Don't |
 |----|-------|
 | Use descriptive `--name` | Use generic names (`q1`, `ask`) |
+| `--name` only contains letters and underscore | Use names (`非英文字符`, `other_symbols_like$#%*`) |
 | Fill `REASON` for context | Leave `REASON` empty |
-| Ask one focused question | Bundle unrelated questions |
 | Ask early when uncertain | Guess and risk rework |
 | Provide options when applicable | Leave open-ended if choices exist |
 

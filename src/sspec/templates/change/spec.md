@@ -1,8 +1,15 @@
 ---
+name: {{CHANGE_NAME}}
 status: PLANNING
 type: ""
 created: {{TIME}}
+reference: null
 ---
+
+<!-- @RULE: Frontmatter
+reference?: Array<{source; type; note?}>
+reference[number].type: 'request' | 'sup-change' | 'sub-change' | 'doc';
+ -->
 
 # {{CHANGE_NAME}}
 

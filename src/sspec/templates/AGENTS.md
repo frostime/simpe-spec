@@ -54,14 +54,17 @@ Changes live in `.sspec/changes/<name>/`.
 
 When user provides a vague request (idea, bug, feature), process BEFORE creating change:
 
+0. **Change**: Invoke `sspec change new` and `link` request to change.
 1. **Understand**: Read the request carefully. Identify the underlying need, not the surface ask. Requests are often confused—apply first-principles thinking to find the real problem.
 2. **Research**:  Gather context from `.sspec/project.md` and relevant code. If unclear terms or missing info, **use `sspec ask` actively**—it saves cost and reduces guessing.
 3. **Design**:  Once requirements are clear:
 - Simple changes: Draft spec.md mentally
-- Complex changes: Write exploration to `reference/` first (design-draft.md, api-options.md, research.md)
+- Complex changes (>1 week / >15 files / >20 tasks): **Consider using `sspec ask`** to consult user on splitting into multi-change approach (root + sub-changes)
+  - For design exploration: Use `reference/` for drafts (design-draft.md, api-options.md, research.md)
+  - For one-off scripts: Use `script/` for migrations, test data generators
 - Finalize: Distill into spec.md Sections A/B/C
-4. **Confirm**: Before implementation, **use `sspec ask`** to present your understanding and plan. Wait for explicit approval.
-5. **Execute**: Proceed per SSPEC protocol. Update tasks.md after each task.
+1. **Confirm**: Before implementation, **use `sspec ask`** to present your understanding and plan. Wait for explicit approval.
+2. **Execute**: Proceed per SSPEC protocol. Update tasks.md after each task.
 
 **Key principle**: Understand before acting. Wrong direction costs more than extra questions.
 
@@ -85,6 +88,7 @@ When user provides a vague request (idea, bug, feature), process BEFORE creating
 
 If `.sspec/changes/<name>/` exists:
 - Read handover.md → tasks.md → spec.md
+- Check spec.md `reference` frontmatter field for linked requests/changes
 - If reference/ exists: Scan for context
 - Output: status, progress percentage, next 3 actions
 

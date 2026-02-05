@@ -55,26 +55,6 @@ def extract_summary(body: str) -> str:
     return ''
 
 
-def _split_frontmatter(content: str) -> tuple[dict[str, Any], str]:
-    if not content.startswith('---'):
-        return {}, content
-
-    parts = content.split('---', 2)
-    if len(parts) < 3:
-        return {}, content
-
-    try:
-        meta = yaml.safe_load(parts[1]) or {}
-    except yaml.YAMLError:
-        return {}, parts[2]
-
-    if not isinstance(meta, dict):
-        meta = {}
-
-    body = parts[2].lstrip('\n')
-    return meta, body
-
-
 def create_request(
     *,
     sspec_root: Path,
@@ -92,8 +72,10 @@ def create_request(
 
     dt = now or datetime.now()
     timestamp = dt.isoformat(timespec='seconds')
-    timeprefix = dt.strftime('%y%m%d%H%M%S')
-    request_path = requests_dir / f'{timeprefix}-{normalized}.md'
+
+    # New naming format: <yy-MM-ddTHH-mm>_<name>
+    timeprefix = dt.strftime('%y-%m-%dT%H-%M')
+    request_path = requests_dir / f'{timeprefix}_{normalized}.md'
 
     if request_path.exists():
         raise FileExistsError(f"Request '{normalized}' already exists")
@@ -127,12 +109,14 @@ def create_request(
 
 def parse_request_file(path: Path) -> RequestInfo | None:
     """Parse request file into RequestInfo, or None if unreadable."""
+    from sspec.libs.md_yaml import parse_frontmatter
+
     try:
         content = path.read_text(encoding='utf-8')
     except OSError:
         return None
 
-    meta, body = _split_frontmatter(content)
+    meta, body = parse_frontmatter(content)
     if not meta:
         return None
 
@@ -167,15 +151,25 @@ def list_requests(requests_dir: Path) -> list[RequestInfo]:
 
 
 def find_request_matches(requests_dir: Path, name: str) -> list[Path]:
-    """Find request file candidates by exact or fuzzy match."""
+    """Find request file candidates by exact or fuzzy match.
+
+    Supports both old format (<yyMMddHHmmss>-<name>) and new format (<yy-MM-ddTHH-mm>_<name>).
+    """
     exact_path = requests_dir / f'{name}.md'
     if exact_path.exists():
         return [exact_path]
 
+    # Try new format: *_<name>.md
+    matches = list(requests_dir.glob(f'*_{name}.md'))
+    if matches:
+        return sorted(matches)
+
+    # Try old format: *-<name>.md (backward compatibility)
     matches = list(requests_dir.glob(f'*-{name}.md'))
     if matches:
         return sorted(matches)
 
+    # Fallback: contains match
     contains = [p for p in requests_dir.glob('*.md') if name in p.stem]
     if contains:
         return sorted(contains)
@@ -190,37 +184,66 @@ def link_request_to_change(
     request_file: Path,
     change_name: str,
 ) -> None:
-    """Link a request to a change and set status to DOING."""
+    """Link a request to a change (bidirectional).
+
+    Updates:
+    1. Request frontmatter: attach-change, status=DOING
+    2. Change spec.md: adds reference entry
+    """
+    from sspec.libs.md_yaml import parse_frontmatter, update_frontmatter
+
     change_path = sspec_root / 'changes' / change_name
     if not change_path.exists():
         raise FileNotFoundError(f"Change '{change_name}' not found")
 
-    content = request_file.read_text(encoding='utf-8')
-    if not content.startswith('---'):
-        raise ValueError('Request file missing front yaml')
+    # Update request file
+    request_content = request_file.read_text(encoding='utf-8')
+    request_content = update_frontmatter(request_content, {
+        'attach-change': change_name,
+        'status': RequestStatus.DOING.value
+    })
+    request_file.write_text(request_content, encoding='utf-8')
 
-    parts = content.split('---', 2)
-    if len(parts) < 3:
-        raise ValueError('Invalid request file format')
+    # Update change spec.md with reference
+    spec_file = change_path / 'spec.md'
+    if spec_file.exists():
+        spec_content = spec_file.read_text(encoding='utf-8')
+        meta, body = parse_frontmatter(spec_content)
 
-    try:
-        meta = yaml.safe_load(parts[1]) or {}
-    except yaml.YAMLError as e:
-        raise ValueError(f'Invalid yaml: {e}') from e
+        # Get or create reference array
+        reference = meta.get('reference') or []
+        if not isinstance(reference, list):
+            reference = []
 
-    if not isinstance(meta, dict):
-        meta = {}
+        # Add request reference (relative to .sspec/)
+        request_relative = request_file.relative_to(sspec_root).as_posix()
+        new_ref = {
+            'source': request_relative,
+            'type': 'request',
+            'note': f'Linked from request'
+        }
 
-    meta['attach-change'] = change_name
-    meta['status'] = RequestStatus.DOING.value
+        # Avoid duplicates
+        if not any(ref.get('source') == request_relative for ref in reference):
+            reference.append(new_ref)
 
-    new_yaml = yaml.dump(meta, default_flow_style=False, allow_unicode=True)
-    new_content = f'---\n{new_yaml}---{parts[2]}'
-    request_file.write_text(new_content, encoding='utf-8')
+        spec_content = update_frontmatter(spec_content, {'reference': reference})
+        spec_file.write_text(spec_content, encoding='utf-8')
 
 
 def archive_request_file(*, requests_dir: Path, request_file: Path) -> Path:
-    """Move a request file into requests/archive and return destination path."""
+    """Move a request file into requests/archive and add archived timestamp to frontmatter.
+
+    Returns destination path.
+    """
+    # Add archived timestamp to frontmatter
+    from sspec.libs.md_yaml import update_frontmatter
+
+    content = request_file.read_text(encoding='utf-8')
+    archived_time = datetime.now().isoformat(timespec='seconds')
+    updated_content = update_frontmatter(content, {'archived': archived_time})
+    request_file.write_text(updated_content, encoding='utf-8')
+
     archive_dir = requests_dir / 'archive'
     archive_dir.mkdir(parents=True, exist_ok=True)
 

@@ -41,7 +41,8 @@ def change() -> None:
 
 @change.command()
 @click.argument('name')
-def new(name: str) -> None:
+@click.option('--from', 'from_request', help='Link to existing request')
+def new(name: str, from_request: str | None = None) -> None:
     """Create a new change proposal (spec, tasks, handover)."""
     try:
         sspec_root = get_sspec_root()
@@ -53,9 +54,36 @@ def new(name: str) -> None:
     except (InvalidChangeNameError, ChangeExistsError) as e:
         raise click.ClickException(str(e)) from e
 
+    # If --from specified, link to request
+    if from_request:
+        from sspec.services.request_service import (
+            find_request_matches,
+            link_request_to_change,
+        )
+
+        requests_dir = sspec_root / 'requests'
+        matches = find_request_matches(requests_dir, from_request)
+
+        if not matches:
+            console.print(f'[yellow]Warning:[/yellow] Request "{from_request}" not found')
+        elif len(matches) > 1:
+            console.print(f'[yellow]Warning:[/yellow] Multiple requests match "{from_request}", skipping link')
+        else:
+            request_file = matches[0]
+            try:
+                link_request_to_change(
+                    sspec_root=sspec_root,
+                    requests_dir=requests_dir,
+                    request_file=request_file,
+                    change_name=change_path.name,
+                )
+                console.print(f'[green]✓[/green] Linked to request: {request_file.stem}')
+            except Exception as e:
+                console.print(f'[yellow]Warning:[/yellow] Failed to link request: {e}')
+
     rel_path = change_path.relative_to(sspec_root.parent)
 
-    console.print(f'[green]+[/green] Created change: {name}')
+    console.print(f'[green]+[/green] Created change: {change_path.name}')
     console.print()
     console.print('[cyan]Files:[/cyan]')
     console.print(f'  {rel_path}/')

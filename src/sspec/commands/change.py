@@ -232,8 +232,8 @@ def _show_change_detail(change_path: Path) -> None:
 @change.command()
 @click.argument('name', required=False)
 @click.option('--yes', '-y', is_flag=True, help='Skip confirmation')
-@click.option('--force', '-f', is_flag=True, help='Archive even if not DONE')
-def archive(name: str | None, yes: bool, force: bool) -> None:
+# @click.option('--force', '-f', is_flag=True, help='Archive even if not DONE')
+def archive(name: str | None, yes: bool) -> None:
     """Archive a completed change.
 
     Without arguments, shows interactive multi-select for archivable changes.
@@ -254,21 +254,22 @@ def archive(name: str | None, yes: bool, force: bool) -> None:
             raise click.ClickException('No active changes to archive')
 
         # Filter to archivable changes (DONE or all if --force)
-        if force:
-            archivable = active
-        else:
-            archivable = [c for c in active if c['status'] == ChangeStatus.DONE.value]
+        # if force:
+        #     archivable = active
+        # else:
+        #     archivable = [c for c in active if c['status'] == ChangeStatus.DONE.value]
 
-            if not archivable:
-                console.print('[yellow]No DONE changes to archive, Please manually select archivable.[/yellow]')
-                archivable = active  # Allow all for selection
+        #     if not archivable:
+        #         console.print('[yellow]No DONE changes to archive, Please manually select archivable.[/yellow]')
+        #         archivable = active  # Allow all for selection
+        archivable = active
 
         if len(archivable) == 1 and not yes:
             # Single change: ask confirmation
             change_info = archivable[0]
             name = change_info['name']
             if questionary.confirm(f"Archive '{name}'?", default=True).ask():
-                _archive_single_change(sspec_root, change_info, yes=True, force=force)
+                _archive_single_change(sspec_root, change_info, yes=True)
             else:
                 console.print('[yellow]Cancelled[/yellow]')
             return
@@ -302,7 +303,7 @@ def archive(name: str | None, yes: bool, force: bool) -> None:
         archived_count = 0
         for change_info in selected:
             try:
-                _archive_single_change(sspec_root, change_info, yes=True, force=force)
+                _archive_single_change(sspec_root, change_info, yes=True)
                 archived_count += 1
             except Exception as e:
                 console.print(f'[red]Failed to archive {change_info["name"]}: {e}[/red]')
@@ -317,10 +318,10 @@ def archive(name: str | None, yes: bool, force: bool) -> None:
         raise click.ClickException(f"Change '{name}' not found")
 
     change_info = parse_change(change_path)
-    _archive_single_change(sspec_root, change_info, yes, force)
+    _archive_single_change(sspec_root, change_info, yes)
 
 
-def _archive_single_change(sspec_root: Path, change_info: ChangeInfo, yes: bool, force: bool) -> None:
+def _archive_single_change(sspec_root: Path, change_info: ChangeInfo, yes: bool) -> None:
     """Archive a single change (extracted from original archive command)."""
     # Check current status
     change_path = change_info['path']
@@ -328,40 +329,40 @@ def _archive_single_change(sspec_root: Path, change_info: ChangeInfo, yes: bool,
     current_status = change_info['status']
 
     # Interactive prompt if status is not DONE and not forced
-    if current_status != ChangeStatus.DONE.value and not force:
-        console.print()
-        console.print(
-            f'[yellow]Warning: Change "{name}" status is {current_status}, not DONE[/yellow]'
-        )
-        console.print()
+    # if current_status != ChangeStatus.DONE.value and not force:
+    #     console.print()
+    #     console.print(
+    #         f'[yellow]Warning: Change "{name}" status is {current_status}, not DONE[/yellow]'
+    #     )
+    #     console.print()
 
-        choice = questionary.select(
-            'Select option:',
-            choices=[
-                questionary.Choice('Force archive (keep current status)', value='1'),
-                questionary.Choice('Mark as DONE and archive', value='2'),
-                questionary.Choice('Cancel', value='3'),
-            ],
-            default='3',
-        ).ask()
+    #     choice = questionary.select(
+    #         'Select option:',
+    #         choices=[
+    #             questionary.Choice('Force archive (keep current status)', value='1'),
+    #             questionary.Choice('Mark as DONE and archive', value='2'),
+    #             questionary.Choice('Cancel', value='3'),
+    #         ],
+    #         default='3',
+    #     ).ask()
 
-        if not choice or choice == '3':
-            console.print('[yellow]Cancelled[/yellow]')
-            return
-        elif choice == '1':
-            force = True
-        elif choice == '2':
-            # Update status to DONE in spec.md
-            spec_file = change_path / 'spec.md'
-            if spec_file.exists():
-                content = spec_file.read_text(encoding='utf-8')
-                # Update YAML front matter status
-                if content.startswith('---'):
-                    import re
+    #     if not choice or choice == '3':
+    #         console.print('[yellow]Cancelled[/yellow]')
+    #         return
+    #     elif choice == '1':
+    #         force = True
+    #     elif choice == '2':
+    #         # Update status to DONE in spec.md
+    #         spec_file = change_path / 'spec.md'
+    #         if spec_file.exists():
+    #             content = spec_file.read_text(encoding='utf-8')
+    #             # Update YAML front matter status
+    #             if content.startswith('---'):
+    #                 import re
 
-                    content = re.sub(r'(status:\s*)[^\n]+', r'\1DONE', content, count=1)
-                    spec_file.write_text(content, encoding='utf-8')
-                    console.print('[green]OK[/green] Updated status to DONE')
+    #                 content = re.sub(r'(status:\s*)[^\n]+', r'\1DONE', content, count=1)
+    #                 spec_file.write_text(content, encoding='utf-8')
+    #                 console.print('[green]OK[/green] Updated status to DONE')
 
     # Confirm if not --yes
     if not yes:
@@ -370,7 +371,7 @@ def _archive_single_change(sspec_root: Path, change_info: ChangeInfo, yes: bool,
             return
 
     try:
-        archive_path = archive_change(sspec_root, change_info, force=force)
+        archive_path = archive_change(sspec_root, change_info)
         rel_path = archive_path.relative_to(sspec_root.parent)
         console.print(f'[green]+[/green] Archived to: {rel_path}')
     except ChangeNotFoundError as e:

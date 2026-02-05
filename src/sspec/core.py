@@ -439,7 +439,7 @@ def create_change(sspec_root: Path, change_name: str) -> Path:
 
 
 def archive_change(
-    sspec_root: Path, change_info: ChangeInfo, force: bool = False
+    sspec_root: Path, change_info: ChangeInfo
 ) -> Path:
     """Archive a completed change.
 
@@ -450,12 +450,12 @@ def archive_change(
     change_path = change_info['path']
     name = change_path.name
 
-    if not force:
-        if change_info['status'] != ChangeStatus.DONE.value:
-            raise ValueError(
-                f"Change '{name}' status is {change_info['status']}, not DONE. "
-                f"Use --force to archive anyway."
-            )
+    # if not force:
+    #     if change_info['status'] != ChangeStatus.DONE.value:
+    #         raise ValueError(
+    #             f"Change '{name}' status is {change_info['status']}, not DONE. "
+    #             f"Use --force to archive anyway."
+    #         )
 
     # Add archived timestamp to spec.md frontmatter
     spec_file = change_path / 'spec.md'

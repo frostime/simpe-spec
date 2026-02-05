@@ -260,19 +260,11 @@ def link_request(request_name: str, change_name: str) -> None:
 @request.command(name='archive')
 @click.argument('name', required=False)
 @click.option('--yes', '-y', 'auto_yes', is_flag=True, help='Skip confirmation prompts')
-@click.option(
-    '--force',
-    '-f',
-    'force_archive',
-    is_flag=True,
-    help='Archive all requests regardless of status',
-)
-def archive_request(name: str | None, auto_yes: bool, force_archive: bool) -> None:
+def archive_request(name: str | None, auto_yes: bool) -> None:
     """Archive requests.
 
     Without arguments, shows interactive multi-select for archivable requests.
     With name argument, archives single request.
-    Use --force to archive done requests.
     """
     try:
         sspec_root = get_sspec_root()
@@ -283,46 +275,58 @@ def archive_request(name: str | None, auto_yes: bool, force_archive: bool) -> No
 
     # Single request mode
     if name:
-        _archive_single_request(requests_dir, name, auto_yes, force_archive)
+        _archive_single_request(requests_dir, name, auto_yes)
         return
 
     # Multi-select mode
-    _archive_requests_interactive(requests_dir, auto_yes, force_archive)
+    _archive_requests_interactive(requests_dir)
 
 
 def _archive_requests_interactive(
     requests_dir: Path,
-    auto_yes: bool,
-    force_archive: bool,
+    # auto_yes: bool,
 ) -> None:
     """Interactive multi-select for archiving requests."""
     items = list_requests_service(requests_dir)
-    if force_archive:
-        archivable = items
-    else:
-        # Default: allow archiving DONE and CLOSED requests
-        # Use --force to archive OPEN/DOING/BLOCKED requests
-        archivable = [
-            r for r in items if r.status in (RequestStatus.DONE.value, RequestStatus.CLOSED.value)
-        ]
 
-    if not archivable:
-        if force_archive:
-            console.print('[dim]No requests to archive[/dim]')
-        else:
-            console.print('[dim]No DONE or CLOSED requests to archive[/dim]')
-            console.print('[dim]Use --force to archive all requests regardless of status[/dim]')
+    if not items:
+        console.print('[dim]No requests to archive[/dim]')
         return
 
-    # Use questionary for multi-select
-    choices = [
-        questionary.Choice(
-            title=f'{r.name} [{r.status}] - {r.tldr[:50]}',
-            value=r,
-            checked=True,
-        )
-        for r in archivable
+    # Define archivable requests: DONE and CLOSED
+    archivable = [
+        r for r in items if r.status in (RequestStatus.DONE.value, RequestStatus.CLOSED.value)
     ]
+    non_archivable = [
+        r for r in items if r.status not in (RequestStatus.DONE.value, RequestStatus.CLOSED.value)
+    ]
+
+    # Create choices with archivable first and checked by default
+    choices = []
+
+    # Add archivable requests first (checked by default)
+    for r in archivable:
+        choices.append(
+            questionary.Choice(
+                title=f'{r.name} [{r.status}] - {r.tldr[:50]}',
+                value=r,
+                checked=True,
+            )
+        )
+
+    # Add non-archivable requests (not checked by default)
+    for r in non_archivable:
+        choices.append(
+            questionary.Choice(
+                title=f'{r.name} [{r.status}] - {r.tldr[:50]}',
+                value=r,
+                checked=False,
+            )
+        )
+
+    if not choices:
+        console.print('[dim]No requests to archive[/dim]')
+        return
 
     console.print()
     console.print('[bold]Select requests to archive:[/bold]')
@@ -346,7 +350,6 @@ def _archive_requests_interactive(
             requests_dir,
             req.name,
             auto_yes=True,
-            force_archive=force_archive,
         )
         archived_count += 1
 
@@ -358,7 +361,6 @@ def _archive_single_request(
     requests_dir: Path,
     name: str,
     auto_yes: bool,
-    force_archive: bool = False,
 ) -> None:
     """Archive a single request."""
     request_path = _resolve_request_file(requests_dir, name, interactive=not auto_yes)

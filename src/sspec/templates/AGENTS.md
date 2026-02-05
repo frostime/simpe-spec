@@ -54,10 +54,10 @@ Changes live in `.sspec/changes/<name>/`.
 
 When user provides a vague request (idea, bug, feature), process BEFORE creating change:
 
-0. **Change**: Invoke `sspec change new` and `link` request to change.
-1. **Understand**: Read the request carefully. Identify the underlying need, not the surface ask. Requests are often confused—apply first-principles thinking to find the real problem.
-2. **Research**:  Gather context from `.sspec/project.md` and relevant code. If unclear terms or missing info, **use `sspec ask` actively**—it saves cost and reduces guessing.
-3. **Design**:  Once requirements are clear:
+1. **Change**: Invoke `sspec change new` with `--from` or invoke `link` after new, make request-change pair.
+2. **Understand**: Read the request carefully. Identify the underlying need, not the surface ask. Requests are often confused—apply first-principles thinking to find the real problem.
+3. **Research**:  Gather context from `.sspec/project.md` and relevant code. If unclear terms or missing info, **use `sspec ask` actively**—it saves cost and reduces guessing.
+4. **Design**:  Once requirements are clear:
 - Simple changes: Draft spec.md mentally
 - Complex changes (>1 week / >15 files / >20 tasks): **Consider using `sspec ask`** to consult user on splitting into multi-change approach (root + sub-changes)
   - For design exploration: Use `reference/` for drafts (design-draft.md, api-options.md, research.md)
@@ -93,7 +93,7 @@ If `.sspec/changes/<name>/` exists:
 - Output: status, progress percentage, next 3 actions
 
 If new:
-- Run `sspec change new <name>`
+- Run `sspec change new <name>` or `sspec change new --from <request>`
 - Follow Request → Change Workflow (Section 2.0)
 - Fill spec.md Sections A/B/C
 - Generate tasks.md from Section C

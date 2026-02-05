@@ -16,6 +16,7 @@ from typing import Any
 import yaml
 
 from sspec.core import RequestStatus, normalize_status
+from sspec.libs.md_yaml import parse_frontmatter, update_frontmatter
 
 
 @dataclass(frozen=True, slots=True)
@@ -232,10 +233,11 @@ def link_request_to_change(
     if not change_path.exists():
         raise FileNotFoundError(f"Change '{change_name}' not found")
 
-    # Update request file
+    # Update request file - store spec.md path instead of dir name
     request_content = request_file.read_text(encoding='utf-8')
+    spec_relative = (change_path / 'spec.md').relative_to(sspec_root).as_posix()
     request_content = update_frontmatter(request_content, {
-        'attach-change': change_name,
+        'attach-change': spec_relative,  # Store path like "changes/<name>/spec.md"
         'status': RequestStatus.DOING.value
     })
     request_file.write_text(request_content, encoding='utf-8')
@@ -267,15 +269,20 @@ def link_request_to_change(
         spec_file.write_text(spec_content, encoding='utf-8')
 
 
-def archive_request_file(*, requests_dir: Path, request_file: Path) -> Path:
+def archive_request_file(
+    *, sspec_root: Path, requests_dir: Path, request_file: Path
+) -> Path:
     """Move a request file into requests/archive and add archived timestamp to frontmatter.
 
+    Updates change.spec.md reference if request was linked to a change.
     Returns destination path.
     """
-    # Add archived timestamp to frontmatter
-    from sspec.libs.md_yaml import update_frontmatter
+    from sspec.libs.md_yaml import parse_frontmatter, update_frontmatter
 
     content = request_file.read_text(encoding='utf-8')
+    meta, body = parse_frontmatter(content)
+    attach_change = meta.get('attach-change')
+
     archived_time = datetime.now().isoformat(timespec='seconds')
     updated_content = update_frontmatter(content, {'archived': archived_time})
     request_file.write_text(updated_content, encoding='utf-8')
@@ -292,4 +299,57 @@ def archive_request_file(*, requests_dir: Path, request_file: Path) -> Path:
             counter += 1
 
     shutil.move(str(request_file), str(dest_path))
+
+    # Update cross-references in change if this request was linked
+    _update_change_after_request_archive(
+        sspec_root, request_file.relative_to(sspec_root).as_posix(),
+        dest_path.relative_to(sspec_root).as_posix(), attach_change
+    )
+
     return dest_path
+
+
+def _update_change_after_request_archive(
+    sspec_root: Path,
+    old_request_relative: str,
+    new_request_relative: str,
+    attach_change: str | None,
+) -> None:
+    """Update change.spec.md reference after archiving a request.
+
+    When request is moved to archive/, the change's reference.source should point to new location.
+    """
+    if not attach_change:
+        return
+
+    # Resolve change spec path from attach_change
+    if 'spec.md' in attach_change:
+        spec_path = sspec_root / attach_change
+    else:
+        # Old format: just the dir name
+        spec_path = sspec_root / 'changes' / attach_change / 'spec.md'
+
+    # Also check archive directory
+    if not spec_path.exists():
+        archive_spec = sspec_root / 'changes' / 'archive' / attach_change / 'spec.md'
+        if archive_spec.exists():
+            spec_path = archive_spec
+        else:
+            return  # Change not found, skip
+
+    content = spec_path.read_text(encoding='utf-8')
+    meta, body = parse_frontmatter(content)
+    reference = meta.get('reference') or []
+    if not isinstance(reference, list):
+        return
+
+    updated = False
+    for ref in reference:
+        if ref.get('source') == old_request_relative:
+            ref['source'] = new_request_relative
+            ref['note'] = 'Archived request'
+            updated = True
+
+    if updated:
+        content = update_frontmatter(content, {'reference': reference})
+        spec_path.write_text(content, encoding='utf-8')

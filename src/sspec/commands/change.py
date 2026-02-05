@@ -15,9 +15,12 @@ from sspec.core import (
     ChangeStatus,
     InvalidChangeNameError,
     SspecNotFoundError,
+    get_sspec_root,
+)
+from sspec.services.change_service import (
     archive_change,
     create_change,
-    get_sspec_root,
+    find_change_matches,
     list_changes,
     parse_change,
 )
@@ -31,6 +34,16 @@ STATUS_STYLES: dict[str, tuple[str, str]] = {
     ChangeStatus.REVIEW.value: ('magenta', '👀'),
     ChangeStatus.DONE.value: ('green', '✅'),
 }
+
+
+def _interactive_select_change(matches: list[Path], name: str) -> Path:
+    """Interactive selection when multiple change matches found."""
+    choices = [questionary.Choice(title=m.name, value=m) for m in matches]
+    console.print(f"\n[yellow]Multiple matches for '{name}':[/yellow]")
+    selected = questionary.select('Select change:', choices=choices).ask()
+    if selected is None:
+        raise click.ClickException('Cancelled')
+    return selected
 
 
 @click.group()
@@ -120,8 +133,8 @@ def _list_changes(sspec_root: Path, include_all: bool) -> None:
         console.print('Create one with: sspec change new <change-name>')
         return
 
-    active = [c for c in changes if not c['archived']]
-    archived = [c for c in changes if c['archived']]
+    active = [c for c in changes if not c.archived]
+    archived = [c for c in changes if c.archived]
 
     if active:
         console.print()
@@ -147,12 +160,12 @@ def _print_changes_table(changes: list[ChangeInfo], dim: bool = False) -> None:
     table.add_column('Flags')
 
     for change in changes:
-        status = change['status']
+        status = change.status
         color, icon = STATUS_STYLES.get(status, ('dim', '❓'))
         if dim:
             color = 'dim'
 
-        progress = change['progress']
+        progress = change.progress
         progress_str = ''
         if progress['total'] > 0:
             progress_str = f"{progress['done']}/{progress['total']}"
@@ -160,16 +173,16 @@ def _print_changes_table(changes: list[ChangeInfo], dim: bool = False) -> None:
             progress_str = '0/0'
 
         flags = []
-        if change['has_pivot']:
+        if change.has_pivot:
             flags.append('⚡pivot')
-        if change['has_blockers']:
+        if change.has_blockers:
             flags.append('🚧blocked')
 
         table.add_row(
-            f"[{color}]{change['name']}[/{color}]",
+            f"[{color}]{change.name}[/{color}]",
             f'[{color}]{icon} {status}[/{color}]',
             progress_str,
-            str(change['path'].relative_to(Path.cwd()) / 'spec.md'),
+            str(change.path.relative_to(Path.cwd()) / 'spec.md'),
             ' '.join(flags),
         )
 
@@ -190,9 +203,18 @@ def status(name: str | None = None) -> None:
         _list_changes(sspec_root, include_all=False)
         return
 
-    change_path = sspec_root / 'changes' / name
-    if not change_path.exists():
+    # Use fuzzy lookup to find change
+    changes_dir = sspec_root / 'changes'
+    matches = find_change_matches(changes_dir, name)
+
+    if not matches:
         raise click.ClickException(f"Change '{name}' not found")
+
+    if len(matches) > 1:
+        # Multiple matches: ask user to select
+        change_path = _interactive_select_change(matches, name)
+    else:
+        change_path = matches[0]
 
     _show_change_detail(change_path)
 
@@ -220,9 +242,9 @@ def _show_change_detail(change_path: Path) -> None:
     console.print()
     console.print(
         Panel(
-            f"[bold]{change['name']}[/bold]\n"
-            f"Status: {change['status']}\n"
-            f"Progress: {change['progress']['done']}/{change['progress']['total']}\n"
+            f"[bold]{change.name}[/bold]\n"
+            f"Status: {change.status}\n"
+            f"Progress: {change.progress['done']}/{change.progress['total']}\n"
             f"{summary}",
             title='Change Details',
         )
@@ -248,7 +270,7 @@ def archive(name: str | None, yes: bool) -> None:
     # If no name provided, use interactive multi-select
     if not name:
         changes = list_changes(sspec_root)
-        active = [c for c in changes if not c['archived']]
+        active = [c for c in changes if not c.archived]
 
         if not active:
             raise click.ClickException('No active changes to archive')
@@ -267,7 +289,7 @@ def archive(name: str | None, yes: bool) -> None:
         if len(archivable) == 1 and not yes:
             # Single change: ask confirmation
             change_info = archivable[0]
-            name = change_info['name']
+            name = change_info.name
             if questionary.confirm(f"Archive '{name}'?", default=True).ask():
                 _archive_single_change(sspec_root, change_info, yes=True)
             else:
@@ -277,9 +299,9 @@ def archive(name: str | None, yes: bool) -> None:
         # Multi-select mode
         choices = [
             questionary.Choice(
-                title=f"{c['name']} [{c['status']}] - {c['progress']['done']}/{c['progress']['total']} tasks",
+                title=f"{c.name} [{c.status}] - {c.progress['done']}/{c.progress['total']} tasks",
                 value=c,
-                checked=(c['status'] == ChangeStatus.DONE.value),  # Default check DONE changes
+                checked=(c.status == ChangeStatus.DONE.value),  # Default check DONE changes
             )
             for c in archivable
         ]
@@ -306,16 +328,23 @@ def archive(name: str | None, yes: bool) -> None:
                 _archive_single_change(sspec_root, change_info, yes=True)
                 archived_count += 1
             except Exception as e:
-                console.print(f'[red]Failed to archive {change_info["name"]}: {e}[/red]')
+                console.print(f'[red]Failed to archive {change_info.name}: {e}[/red]')
 
         console.print()
         console.print(f'[green]✓[/green] Archived {archived_count}/{len(selected)} change(s)')
         return
 
-    # Single change mode (original behavior)
-    change_path = sspec_root / 'changes' / name
-    if not change_path.exists():
+    # Single change mode (use fuzzy lookup)
+    changes_dir = sspec_root / 'changes'
+    matches = find_change_matches(changes_dir, name)
+
+    if not matches:
         raise click.ClickException(f"Change '{name}' not found")
+
+    if len(matches) > 1:
+        change_path = _interactive_select_change(matches, name)
+    else:
+        change_path = matches[0]
 
     change_info = parse_change(change_path)
     _archive_single_change(sspec_root, change_info, yes)
@@ -324,9 +353,9 @@ def archive(name: str | None, yes: bool) -> None:
 def _archive_single_change(sspec_root: Path, change_info: ChangeInfo, yes: bool) -> None:
     """Archive a single change (extracted from original archive command)."""
     # Check current status
-    change_path = change_info['path']
+    change_path = change_info.path
     name = change_path.name
-    current_status = change_info['status']
+    current_status = change_info.status
 
     # Interactive prompt if status is not DONE and not forced
     # if current_status != ChangeStatus.DONE.value and not force:

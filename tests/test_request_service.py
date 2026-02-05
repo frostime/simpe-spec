@@ -107,14 +107,15 @@ def test_link_request_to_change_updates_frontmatter():
         )
 
         updated = req.read_text(encoding="utf-8")
-        assert "attach-change: demo" in updated
+        assert "attach-change: changes/demo/spec.md" in updated
         assert "status: DOING" in updated
 
 
 def test_archive_request_file_moves_and_resolves_conflicts():
     with tempfile.TemporaryDirectory() as tmpdir:
         project_root = Path(tmpdir)
-        requests_dir = project_root / ".sspec" / "requests"
+        sspec_root = project_root / ".sspec"
+        requests_dir = sspec_root / "requests"
         requests_dir.mkdir(parents=True, exist_ok=True)
 
         req = requests_dir / "x.md"
@@ -124,7 +125,7 @@ def test_archive_request_file_moves_and_resolves_conflicts():
         archive_dir.mkdir(parents=True, exist_ok=True)
         (archive_dir / "x.md").write_text("old", encoding="utf-8")
 
-        dest = archive_request_file(requests_dir=requests_dir, request_file=req)
+        dest = archive_request_file(sspec_root=sspec_root, requests_dir=requests_dir, request_file=req)
 
         assert not req.exists()
         assert dest.exists()

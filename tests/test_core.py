@@ -6,10 +6,10 @@ from pathlib import Path
 from sspec.core import (
     SSPEC_DIR,
     copy_template,
-    create_change,
     find_sspec_root,
     get_template_dir,
 )
+from sspec.services.change_service import create_change
 
 
 def test_find_sspec_root_not_found():

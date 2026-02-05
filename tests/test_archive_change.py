@@ -5,7 +5,8 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from sspec.core import SSPEC_DIR, archive_change, create_change, parse_change
+from sspec.core import SSPEC_DIR
+from sspec.services.change_service import archive_change, create_change, parse_change
 
 
 def _write_done_status(spec_file: Path) -> None:
@@ -33,6 +34,6 @@ def test_archive_change_moves_directory():
         _write_done_status(change_path / "spec.md")
 
         change_info = parse_change(change_path)
-        archived_path = archive_change(sspec_root, change_info, force=False)
+        archived_path = archive_change(sspec_root, change_info)
         assert archived_path.exists()
         assert not change_path.exists()

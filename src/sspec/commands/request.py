@@ -275,16 +275,16 @@ def archive_request(name: str | None, auto_yes: bool) -> None:
 
     # Single request mode
     if name:
-        _archive_single_request(requests_dir, name, auto_yes)
+        _archive_single_request(sspec_root, requests_dir, name, auto_yes)
         return
 
     # Multi-select mode
-    _archive_requests_interactive(requests_dir)
+    _archive_requests_interactive(sspec_root, requests_dir)
 
 
 def _archive_requests_interactive(
+    sspec_root: Path,
     requests_dir: Path,
-    # auto_yes: bool,
 ) -> None:
     """Interactive multi-select for archiving requests."""
     items = list_requests_service(requests_dir)
@@ -347,6 +347,7 @@ def _archive_requests_interactive(
     archived_count = 0
     for req in selected:
         _archive_single_request(
+            sspec_root,
             requests_dir,
             req.name,
             auto_yes=True,
@@ -358,6 +359,7 @@ def _archive_requests_interactive(
 
 
 def _archive_single_request(
+    sspec_root: Path,
     requests_dir: Path,
     name: str,
     auto_yes: bool,
@@ -370,7 +372,7 @@ def _archive_single_request(
             console.print('[yellow]Cancelled[/yellow]')
             return
 
-    dest_path = archive_request_file(requests_dir=requests_dir, request_file=request_path)
+    dest_path = archive_request_file(sspec_root=sspec_root, requests_dir=requests_dir, request_file=request_path)
 
     rel_path = dest_path.relative_to(requests_dir.parent)
     console.print(f'[green]✓[/green] Archived to: {rel_path}')

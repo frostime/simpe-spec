@@ -20,10 +20,10 @@ from sspec.core import (
     copy_template,
     get_sspec_root,
     get_template_dir,
-    list_changes,
     list_template_skills,
 )
 from sspec.services.agents_service import update_root_agents_block
+from sspec.services.change_service import list_changes
 from sspec.services.meta_service import load_meta, save_meta
 from sspec.services.project_init_service import (
     ProjectAlreadyInitializedError,
@@ -173,7 +173,7 @@ def status() -> None:
 def _show_overview(sspec_root: Path) -> None:
     """Show project overview."""
     changes = list_changes(sspec_root)
-    active = [c for c in changes if not c['archived']]
+    active = [c for c in changes if not c.archived]
 
     console.print()
     console.print('[bold]sspec Status[/bold]')
@@ -183,16 +183,19 @@ def _show_overview(sspec_root: Path) -> None:
         console.print('[dim]No active changes[/dim]')
     else:
         for change in active:
-            status = change.get('status', '')
+            # status = change.get('status', '')
+            status = change.status or ''
             status_icon = _get_status_icon(status)
-            name = change['name']
+            # name = change['name']
+            name = change.name
 
             console.print(
                 f'{status_icon} [bold]{name}[/bold] ' f'[{_get_status_color(status)}]{status}[/]'
             )
 
-            if change.get('description'):
-                console.print(f'  [dim]{change["description"]}[/dim]')
+            # if change.get('description'):
+            #     console.print(f'  [dim]{change["description"]}[/dim]')
+            console.print(f'  [dim]{change.description}[/dim]')
             console.print()
 
     console.print(f'[dim]{len(active)} active, {len(changes) - len(active)} archived[/dim]')

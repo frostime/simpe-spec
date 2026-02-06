@@ -2,20 +2,40 @@
 name: write-spec-doc
 description: Guide for writing project specifications in .sspec/spec-docs/. Use when creating or updating spec documents.
 metadata:
-  version: 1.5.0
+  version: 2.0.0
 ---
 
 # Write-Spec
 
 This skill covers:
+- [When to Create](#when-to-create) - Decision criteria
 - [Frontmatter](#frontmatter) - Required metadata fields
 - [Body Structure](#body-structure) - Template and organization
 - [Scope Definition](#scope-definition) - File path patterns
 - [Style Guide](#style-guide) - What to include/exclude
 - [Diagramming](#diagramming) - Mermaid examples
+- [Relationship to Changes](#relationship-to-changes) - Keeping specs current
 - [Deprecation](#deprecation) - Archiving obsolete specs
 - [Multi-File Specs](#multi-file-specs) - Complex subsystems
 - [Examples](#examples) - Good vs bad specs
+
+---
+
+## When to Create
+
+Create a spec-doc when:
+- A subsystem has design decisions that aren't obvious from code alone
+- Multiple changes will touch the same area and need shared context
+- The architecture involves non-trivial component interactions
+- API contracts need to be documented for external consumers or cross-team use
+- A convention or standard applies across multiple files/modules
+
+**Don't create** when:
+- Code comments and type signatures adequately capture the design
+- The topic is a single-file implementation detail
+- The information would duplicate framework/library documentation
+
+**Rule of thumb**: If a new developer would need 10+ minutes to understand the design intent from code alone, it deserves a spec-doc.
 
 ---
 
@@ -50,37 +70,66 @@ replacement: ""
 
 ## Body Structure
 
+The structure should match the **type of spec**. Below are recommended skeletons — adapt sections to fit the subject.
+
+### Architecture Spec
+
 ```markdown
-# <Spec Name>
+# <System Name>
 
 ## Overview
+**Purpose**: Why this system exists
+**Scope**: What's covered / what's excluded
 
-**Purpose**: Why this spec exists (1-2 sentences)
-**Scope**: What this covers and what it doesn't
+## Architecture
+<!-- Mermaid diagram -->
 
-## Current Design
-
-### Architecture
-<!-- Mermaid or PlantUML diagram -->
-
-### Components
+## Components
 | Component | Responsibility | Location |
 |-----------|----------------|----------|
-| AuthService | Token generation | `/src/auth/service.ts` |
 
-### Key Decisions
-**JWT over Sessions**: Stateless, scalable | Trade-off: Cannot revoke
+## Key Decisions
+**<Decision>**: <chosen approach> | Trade-off: <what was sacrificed>
 
-## Development Guidelines
-
-### File Organization
-### API Contracts
-### Configuration
-### Testing Requirements
-
-## References
-- Related: [Other Spec](./other.md)
+## Configuration
+## Testing Requirements
 ```
+
+### API Contract Spec
+
+```markdown
+# <API Name>
+
+## Overview
+**Base URL**: `/api/v2/...`
+**Auth**: Bearer token required
+
+## Endpoints
+### POST /resource
+**Request**: ...
+**Response**: ...
+**Errors**: ...
+
+## Data Models
+## Rate Limits
+## Versioning Policy
+```
+
+### Convention / Standard Spec
+
+```markdown
+# <Convention Name>
+
+## Overview
+**Purpose**: Why this convention exists
+**Applies to**: <file patterns or modules>
+
+## Rules
+## Examples
+## Exceptions
+```
+
+The key principle: **structure serves content**. Don't force an architecture template on an API contract.
 
 ---
 
@@ -117,7 +166,6 @@ scope:
 3. **Marketing language**: No "revolutionary", "cutting-edge"
 4. **Vague statements**: Quantify everything
 5. **Common knowledge**: Don't explain REST, HTTP, basic concepts
-6. **Future features**: Document current state only (YAGNI)
 
 ### Language
 
@@ -172,6 +220,29 @@ Avoid ASCII art.
 
 ---
 
+## Relationship to Changes
+
+Spec-docs and changes interact in two ways:
+
+### Change Creates a Spec-Doc
+When a change introduces a new subsystem or architecture, create the corresponding spec-doc as part of the change's tasks. Link via the reference field:
+```yaml
+# In change spec.md frontmatter:
+reference:
+  - source: "spec-docs/auth-system.md"
+    type: "doc"
+```
+
+### Change Modifies an Existing Spec-Doc
+When a change alters behavior documented in a spec-doc:
+1. Add a task in tasks.md: "Update spec-doc `spec-docs/<name>.md`"
+2. Update the spec-doc's `updated` field and affected sections
+3. Verify `scope` still matches actual files
+
+**Principle**: Spec-docs should never be silently outdated by a change. If code changes, the spec changes in the same change.
+
+---
+
 ## Deprecation
 
 When design becomes obsolete:
@@ -185,11 +256,11 @@ When design becomes obsolete:
 
 ## Multi-File Specs
 
-For complex subsystems:
+For complex subsystems needing multiple documents:
 
 ```
 spec-docs/payment-system/
-├── index.md          # Entry point
+├── index.md          # Entry point — overview + navigation
 ├── gateway.md        # Stripe integration
 ├── webhooks.md       # Event handling
 └── reconciliation.md # Ledger matching
@@ -210,6 +281,13 @@ scope:
   - /src/payment/**
 ---
 ```
+
+### Organization Rules
+
+- **index.md is the entry point**: Contains overview, component map, and links to sub-files
+- **Each sub-file is self-contained**: Has its own frontmatter with narrowed `scope`
+- **Cross-references use relative paths**: `[See Gateway](./gateway.md#error-handling)`
+- **Shared concepts go in index.md**: Avoid duplicating definitions across sub-files
 
 ---
 

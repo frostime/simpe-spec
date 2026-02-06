@@ -14,7 +14,7 @@ SSPEC is a document-driven AI collaboration framework. All planning, tracking, a
 .sspec/
 ├── project.md              # Project overview, tech stack, conventions
 ├── spec-docs/              # Project-level specifications (persistent)
-├── changes/<name>/         # Active change proposals
+├── changes/<n>/         # Active change proposals
 │   ├── spec.md | tasks.md | handover.md  # Required
 │   └── reference/ | script/             # Optional
 ├── requests/               # Lightweight proposals
@@ -40,7 +40,7 @@ When entering project in new session:
 
 ## 2. SCOPE: Changes
 
-Changes live in `.sspec/changes/<name>/`.
+Changes live in `.sspec/changes/<n>/`.
 
 | File/Dir | Contains | Required |
 |----------|----------|----------|
@@ -58,15 +58,17 @@ When user provides a vague request (idea, bug, feature), process BEFORE creating
 2. **Understand**: Read the request carefully. Identify the underlying need, not the surface ask. Requests are often confused—apply first-principles thinking to find the real problem.
 3. **Research**:  Gather context from `.sspec/project.md` and relevant code. If unclear terms or missing info, **use `sspec ask` actively**—it saves cost and reduces guessing.
 4. **Design**:  Once requirements are clear:
-- Simple changes: Draft spec.md mentally
-- Complex changes (>1 week / >15 files / >20 tasks): **Consider using `sspec ask`** to consult user on splitting into multi-change approach (root + sub-changes)
-  - For design exploration: Use `reference/` for drafts (design-draft.md, api-options.md, research.md)
-  - For one-off scripts: Use `script/` for migrations, test data generators
-- Finalize: Distill into spec.md Sections A/B/C
-1. **Confirm**: Before implementation, **use `sspec ask`** to present your understanding and plan. Wait for explicit approval.
-2. **Execute**: Proceed per SSPEC protocol. Update tasks.md after each task.
+   - Simple changes: Draft spec.md mentally
+   - Complex changes (>1 week / >15 files / >20 tasks): **Consider using `sspec ask`** to consult user on splitting into multi-change approach (root + sub-changes)
+     - For design exploration: Use `reference/` for drafts (design-draft.md, api-options.md, research.md)
+     - For one-off scripts: Use `script/` for migrations, test data generators
+   - Finalize: Distill into spec.md Sections A/B/C
+5. **Confirm**: Before implementation, **use `sspec ask`** to present your understanding and plan. Wait for explicit approval.
+6. **Execute**: Proceed per SSPEC protocol. Update tasks.md after each task.
 
 **Key principle**: Understand before acting. Wrong direction costs more than extra questions.
+
+📚 For quality standards, complexity assessment, and edge cases → Consult `sspec` SKILL
 
 ### 2.1 Status Transitions
 
@@ -84,16 +86,16 @@ When user provides a vague request (idea, bug, feature), process BEFORE creating
 
 ### 2.2 Directives
 
-#### `@change <name>`
+#### `@change <n>`
 
-If `.sspec/changes/<name>/` exists:
+If `.sspec/changes/<n>/` exists:
 - Read handover.md → tasks.md → spec.md
 - Check spec.md `reference` frontmatter field for linked requests/changes
 - If reference/ exists: Scan for context
 - Output: status, progress percentage, next 3 actions
 
 If new:
-- Run `sspec change new <name>` or `sspec change new --from <request>`
+- Run `sspec change new <n>` or `sspec change new --from <request>`
 - Follow Request → Change Workflow (Section 2.0)
 - Fill spec.md Sections A/B/C
 - Generate tasks.md from Section C
@@ -134,15 +136,9 @@ After autonomous coding without tracking:
 
 #### `@argue`
 
-User disagrees mid-implementation. STOP immediately.
+User disagrees mid-implementation. **STOP immediately**, then follow the rejection protocol.
 
-1. STOP current work
-2. Clarify what's wrong:
-   - Implementation detail → Revise task in tasks.md
-   - Design decision → Revise spec.md Section B
-   - Requirement itself → Revise spec.md Section A, add PIVOT marker
-3. Output revised plan
-4. WAIT for explicit confirmation before continuing
+📚 For detailed rejection protocol and scope assessment → Consult `sspec` SKILL
 
 ### 2.3 Edit Rules
 
@@ -164,9 +160,9 @@ Templates use markers to guide editing:
 Lightweight proposals before becoming changes. Location: `.sspec/requests/`
 
 ```
-Create:  sspec request new <name> | sspec request new --from <request>
+Create:  sspec request new <n> | sspec request new --from <request>
 Manual Link:    sspec request link <request> <change>
-Archive: sspec request archive <name>
+Archive: sspec request archive <n>
 ```
 
 Request = "I want X" (idea)
@@ -178,10 +174,10 @@ Change = "Here's how we do X" (plan + execution)
 
 Project-level specifications (architecture, API contracts, standards). Location: `.sspec/spec-docs/`
 
-#### `@doc <name>`
+#### `@doc <n>`
 
 If creating new:
-- Run `sspec doc new "<name>" [--dir]`
+- Run `sspec doc new "<n>" [--dir]`
 - Consult write-spec-doc SKILL
 - Write specification following SKILL guidelines
 
@@ -200,27 +196,8 @@ If updating:
 
 Use when needing user input mid-execution. Saves cost (1 turn instead of 2), reduces hallucination/directional errors, and persists Q&A record.
 
-**When to use** (mandatory triggers):
-1. User explicitly requested ask/confirmation
-2. Information missing → Cannot proceed reliably
-3. Directional choice → Multiple valid approaches (not minor tweaks)
-4. Work completion check → Confirm task is done before ending turn
-5. Repeated failures (3+ attempts) → Need user insight
-
-**Two-step workflow**:
-```bash
-# Step 1: Create template
-sspec ask create --name <topic>
-
-# Step 2: Edit the .py file (REASON + QUESTION)
-
-# Step 3: Execute prompt
-sspec ask prompt <path>
-```
-
-**Active use principle**: Guessing wastes more tokens than one ask. When in doubt, ask.
-
-📚 For detailed syntax and examples → Consult `sspec-ask` SKILL
+📚 For triggers, workflow, syntax and examples → Consult `sspec-ask` SKILL
+🤖 User input directive `/sspec-ask` → Consult `sspec-ask` SKILL, and apply ask when {Confuse, Before End, Tool call rejected}.
 
 ---
 
@@ -244,4 +221,3 @@ ON uncertainty:
 ```
 
 <!-- SSPEC:END -->
-

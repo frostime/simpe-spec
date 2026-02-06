@@ -3,7 +3,7 @@ name: sspec-ask
 description: Mid-execution user consultation. USE ACTIVELY to reduce errors and save cost.
 metadata:
    author: frostime
-   version: 3.1.0
+   version: 4.0.0
 ---
 
 # SSPEC Ask Skill
@@ -14,19 +14,26 @@ metadata:
 
 ## When to Trigger (Critical Decision Points)
 
-**REQUIRED use cases** - Agent MUST use sspec ask when:
+**REQUIRED use cases** — Agent MUST use sspec ask when:
 
-1. **User explicitly requested** - User mentions ask/confirmation in their request
-2. **Information missing** - Cannot proceed reliably without user clarification
+1. **User explicitly requested** — User mentions ask/confirmation in their request
+2. **Information missing** — Cannot proceed reliably without user clarification
    - Example: User mentions ambiguous terms without context → Ask for specific meaning
-3. **Directional choice needed** - Multiple valid approaches exist (not minor tweaks)
-   - Example: Component refactor could use multiple architecture styles → Ask for user preference
-4. **Work completion check** - Agent believes task is done
-   - Example: Code changes completed → Ask user to verify satisfaction before ending turn
-5. **Repeated failures** - Multiple attempts failed, need user insight
-   - Example: CLI command fails 3+ times → Ask user for environment details
+3. **Directional choice needed** — Multiple valid approaches exist (not minor tweaks)
+   - Example: Component refactor could use multiple architecture styles → Ask preference
+4. **Work completion check** — Agent believes task is done
+   - Example: Code changes completed → Ask user to verify before ending turn
+5. **Repeated failures** — Multiple attempts failed, need user insight
+   - Example: CLI command fails 3+ times → Ask for environment details
 
-**Why active use matters**: Reduces guessing, prevents directional errors, saves tokens by avoiding rework, ensures alignment with user intent.
+**Cost principle**: One ask < rework from wrong guess. Prefer asking over guessing.
+
+### When NOT to Ask
+
+Don't create an ask for trivial decisions where:
+- Only one reasonable approach exists
+- The choice is easily reversible (e.g., variable naming)
+- The answer is available in project.md or existing spec-docs
 
 ---
 
@@ -39,17 +46,26 @@ sspec ask create --name <topic>
 Creates `.sspec/asks/<timestamp>_<topic>.py`
 
 **Step 2**: Edit the `.py` file
-- Fill `REASON` (why asking)
-- Fill `QUESTION` (what to ask)
+- Fill `REASON` (why asking — for future reference)
+- Fill `QUESTION` (what to ask — be specific, provide options when possible)
 - Do NOT edit `USER_ANSWER`
 
 **Step 3**: Execute
 ```bash
 sspec ask prompt <path>
 ```
-**Output**: Use's answer, and creates `.sspec/asks/<timestamp>_<name>.py` with template as follow.
+Prompts user in terminal and captures their answer.
 
-**Error Case**: `sspec ask prompt` output shows that do not exists the `<timestamp>_<name>.py` file -- might becasue the file has been achived to md, check if exsits `<timestamp>_<name>.md`.
+**Step 4**: Automatic lifecycle
+After execution, the `.py` file is appended with the user's `ANSWER`, then **converted to `.md`** for permanent record. The `.py` file is deleted.
+
+### Error Handling
+
+If `sspec ask prompt` reports file not found:
+- The ask may have already been answered and archived. Check if `<timestamp>_<topic>.md` exists in `.sspec/asks/`.
+- If the `.md` file exists, read the answer from it directly.
+
+---
 
 ## Template Format
 
@@ -68,9 +84,13 @@ QUESTION = r"""
 USER_ANSWER = r""""""
 ```
 
+After execution, `ANSWER` is appended automatically. Then the file converts to `.md`.
+
 ---
 
-## Example: Directional Choice
+## Patterns
+
+### Single Decision Ask
 
 ```python
 REASON = r"""
@@ -96,14 +116,51 @@ Which aligns with project priorities?
 """
 ```
 
+### Batched Questions
+
+When multiple related questions arise, **batch them in a single ask** rather than creating separate asks for each:
+
+```python
+REASON = r"""
+Starting auth module implementation, several design decisions needed
+"""
+
+QUESTION = r"""
+Before starting the auth module, I need a few decisions:
+
+1. **Token format**: JWT (stateless, standard) or opaque tokens (revocable, simpler)?
+2. **Session storage**: Redis (fast, needs infra) or DB table (simpler, slower)?
+3. **Password hashing**: bcrypt (proven) or argon2 (newer, more resistant)?
+
+For each, my recommendation is in bold if it helps. Override any as you see fit.
+"""
+```
+
+### Confirmation Before Major Action
+
+```python
+REASON = r"""
+About to delete and recreate the database schema — irreversible action
+"""
+
+QUESTION = r"""
+I'm about to run the migration that drops and recreates the `users` table.
+This will delete all existing user data in dev.
+
+Proceed? (yes/no)
+"""
+```
+
 ---
 
 ## Guidelines
 
 | Do | Don't |
 |----|-------|
-| Use descriptive `--name` | Use generic names (`q1`, `ask`) |
-| `--name` only contains letters and underscore | Use names (`非英文字符`, `other_symbols_like$#%*`) |
-| Fill `REASON` for context | Leave `REASON` empty |
+| Use descriptive `--name` (e.g., `auth_approach`) | Use generic names (`q1`, `ask`, `question`) |
+| Keep `--name` to letters and underscores only | Use non-ASCII or special characters in names |
+| Fill `REASON` with context for future reference | Leave `REASON` empty or vague |
 | Ask early when uncertain | Guess and risk rework |
-| Provide options when applicable | Leave open-ended if choices exist |
+| Provide options when choices exist | Leave open-ended if you already have candidates |
+| Batch related questions in one ask | Create 3 separate asks for related decisions |
+| Check project.md/spec-docs before asking | Ask for info that's already documented |

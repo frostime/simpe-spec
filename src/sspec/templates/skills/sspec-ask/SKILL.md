@@ -1,7 +1,9 @@
 ---
-skill: sspec-ask
-version: 3.1.0
+name: sspec-ask
 description: Mid-execution user consultation. USE ACTIVELY to reduce errors and save cost.
+metadata:
+   author: frostime
+   version: 3.1.0
 ---
 
 # SSPEC Ask Skill
@@ -105,24 +107,3 @@ Which aligns with project priorities?
 | Fill `REASON` for context | Leave `REASON` empty |
 | Ask early when uncertain | Guess and risk rework |
 | Provide options when applicable | Leave open-ended if choices exist |
-
-
----
-
-## Final Record Format
-
-```markdown
----
-created: '<timestamp>'
-name: <topic>
-why: <reason>
----
-
-# Ask: <topic>
-
-## Question
-<question_text>
-
-## Answer
-<answer_text>
-```

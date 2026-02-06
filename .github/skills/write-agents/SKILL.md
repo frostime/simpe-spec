@@ -1,6 +1,7 @@
 ---
-skill: write-agents
+name: write-agents
 description: "编写优化 Agents.md 时需要遵循的规范、风格、指南"
+---
 
 # write-agents
 

@@ -1,7 +1,8 @@
 ---
-name: write-spec
-version: 1.5.0
+name: write-spec-doc
 description: Guide for writing project specifications in .sspec/spec-docs/. Use when creating or updating spec documents.
+metadata:
+  version: 1.5.0
 ---
 
 # Write-Spec

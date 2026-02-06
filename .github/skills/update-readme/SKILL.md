@@ -1,7 +1,9 @@
 ---
-skill: update-readme
-version: 1.0.0
+name: update-readme
 description: Automate README updates and i18n translations. Use when project features change and documentation needs sync.
+metadata:
+  author: frsotime
+  version: 1.0.0
 ---
 
 # Update README Skill

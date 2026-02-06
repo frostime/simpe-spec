@@ -1,7 +1,9 @@
 ---
-skill: sspec
-version: 6.0.0
+name: sspec
 description: Quality standards and workflows for SSPEC changes. Covers single/multi-change assessment, document standards, reference field usage, and edge cases. Consult when starting changes, handling complex scenarios, or unsure about quality standards.
+metadata:
+  author: frsotime
+  version: 6.0.0
 ---
 
 # SSPEC Skill
@@ -182,7 +184,7 @@ Track relationships: request → change, sub-change ↔ root change, change → 
 ```yaml
 reference:
   - source: "requests/26-02-05T14-00_add-auth.md"  # Relative to .sspec/
-    type: "request"  # 'request' | 'sub-change' | 'sup-change' | 'doc'
+    type: "request"  # 'request' | 'sub-change' | 'root-change' | 'doc'
     note: "Original feature proposal"  # Optional
 ```
 

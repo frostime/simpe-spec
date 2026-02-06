@@ -6,6 +6,10 @@ attach-change: null
 tldr: ""
 ---
 
+<!-- @RULE: Frontmatter Type
+status: OPEN | DOING | DONE | CLOSED;
+ -->
+
 # Request: {{NAME}}
 
 ## Context

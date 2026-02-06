@@ -38,11 +38,12 @@ console = Console()
 DEFAULT_GITIGNORE = """
 !spec-docs/**
 !project.md
+!.meta.json
+!memory/**
 changes/**
 requests/**
 skills/**
 asks/**
-.meta.json
 """.strip()
 
 

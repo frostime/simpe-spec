@@ -5,7 +5,8 @@
 ---
 
 ## Background
-<!-- 1-3 paragraphs: What this change is about -->
+<!-- @RULE: Write once on first session, update only if scope changes.
+One sentence: what this change does and why. Details are in spec.md. -->
 
 ## Accomplished This Session
 <!-- Specific list of what got done -->
@@ -14,7 +15,7 @@
 <!-- PLANNING / DOING / BLOCKED / REVIEW -->
 
 ## Next Steps
-<!-- File-level actions. Example:
+<!-- 1-3 specific file-level actions. Example:
 1. Implement `src/auth/jwt.py:refresh_token()`
 2. Add tests in `tests/test_jwt.py`
 -->

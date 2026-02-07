@@ -16,6 +16,8 @@ metadata:
 
 **Note**: Core protocol (directives, status transitions, cold start) is in AGENTS.md. This SKILL provides quality depth.
 
+📋 For quick checklists at specific checkpoints → See [references/checklists.md](./references/checklists.md)
+
 ---
 
 ## Change Complexity Assessment
@@ -40,7 +42,7 @@ Use when ANY of:
 - **Tasks**: >20 tasks, or phases with distinct milestones
 - **Risk**: High, requires staged rollout or extensive testing
 
-**Pattern**: Create **root change** for coordination + multiple **sub-changes** for execution.
+**Pattern**: Create **root change** (`sspec change new <n> --root`) for coordination + multiple **sub-changes** for execution.
 
 **When uncertain**: Use `sspec ask` to consult user on splitting approach.
 
@@ -48,30 +50,41 @@ Use when ANY of:
 
 ## Multi-Change Management
 
+### Root vs Sub-Change
+
+| Aspect | Root Change | Sub-Change |
+|--------|------------|------------|
+| Template | `--root` flag → phase-level | Default → file-level |
+| spec.md Section C | Phase/sub-change breakdown | File-level task breakdown |
+| tasks.md | Milestones (one per sub-change) | Atomic tasks (<2h each) |
+| handover.md | Sub-change status tracking | File-level next steps |
+| Lifecycle | Active until all subs complete | Normal: PLANNING→DONE |
+
 ### Structure
 
 ```
 Root change (coordinator):
   - changes/<root-name>/
-    ├── spec.md         # Overall vision, phases overview
-    ├── tasks.md        # High-level milestones
-    ├── reference/      # Shared design docs, architecture
-    └── script/         # Shared migration scripts
+    ├── spec.md         # Overall vision, phase overview (change-type: root)
+    ├── tasks.md        # Milestones per sub-change
+    ├── handover.md     # Sub-change status tracking
+    ├── reference/      # Shared design docs
+    └── script/         # Shared scripts
 
 Sub-changes (execution):
   - changes/<sub-name>/
-    ├── spec.md         # Focused scope, reference links to root
-    ├── tasks.md        # Specific tasks for this phase
+    ├── spec.md         # Focused scope (change-type: sub)
+    ├── tasks.md        # File-level tasks
     └── handover.md
 ```
 
 ### Workflow
 
-1. **Create root change**: Design overall approach, break into phases
-2. **Create first sub-change**: Link to root via `reference` field
-3. **Complete → Archive → Next**: Archive sub-change, create next
-4. **Root stays active**: Until all sub-changes complete
-5. **Final archive**: Archive root when everything done
+1. **Create root**: `sspec change new <n> --root` → design phases
+2. **Create sub-change**: `sspec change new <sub-n>` → link to root via `reference`
+3. **Execute sub-change**: Normal PLANNING→DOING→REVIEW→DONE cycle
+4. **Archive sub-change → create next**: Repeat for each phase
+5. **Archive root**: When all sub-changes complete
 
 ### Reference Linking
 
@@ -103,40 +116,13 @@ reference:
 | C. Implementation | File-level tasks | "Modify auth files" | "`src/auth/jwt.py` — create refresh_token()" |
 | D. Blockers | Dated, actionable | "Waiting on DevOps" | "Blocker (01-27): Need Redis host:port" |
 
-**Section C format**:
-```markdown
-### Phase 1: Infrastructure
-- `src/cache/redis.py` — create, connection pool setup
-- `requirements.txt` — modify, add redis>=4.0
-
-### Phase 2: Core Logic
-- `src/auth/jwt.py` — create, token generation/validation
-- `src/auth/middleware.py` — modify, add cache-first lookup
-
-### Risks & Dependencies
-- Redis server required (coordinate with DevOps)
-```
-
 ### tasks.md
 
 | Criterion | Standard |
 |-----------|----------|
-| Granularity | Each task <2h, independently testable |
+| Granularity | Each task <2h, independently testable (sub/single); milestone-level (root) |
 | Verification | Each phase has explicit pass criteria |
 | Progress tracking | Update after completing EACH task |
-
-**Format**:
-```markdown
-### Phase 1: Infrastructure ✅
-- [x] Add redis dependency to `requirements.txt`
-- [x] Create connection pool in `src/cache/redis.py`
-**Verification**: `pytest tests/test_cache.py` all pass
-
-### Phase 2: Core Logic 🚧
-- [x] Implement cache-first lookup in `src/auth/middleware.py`
-- [ ] Create token refresh in `src/auth/jwt.py`
-**Verification**: Auth endpoint responds in <100ms
-```
 
 ### handover.md
 
@@ -144,7 +130,7 @@ reference:
 |-------|---------|-------------|--------------|
 | Background | One-sentence overview | "Doing auth" | "JWT+Redis cache to reduce auth from 5s to <1s" |
 | Accomplished | What's done this session | "Made progress" | "Phase 1 complete: redis pool + middleware integration" |
-| Next Steps | 1-3 specific file actions | "Continue" | "1. Code jwt.py:refresh_token() 2. Add token expiry tests" |
+| Next Steps | 1-3 specific actions | "Continue" | "1. Code jwt.py:refresh_token() 2. Add token expiry tests" |
 | Conventions | Patterns discovered | (empty) | "Cache key format: `auth:{user_id}`, TTL: 900s" |
 
 **Quality test**: New Agent can resume in <30 seconds?
@@ -194,10 +180,6 @@ reference:
 | `root-change` | Parent coordinator | sub-change → root |
 | `sub-change` | Child execution unit | root → sub-change |
 | `doc` | Related spec-doc | change → spec-doc |
-
-### Auto-populated
-- `sspec change new --from <req>`: Creates change with `request` reference
-- `sspec request link <req> <chg>`: Updates both request and change
 
 ---
 
@@ -267,34 +249,4 @@ When spec.md keeps getting revised in PLANNING:
 | Batch progress updates | Lose track of actual state | Update after **each** task |
 | Over-use reference/ | Wasted effort on simple changes | Reserve for complex design |
 | Forget reference field | Lost traceability | Use CLI auto-link or add manually |
-
----
-
-## Checklists
-
-### Starting New Change
-
-- [ ] Assessed: Single vs multi-change?
-- [ ] If multi-change: Created root change first?
-- [ ] Spec.md Section A: Problem quantified with metrics?
-- [ ] Spec.md Section B: Solution approach + rationale stated?
-- [ ] Spec.md Section C: File-level task breakdown provided?
-- [ ] Tasks.md: Each task <2h, has verification criteria?
-- [ ] Handover.md: Initial context documented?
-- [ ] Reference field: Linked to originating request (if applicable)?
-
-### Before Transitioning to REVIEW
-
-- [ ] All tasks marked `[x]` in tasks.md?
-- [ ] All phase verification criteria met?
-- [ ] Handover.md reflects completion?
-- [ ] Spec.md Section D: No undocumented blockers?
-- [ ] Code tested and passing?
-
-### Before @handover (End of Session)
-
-- [ ] Handover.md: "Accomplished" updated?
-- [ ] Handover.md: "Next Steps" clear (1-3 file-level actions)?
-- [ ] Handover.md: "Conventions" updated if new patterns found?
-- [ ] Tasks.md: Progress percentage updated?
-- [ ] Spec.md: Status accurate?
+| Use file-level tasks in root | Root is coordinator, not executor | Use milestone-level tasks |

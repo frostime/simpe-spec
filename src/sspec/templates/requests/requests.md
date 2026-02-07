@@ -8,6 +8,7 @@ tldr: ""
 
 <!-- @RULE: Frontmatter Type
 status: OPEN | DOING | DONE | CLOSED;
+tldr: One-sentence summary for list views — fill this!
  -->
 
 # Request: {{NAME}}
@@ -18,8 +19,9 @@ status: OPEN | DOING | DONE | CLOSED;
 ## Problem
 <!-- What's not working or missing -->
 
-## Initiative / Proposal
-<!-- Your initial idea or direction — rough thoughts are fine -->
+## Initial Direction
+<!-- Your rough idea or preferred direction — details are fine but not required.
+This becomes the starting point for the change's spec.md Section A/B. -->
 
 ## Additional Context
 <!-- Constraints, preferences, related links -->

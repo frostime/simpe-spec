@@ -22,6 +22,10 @@ updated: ""
 ## Progress
 <!-- @REPLACE -->
 
+<!-- @RULE: Update percentage and status after EACH task completion.
+Use 🚧 (in progress), ✅ (done), ⏳ (pending).
+CLI `sspec change status` auto-calculates from checkboxes — keep tasks.md as source of truth. -->
+
 **Overall**: 0%
 
 | Phase | Progress | Status |

@@ -2,12 +2,14 @@
 name: {{CHANGE_NAME}}
 status: PLANNING
 type: ""
+change-type: single
 created: {{TIME}}
 reference: null
 ---
 
 <!-- @RULE: Frontmatter Type
-status: PLANNING | DOING | REVIEW | DONE | BLOCK;
+status: PLANNING | DOING | REVIEW | DONE | BLOCKED;
+change-type: single | sub (sub if part of a root change);
 reference?: Array<{source: str; type: RefType; note?}>;
 type RefType: 'request' | 'root-change' | 'sub-change' | 'doc';
  -->
@@ -17,11 +19,9 @@ type RefType: 'request' | 'root-change' | 'sub-change' | 'doc';
 ## A. Problem Statement
 <!-- @REPLACE -->
 
-### Current Situation
-<!-- @RULE: Quantify pain. Format: "[metric] causing [impact]" -->
-
-### User Requirement
-<!-- @RULE: Measurable acceptance criteria -->
+<!-- @RULE: Quantify pain. Format: "[metric] causing [impact]".
+For simple changes, a single paragraph is fine — no need to split into sub-sections.
+For complex changes, use "Current Situation" + "User Requirement" sub-headings. -->
 
 ## B. Proposed Solution
 <!-- @REPLACE -->
@@ -34,8 +34,9 @@ type RefType: 'request' | 'root-change' | 'sub-change' | 'doc';
 
 ## C. Implementation Strategy
 <!-- @REPLACE -->
+
 <!-- @RULE: File-level breakdown. Format:
-### Phase N: <name>
+### Phase N: <n>
 - `path/file.py` — create|modify, <what>
 
 ### Risks & Dependencies
@@ -44,6 +45,7 @@ type RefType: 'request' | 'root-change' | 'sub-change' | 'doc';
 
 ## D. Blockers & Feedback
 <!-- @REPLACE -->
+
 <!-- @RULE: Record with dates. Format:
 ### Blocker (YYYY-MM-DD)
 **Blocked**: <what> | **Needed**: <to unblock>

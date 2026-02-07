@@ -12,11 +12,11 @@ SSPEC is a document-driven AI collaboration framework. All planning, tracking, a
 **Folder Structure**:
 ```
 .sspec/
-├── project.md              # Project overview, tech stack, conventions
-├── spec-docs/              # Project-level specifications (persistent)
-├── changes/<name>/         # Active change proposals
+├── project.md              # Identity, conventions, accumulated notes (memory)
+├── spec-docs/              # Formal specifications (architecture, APIs, standards)
+├── changes/<n>/            # Active change proposals
 │   ├── spec.md | tasks.md | handover.md  # Required
-│   └── reference/ | script/             # Optional
+│   └── reference/ | script/              # Optional
 ├── requests/               # Lightweight proposals
 └── asks/                   # Human-in-the-loop Q&A records
 ```
@@ -27,21 +27,33 @@ SSPEC is a document-driven AI collaboration framework. All planning, tracking, a
 
 When entering project in new session:
 
-1. Read `.sspec/project.md`
+1. Read `.sspec/project.md` — identity, conventions, and accumulated notes
 2. Determine action based on user message:
 
 | User Message | Action |
 |--------------|--------|
 | Contains `@resume` or `@change` | Load that change's context |
+| Contains `@status` | Show project overview (see below) |
+| Micro task (≤3 files, ≤30min, obvious) | Do directly, no change ceremony |
 | Vague request (idea/bug/feature) | Follow Request → Change Workflow (Section 2.0) |
 | Simple task, no directive | Do directly, skip sspec ceremony |
-| Micro change (≤3 files, ≤30 min) | Plan inline in request file, skip change ceremony |
+
+3. If touching unfamiliar subsystem → check `spec-docs/` for relevant specs
+
+#### `@status`
+
+Project-wide overview. Output:
+
+1. Active changes: name, status, progress% for each
+2. Pending requests (OPEN/DOING)
+3. Blockers across all changes
+4. Recent entries from `project.md` Notes (if any)
 
 ---
 
 ## 2. SCOPE: Changes
 
-Changes live in `.sspec/changes/<name>/`.
+Changes live in `.sspec/changes/<n>/`.
 
 | File/Dir | Contains | Required |
 |----------|----------|----------|
@@ -53,24 +65,25 @@ Changes live in `.sspec/changes/<name>/`.
 
 ### 2.0 Request → Change Workflow
 
-<!-- Request → Change Pre-check -->
-**First**: Assess if a change is needed at all.
-- **Micro change** (≤3 files, ≤30 min, user says OK): Track in request file directly. Add a `## Plan` and `## Done` section to the request. No change ceremony needed.
-- **Normal change**: Proceed with workflow below.
+When user provides a request (idea, bug, feature), assess scale FIRST:
 
-<!-- Request → Change Main Workflow -->
-User provides a vague request (idea, bug, feature), process following BEFORE creating change:
+**Micro** (≤3 files, ≤30min, no design decisions):
+- Track inline in request file — add `## Plan` and `## Done` sections
+- Or just do it directly if user approves
+- No change ceremony needed
 
-1. **Change**: Invoke `sspec change new` with `--from` or invoke `link` after new, make request-change pair.
+**Normal+** (anything bigger):
+
+1. **Link**: Invoke `sspec change new` with `--from` or invoke `link` after new, make request-change pair.
 2. **Understand**: Read the request carefully. Identify the underlying need, not the surface ask. Requests are often confused—apply first-principles thinking to find the real problem.
-3. **Research**: Gather context from `.sspec/project.md` and relevant code. If unclear terms or missing info, **use `sspec ask` actively**—it saves cost and reduces guessing.
+3. **Research**: Gather context from `.sspec/project.md` and relevant code. If unclear terms or missing info, **use `@ask` actively**—it saves cost and reduces guessing.
 4. **Design**: Once requirements are clear:
    - Simple changes: Draft spec.md mentally
-   - Complex changes (>1 week / >15 files / >20 tasks): **Use `sspec ask`** to consult user on splitting into multi-change approach. If confirmed, use `sspec change new <n> --root` to create a root change.
+   - Complex changes (>1 week / >15 files / >20 tasks): **Use `@ask`** to consult user on splitting into multi-change approach. If confirmed, use `sspec change new <n> --root` to create a root change.
      - For design exploration: Use `reference/` for drafts
      - For one-off scripts: Use `script/`
    - Finalize: Distill into spec.md Sections A/B/C
-5. **Confirm**: Before implementation, **use `sspec ask`** to present your understanding and plan. Wait for explicit approval.
+5. **Confirm**: Before implementation, **use `@ask`** to present your understanding and plan. Wait for explicit approval.
 6. **Execute**: Proceed per SSPEC protocol. Update tasks.md after each task.
 
 **Key principle**: Understand before acting. Wrong direction costs more than extra questions.
@@ -93,17 +106,17 @@ User provides a vague request (idea, bug, feature), process following BEFORE cre
 
 ### 2.2 Directives
 
-#### `@change <name>`
+#### `@change <n>`
 
-If `.sspec/changes/<name>/` exists:
+If `.sspec/changes/<n>/` exists:
 - Read handover.md → tasks.md → spec.md
 - Check spec.md `reference` frontmatter field for linked requests/changes
 - If reference/ exists: Scan for context
 - Output: status, progress percentage, next 3 actions
 
 If new:
-- Run `sspec change new <name>` or `sspec change new --from <request>`
-- For complex scope: `sspec change new <name> --root` (creates phase-level coordinator)
+- Run `sspec change new <n>` or `sspec change new --from <request>`
+- For complex scope: `sspec change new <n> --root` (creates phase-level coordinator)
 - Follow Request → Change Workflow (Section 2.0)
 - Fill spec.md Sections A/B/C, (follow `@RULE` inside template)
 - Generate tasks.md from Section C, (follow `@RULE` inside template)
@@ -129,6 +142,9 @@ Execute at session end. No exceptions.
    - Update progress percentage
 
 3. If status changed: Update spec.md frontmatter
+
+4. If project-level learnings discovered (not change-specific):
+   Append to `.sspec/project.md` Notes section
 
 **Quality check**: Would a new Agent know exactly what to do in <30 seconds?
 
@@ -168,24 +184,28 @@ Templates use markers to guide editing:
 Lightweight proposals before becoming changes. Location: `.sspec/requests/`
 
 ```
-Create:  sspec request new <name>
+Create:  sspec request new <n>
 Link:    sspec request link <request> <change>
-Archive: sspec request archive <name>
+Archive: sspec request archive <n>
 ```
 
 Request = "I want X" (idea)
 Change = "Here's how we do X" (plan + execution)
 
+**Micro-change shortcut**: For ≤3 files / ≤30min work, track plan and result directly in the request file. No change needed.
+
 ---
 
 ## 4. SCOPE: Spec-Docs
 
-Project-level specifications (architecture, API contracts, standards). Location: `.sspec/spec-docs/`
+Formal project-level specifications (architecture, API contracts, standards). Location: `.sspec/spec-docs/`
 
-#### `@doc <name>`
+Use spec-docs for knowledge **too complex for project.md Conventions** and **needs to survive beyond any single change**.
+
+#### `@doc <n>`
 
 If creating new:
-- Run `sspec doc new "<name>" [--dir]`
+- Run `sspec doc new "<n>" [--dir]`
 - Consult write-spec-doc SKILL
 - Write specification following SKILL guidelines
 
@@ -209,7 +229,8 @@ sspec ask list               # View pending/completed asks
 ```
 
 📚 For triggers, workflow, syntax and examples → Consult `sspec-ask` SKILL
-🤖 User input directive `/sspec-ask` → Consult `sspec-ask` SKILL, and apply ask when {Confuse, Before End, Tool call rejected}.
+
+User directive `@ask` → Consult `sspec-ask` SKILL, and trigger ask when {confused, before session end, tool call rejected}.
 
 ---
 
@@ -218,18 +239,33 @@ sspec ask list               # View pending/completed asks
 ```
 ON user_message:
     IF contains @directive     → Execute directive
+    IF micro task (≤3 files)   → Do directly, skip ceremony
     IF active change is DOING  → Continue tasks, update tasks.md after each
     ELSE                       → Follow Request → Change Workflow (2.0)
 
 ON need_user_input:
-    USE sspec ask              → Persists record, saves cost
+    USE @ask                   → Persists record, saves cost
 
 ON session_end:
     MUST @handover             → No exceptions
+    IF project-level learning  → Append to project.md Notes
 
 ON uncertainty:
     Consult SKILL              → sspec, sspec-ask, write-spec-doc
-    OR use sspec ask for guidance
+    OR use @ask for guidance
 ```
+
+### Directive Quick Reference
+
+| Directive | Scope | What it does |
+|-----------|-------|--------------|
+| `@change <n>` | Changes | Load or create change context |
+| `@resume` | Changes | Continue active change |
+| `@handover` | Changes | Save context + notes for next session |
+| `@sync` | Changes | Reconcile tasks with actual work |
+| `@argue` | Changes | Stop, clarify, re-plan |
+| `@status` | Project | Active changes, requests, blockers overview |
+| `@doc <n>` | Spec-Docs | Create or update specification |
+| `@ask` | Ask | Consult user, by using `sspec ask` |
 
 <!-- SSPEC:END -->

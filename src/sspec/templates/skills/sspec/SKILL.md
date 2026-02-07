@@ -1,187 +1,88 @@
 ---
 name: sspec
-description: Quality standards and workflows for SSPEC changes. Covers single/multi-change assessment, document standards, reference field usage, and edge cases. Consult when starting changes, handling complex scenarios, or unsure about quality standards.
+description: Core decision-making for SSPEC workflow. Complexity assessment (micro/single/multi), knowledge routing, reference field usage, and edge case handling. Consult when starting work or unsure where something belongs.
 metadata:
   author: frostime
-  version: 7.0.0
+  version: 7.1.0
 ---
 
 # SSPEC Skill
 
 **When to consult**:
-- Starting a new change → Complexity assessment (single vs multi-change)
-- Filling spec.md / tasks.md / handover.md → Quality standards below
-- Handling edge cases → Blockers, rejection (@argue), multi-change coordination
-- Using reference field or reference/ directories
+- Starting new work → Complexity assessment below
+- "Where does this knowledge go?" → Knowledge routing below
+- Filling spec.md / tasks.md / handover.md → [references/quality-standards.md](./references/quality-standards.md)
+- Multi-change coordination → [references/multi-change.md](./references/multi-change.md)
+- Quick checkpoint checks → [references/checklists.md](./references/checklists.md)
 
-**Note**: Core protocol (directives, status transitions, cold start) is in AGENTS.md. This SKILL provides quality depth.
-
-📋 For quick checklists at specific checkpoints → See [references/checklists.md](./references/checklists.md)
+**Note**: Core protocol (directives, status transitions, cold start) is in AGENTS.md. This SKILL provides decision depth.
 
 ---
 
-## Change Complexity Assessment
+## Complexity Assessment
 
-**FIRST DECISION**: Single change or multi-change?
+**FIRST DECISION** when receiving work: how big is this?
 
-### No Change Needed (micro)
+### Micro (no change needed)
 
-Use when ALL of:
-- **Scope**: ≤3 files
-- **Time**: ≤30 minutes
-- **Complexity**: No design decisions, obvious implementation
+ALL of: ≤3 files, ≤30 minutes, no design decisions, trivially reversible.
 
-**Action**: Track in request file or do directly. No change ceremony.
+**Action**: Do directly, or track in request file (`## Plan` / `## Done`). No change ceremony.
+
+**Examples**: Fix typo, adjust config, add import, rename variable, update version.
 
 ### Single Change (default)
 
-Use when ALL of:
-- **Time**: Completable in ≤1 week
-- **Scope**: Modifies ≤15 files, focuses on one subsystem
-- **Tasks**: ≤20 actionable tasks
-- **Risk**: Low, changes are reversible
+ALL of: ≤1 week, ≤15 files in one subsystem, ≤20 tasks, low risk.
 
-**Examples**: Bug fix, add single API endpoint, refactor one module, update docs.
+**Examples**: Bug fix, add API endpoint, refactor one module, update docs.
 
-### Multi-Change (complex projects)
+### Multi-Change (complex)
 
-Use when ANY of:
-- **Time**: >1 week estimated
-- **Scope**: Touches multiple subsystems or >15 files
-- **Tasks**: >20 tasks, or phases with distinct milestones
-- **Risk**: High, requires staged rollout or extensive testing
+ANY of: >1 week, >15 files across subsystems, >20 tasks, high risk.
 
-**Pattern**: Create **root change** (`sspec change new <n> --root`) for coordination + multiple **sub-changes** for execution.
+**Pattern**: Root change (`--root`) for coordination + sub-changes for execution.
 
-**When uncertain**: Use `sspec ask` to consult user on splitting approach.
+**When uncertain**: Use `@ask` to consult user on splitting approach.
+
+📋 Multi-change structure, workflow, and linking → [references/multi-change.md](./references/multi-change.md)
 
 ---
 
-## Multi-Change Management
+## Knowledge Routing
 
-### Root vs Sub-Change
+Where does a piece of knowledge belong?
 
-| Aspect | Root Change | Sub-Change |
-|--------|------------|------------|
-| Template | `--root` flag → phase-level | Default → file-level |
-| spec.md Section C | Phase/sub-change breakdown | File-level task breakdown |
-| tasks.md | Milestones (one per sub-change) | Atomic tasks (<2h each) |
-| handover.md | Sub-change status tracking | File-level next steps |
-| Lifecycle | Active until all subs complete | Normal: PLANNING→DONE |
+| Question | Destination |
+|----------|-------------|
+| One-liner, applies across all work? | `project.md` **Conventions** |
+| Learned gotcha/preference, project-wide? | `project.md` **Notes** (append with date) |
+| Needs paragraphs, diagrams, sections? | `spec-docs/` |
+| Only relevant to current change? | `handover.md` **Conventions Discovered** |
 
-### Structure
+**Examples**:
 
-```
-Root change (coordinator):
-  - changes/<root-name>/
-    ├── spec.md         # Overall vision, phase overview (change-type: root)
-    ├── tasks.md        # Milestones per sub-change
-    ├── handover.md     # Sub-change status tracking
-    ├── reference/      # Shared design docs
-    └── script/         # Shared scripts
+| Knowledge | → Goes to |
+|-----------|-----------|
+| "Use snake_case for Python" | project.md Conventions |
+| "pip install -e . needed after template change" | project.md Notes |
+| "Auth uses JWT + Redis with token rotation" | spec-docs/auth.md |
+| "This change's cache key: auth:{id}" | handover.md |
 
-Sub-changes (execution):
-  - changes/<sub-name>/
-    ├── spec.md         # Focused scope (change-type: sub)
-    ├── tasks.md        # File-level tasks
-    └── handover.md
-```
-
-### Workflow
-
-1. **Create root**: `sspec change new <n> --root` → design phases
-2. **Create sub-change**: `sspec change new <sub-n>` → link to root via `reference`
-3. **Execute sub-change**: Normal PLANNING→DOING→REVIEW→DONE cycle
-4. **Archive sub-change → create next**: Repeat for each phase
-5. **Archive root**: When all sub-changes complete
-
-### Reference Linking
-
-Sub-change spec.md frontmatter:
-```yaml
-reference:
-  - source: "changes/<root-name>"
-    type: "root-change"
-    note: "Phase 1 of auth overhaul"
-```
-
-Root spec.md can back-link:
-```yaml
-reference:
-  - source: "changes/<sub-name>"
-    type: "sub-change"
-```
+**Notes lifecycle**: Append → Promote to Conventions if confirmed → Prune if outdated → Graduate to spec-doc if complex.
 
 ---
 
-## Document Quality Standards
+## Reference Field
 
-### spec.md
-
-| Section | Requirement | ❌ Fail | ✅ Pass |
-|---------|-------------|---------|---------|
-| A. Problem | Quantified impact | "Need to refactor" | "Auth takes 5s → 12% conversion drop" |
-| B. Solution | Approach + rationale | "Use caching" | "JWT + Redis: DB→memory, <100ms target" |
-| C. Implementation | File-level tasks | "Modify auth files" | "`src/auth/jwt.py` — create refresh_token()" |
-| D. Blockers | Dated, actionable | "Waiting on DevOps" | "Blocker (01-27): Need Redis host:port" |
-
-### tasks.md
-
-| Criterion | Standard |
-|-----------|----------|
-| Granularity | Each task <2h, independently testable (sub/single); milestone-level (root) |
-| Verification | Each phase has explicit pass criteria |
-| Progress tracking | Update after completing EACH task |
-
-### handover.md
-
-| Field | Purpose | Bad Example | Good Example |
-|-------|---------|-------------|--------------|
-| Background | One-sentence overview | "Doing auth" | "JWT+Redis cache to reduce auth from 5s to <1s" |
-| Accomplished | What's done this session | "Made progress" | "Phase 1 complete: redis pool + middleware integration" |
-| Next Steps | 1-3 specific actions | "Continue" | "1. Code jwt.py:refresh_token() 2. Add token expiry tests" |
-| Conventions | Patterns discovered | (empty) | "Cache key format: `auth:{user_id}`, TTL: 900s" |
-
-**Quality test**: New Agent can resume in <30 seconds?
-
----
-
-## Optional Directories
-
-### reference/ (Design Iteration)
-
-Use for **complex changes** needing design iteration before implementation.
-
-| Use Case | File Example |
-|----------|--------------|
-| Architecture exploration | `design-draft.md` |
-| API alternatives comparison | `api-options.md` |
-| Research notes | `research.md` |
-
-**Workflow**: Draft in reference/ → Iterate via `sspec ask` → Finalize into spec.md A/B/C → Keep for record or discard.
-
-**Skip for**: Simple bug fixes, well-understood features.
-
-### script/ (One-Off Tools)
-
-Migrations, test data generators, analysis tools for this change.
-
-**Lifecycle**: Created in DOING, may promote to project-level if reusable, otherwise archived with change.
-
----
-
-## Frontmatter Reference Field
-
-Track relationships: request → change, sub-change ↔ root change, change → spec-doc.
+Track relationships in spec.md frontmatter:
 
 ```yaml
 reference:
   - source: "requests/26-02-05T14-00_add-auth.md"  # Relative to .sspec/
-    type: "request"       # See type list below
-    note: "Original feature proposal"  # Optional
+    type: "request"
+    note: "Original feature proposal"               # Optional
 ```
-
-### Valid Reference Types
 
 | Type | Meaning | Direction |
 |------|---------|-----------|
@@ -196,66 +97,35 @@ reference:
 
 ### Partial Blockers
 
-Some tasks blocked, others can proceed.
-
-```
-IF blocked tasks are dependencies for remaining:
-    → Status = BLOCKED, document in spec.md Section D
-ELSE IF blocked tasks are non-critical:
-    → Continue other tasks, move blocked to end, document in spec.md D
-ELSE:
-    → Consider splitting into two changes
-```
+- Blocked tasks are dependencies → Status = BLOCKED, document in spec.md D
+- Blocked tasks are non-critical → Continue others, document in spec.md D
+- Ambiguous → Consider splitting into two changes
 
 ### REVIEW Across Sessions
 
-- Keep status = REVIEW
-- Update handover.md: "Awaiting user review since <date>"
-- Can start other changes meanwhile
-- Next session: Prompt user for review result first
+Keep status = REVIEW. Update handover: "Awaiting review since \<date\>". Can start other work meanwhile. Next session: prompt user for review result first.
 
 ### Mid-Flight Rejection (@argue)
 
-User says "this isn't right" during DOING.
-
-1. **STOP** immediately — don't continue current task
-2. **Clarify** rejection scope:
-   - Implementation detail → Update tasks.md only
-   - Design decision → Revise spec.md Section B + tasks.md
-   - Requirement itself → Revise spec.md Section A, mark PIVOT in Section D
-3. **Re-plan**: If scope changed significantly, transition DOING → PLANNING
-4. **Wait**: Get explicit user approval before resuming
+1. **STOP** immediately
+2. **Clarify** scope: implementation detail → tasks.md only; design → revise spec.md B; requirement → revise spec.md A + PIVOT in D
+3. **Re-plan** if scope changed significantly: DOING → PLANNING
+4. **Wait** for explicit approval
 
 ### Multiple Active Changes
 
-Limit to ≤2 changes in DOING status simultaneously.
-
-**Context switching**:
-1. `@handover` on current change
-2. `@change <other>` to switch
-3. Read `<other>/handover.md` before acting
+≤2 changes in DOING simultaneously. Switch via: `@handover` current → `@change <other>` → read handover.md.
 
 ### Design Iteration Loop
 
-When spec.md keeps getting revised in PLANNING:
-
-1. Version current spec: `reference/spec-v1.md`
-2. Brainstorm in `reference/design-exploration.md`
-3. Iterate with user via `sspec ask`
-4. Write final clean version to spec.md
+spec.md keeps getting revised → Version to `reference/spec-v1.md` → Brainstorm in `reference/` → Iterate via `@ask` → Write final to spec.md.
 
 ---
 
-## Anti-Patterns
+## Further Reading
 
-| Bad Practice | Why It Fails | Correct Approach |
-|--------------|--------------|------------------|
-| Skip @handover | Next session re-discovers context | **ALWAYS** handover before ending |
-| Mark `[x]` without testing | False progress, hidden bugs | Done = coded **AND** verified |
-| No file paths in spec.md C | Agent guesses wrong files | List specific paths per task |
-| Stay DOING when blocked | Waste time on workarounds | BLOCKED immediately + document |
-| Skip REVIEW status | No user validation | DOING → REVIEW → DONE |
-| Batch progress updates | Lose track of actual state | Update after **each** task |
-| Over-use reference/ | Wasted effort on simple changes | Reserve for complex design |
-| Forget reference field | Lost traceability | Use CLI auto-link or add manually |
-| Use file-level tasks in root | Root is coordinator, not executor | Use milestone-level tasks |
+| Need | Reference |
+|------|-----------|
+| Quality standards for spec.md / tasks.md / handover.md | [references/quality-standards.md](./references/quality-standards.md) |
+| Multi-change structure, workflow, linking | [references/multi-change.md](./references/multi-change.md) |
+| Quick checklists for checkpoints | [references/checklists.md](./references/checklists.md) |

@@ -1,12 +1,13 @@
 # SSPEC Checklists Reference
 
-Quick-reference checklists for key checkpoints. Load this at the relevant moment rather than reading the full SKILL.
+Quick-reference checklists for key checkpoints. Load at the relevant moment rather than reading the full SKILL.
 
 ---
 
-## Starting New Change
+## Starting New Work
 
-- [ ] Assessed: Single vs multi-change? (≤15 files & ≤20 tasks → single)
+- [ ] Assessed complexity: Micro / Single / Multi-change?
+- [ ] If micro (≤3 files, ≤30min): Skip change, track in request or do directly
 - [ ] If multi-change: Created root change first (`--root`)?
 - [ ] Spec.md Section A: Problem quantified with metrics?
 - [ ] Spec.md Section B: Solution approach + rationale stated?
@@ -32,6 +33,7 @@ Quick-reference checklists for key checkpoints. Load this at the relevant moment
 - [ ] Handover.md: "Conventions" updated if new patterns found?
 - [ ] Tasks.md: Progress percentage updated?
 - [ ] Spec.md: Status accurate?
+- [ ] project.md Notes: Project-level learnings appended? (gotchas, preferences, etc.)
 
 ## Before Archiving Root Change
 

@@ -42,8 +42,8 @@ console = Console()
 DEFAULT_GITIGNORE = """
 !spec-docs/**
 !project.md
+!commands/**
 !.meta.json
-!memory/**
 changes/**
 requests/**
 skills/**

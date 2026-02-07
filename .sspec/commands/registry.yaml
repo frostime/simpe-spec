@@ -1,0 +1,6 @@
+commands:
+  pack-zip:
+    description: 将关键源代码打包成 zip
+    type: script
+    invoke: powershell -File {script}
+    script_file: pack-zip.ps1

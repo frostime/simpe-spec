@@ -23,6 +23,7 @@ from sspec.services.change_service import (
     find_change_matches,
     list_changes,
     parse_change,
+    validate_change,
 )
 
 console = Console()
@@ -98,7 +99,8 @@ def _resolve_from_request(sspec_root: Path, from_value: str) -> Path:
 @change.command()
 @click.argument('name', required=False)
 @click.option('--from', 'from_request', help='Link to existing request (name or path)')
-def new(name: str | None = None, from_request: str | None = None) -> None:
+@click.option('--root', is_flag=True, default=False, help='Create root change for multi-change coordination')
+def new(name: str | None = None, from_request: str | None = None, root: bool = False) -> None:
     """Create a new change proposal (spec, tasks, handover).
 
     NAME is optional when --from is provided; the change name will be
@@ -132,7 +134,7 @@ def new(name: str | None = None, from_request: str | None = None) -> None:
     assert name is not None  # guaranteed by the check above
 
     try:
-        change_path = create_change(sspec_root, name)
+        change_path = create_change(sspec_root, name, is_root=root)
     except (InvalidChangeNameError, ChangeExistsError) as e:
         raise click.ClickException(str(e)) from e
 
@@ -151,8 +153,9 @@ def new(name: str | None = None, from_request: str | None = None) -> None:
             console.print(f'[yellow]Warning:[/yellow] Failed to link request: {e}')
 
     rel_path = change_path.relative_to(sspec_root.parent)
+    change_type = 'root' if root else 'single'
 
-    console.print(f'[green]+[/green] Created change: {change_path.name}')
+    console.print(f'[green]✓[/green] Created {change_type} change: [bold]{change_path.name}[/bold]')
     console.print()
     console.print('[cyan]Files:[/cyan]')
     console.print(f'  {rel_path}/')
@@ -162,8 +165,8 @@ def new(name: str | None = None, from_request: str | None = None) -> None:
     console.print()
     console.print('[yellow]Next:[/yellow]')
     console.print('  0. Read SSPEC skill (if not yet) for standards and best practices')
-    console.print('  1. Fill in spec.md and tasks.md, follow the templates format')
-    console.print('  2. Review with AI before implementation')
+    console.print('  1. Read spec.md / tasks.md, follow templates format and @RULE Hints')
+    console.print('  2. Fill spec.md/tasks.md, run `sspec ask create` for validation')
     console.print('  3. Update handover.md at end of each session')
 
 
@@ -285,15 +288,21 @@ def status(name: str | None = None) -> None:
 
 def _show_change_detail(change_path: Path) -> None:
     """Show detailed status of a single change."""
+    from sspec.libs.md_yaml import parse_frontmatter
+
     change = parse_change(change_path)
 
     spec_file = change_path / 'spec.md'
     summary = ''
+    status = 'PLANNING'
+
     if spec_file.exists():
         content = spec_file.read_text(encoding='utf-8')
+        meta, body = parse_frontmatter(content)
+        status = meta.get('status', 'PLANNING')
         in_why = False
-        for line in content.split('\n'):
-            if line.startswith('## Why'):
+        for line in body.split('\n'):
+            if line.startswith('## A.'):
                 in_why = True
                 continue
             if in_why and line.strip() and not line.startswith('<!--'):
@@ -312,6 +321,13 @@ def _show_change_detail(change_path: Path) -> None:
             title='Change Details',
         )
     )
+
+    if status == 'PLANNING':
+        console.print('\n[dim]Next: Fill spec.md sections A/B/C, then transition to DOING[/dim]')
+    elif status == 'DOING':
+        console.print('\n[dim]Next: Continue tasks. Run \'sspec change status\' for progress[/dim]')
+    elif status == 'REVIEW':
+        console.print('\n[dim]Next: Awaiting user review. After approval → DONE → archive[/dim]')
 
 
 # ============================================================================
@@ -424,3 +440,41 @@ def _archive_single_change(sspec_root: Path, change_info: ChangeInfo, yes: bool)
         raise click.ClickException(str(e)) from e
     except ValueError as e:
         raise click.ClickException(str(e)) from e
+
+
+# ============================================================================
+# Subcommand: validate
+# ============================================================================
+
+
+@change.command()
+@click.argument('name')
+def validate(name: str) -> None:
+    """Validate a change's structure and content quality."""
+    try:
+        sspec_root = get_sspec_root()
+    except SspecNotFoundError:
+        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
+
+    changes_dir = sspec_root / 'changes'
+    matches = find_change_matches(changes_dir, name)
+
+    if not matches:
+        raise click.ClickException(f"Change '{name}' not found")
+
+    if len(matches) > 1:
+        change_path = _interactive_select_change(matches, name)
+    else:
+        change_path = matches[0]
+
+    issues = validate_change(change_path)
+
+    if not issues:
+        console.print(f'[green]✓[/green] Change [bold]{change_path.name}[/bold] looks good!')
+    else:
+        console.print(f'[yellow]⚠[/yellow] Change [bold]{change_path.name}[/bold] has {len(issues)} issue(s):')
+        console.print()
+        for issue in issues:
+            console.print(f'  [yellow]•[/yellow] {issue}')
+        console.print()
+        console.print('[dim]Fix issues above, then run validate again.[/dim]')

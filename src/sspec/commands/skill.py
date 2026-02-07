@@ -25,11 +25,6 @@ def list_skills_cmd() -> None:
     except SspecNotFoundError:
         raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
-    _list_skills(sspec_root)
-
-
-def _list_skills(sspec_root: Path) -> None:
-    """List skills."""
     skills = list_skills(sspec_root)
 
     if not skills:
@@ -107,7 +102,7 @@ def new(name: str, to_claude: bool, to_github: bool) -> None:
         raise click.ClickException(f"Skill '{name}' already exists in: {conflict_list}")
 
     template_content = f"""---
-skill: {name}
+name: {name}
 description: ""
 ---
 

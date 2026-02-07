@@ -4,28 +4,26 @@
 **Description**: {{TODO}}
 **Repo**: {{TODO}}
 
-## Purpose
-[Describe your project's purpose and goals]
-
 ## Tech Stack
-- [List your primary technologies]
-- [e.g., TypeScript, React, Node.js]
+- [List primary technologies, e.g. TypeScript, React, Node.js]
 
-## Project Conventions
+## Key Paths
+<!-- @RULE: Most important directories/files for quick navigation.
+Keep ≤10 entries. Agent uses this to orient in the codebase. -->
 
-### Code Style
-[Describe your code style preferences, formatting rules, and naming conventions]
+| Path | Purpose |
+|------|---------|
+| `src/` | Source code |
+| `tests/` | Test files |
 
-### Architecture Patterns
-[Document your architectural decisions and patterns]
+## Conventions
+<!-- @RULE: Coding rules that apply across ALL work in this project.
+One-liners only. If a convention needs multi-paragraph explanation → write a spec-doc.
+Examples: "snake_case for Python, camelCase for JS", "All API routes: /api/v1/*",
+"Never commit .env files", "Prefer composition over inheritance" -->
 
-### Testing Strategy
-[Explain your testing approach and requirements]
-
-## Domain Context
-[Add domain-specific knowledge that AI assistants need to understand]
-
-## Important Constraints
-[List any technical, business, or regulatory constraints]
-
-## External References
+## Notes
+<!-- @RULE: Project-level memory. Append-only log of learnings, gotchas, preferences.
+Agent appends here during @handover when a discovery is project-wide (not change-specific).
+Format each entry as: `- YYYY-MM-DD: <learning>`
+Prune entries that become outdated or graduate to Conventions/spec-docs. -->

@@ -2,8 +2,8 @@
 name: sspec-ask
 description: Mid-execution user consultation. USE ACTIVELY to reduce errors and save cost.
 metadata:
-   author: frostime
-   version: 4.0.0
+  author: frostime
+  version: 4.0.0
 ---
 
 # SSPEC Ask Skill
@@ -18,13 +18,9 @@ metadata:
 
 1. **User explicitly requested** — User mentions ask/confirmation in their request
 2. **Information missing** — Cannot proceed reliably without user clarification
-   - Example: User mentions ambiguous terms without context → Ask for specific meaning
 3. **Directional choice needed** — Multiple valid approaches exist (not minor tweaks)
-   - Example: Component refactor could use multiple architecture styles → Ask preference
 4. **Work completion check** — Agent believes task is done
-   - Example: Code changes completed → Ask user to verify before ending turn
 5. **Repeated failures** — Multiple attempts failed, need user insight
-   - Example: CLI command fails 3+ times → Ask for environment details
 
 **Cost principle**: One ask < rework from wrong guess. Prefer asking over guessing.
 
@@ -41,7 +37,7 @@ Don't create an ask for trivial decisions where:
 
 **Step 1**: Create template
 ```bash
-sspec ask create --name <topic>
+sspec ask create <topic>
 ```
 Creates `.sspec/asks/<timestamp>_<topic>.py`
 
@@ -52,12 +48,19 @@ Creates `.sspec/asks/<timestamp>_<topic>.py`
 
 **Step 3**: Execute
 ```bash
-sspec ask prompt <path>
+sspec ask prompt <path-to-py-file>
 ```
 Prompts user in terminal and captures their answer.
 
 **Step 4**: Automatic lifecycle
 After execution, the `.py` file is appended with the user's `ANSWER`, then **converted to `.md`** for permanent record. The `.py` file is deleted.
+
+### Checking Ask History
+
+```bash
+sspec ask list
+```
+Shows pending asks (`.py` — unanswered) and completed asks (`.md` — answered).
 
 ### Error Handling
 
@@ -118,7 +121,7 @@ Which aligns with project priorities?
 
 ### Batched Questions
 
-When multiple related questions arise, **batch them in a single ask** rather than creating separate asks for each:
+When multiple related questions arise, **batch them in a single ask**:
 
 ```python
 REASON = r"""
@@ -157,8 +160,8 @@ Proceed? (yes/no)
 
 | Do | Don't |
 |----|-------|
-| Use descriptive `--name` (e.g., `auth_approach`) | Use generic names (`q1`, `ask`, `question`) |
-| Keep `--name` to letters and underscores only | Use non-ASCII or special characters in names |
+| Use descriptive topic name (e.g., `auth_approach`) | Use generic names (`q1`, `ask`, `question`) |
+| Keep topic name to letters and underscores only | Use non-ASCII or special characters in names |
 | Fill `REASON` with context for future reference | Leave `REASON` empty or vague |
 | Ask early when uncertain | Guess and risk rework |
 | Provide options when choices exist | Leave open-ended if you already have candidates |

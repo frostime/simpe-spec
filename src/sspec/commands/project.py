@@ -30,7 +30,11 @@ from sspec.services.project_init_service import (
     get_skill_targets_from_locations,
     initialize_project,
 )
-from sspec.services.project_update_service import collect_update_candidates
+from sspec.services.project_update_service import (
+    collect_orphaned_skills,
+    collect_update_candidates,
+    remove_orphaned_skill,
+)
 
 console = Console()
 
@@ -241,9 +245,50 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
     template_dir = get_template_dir()
     meta = load_meta(sspec_root)
     old_hashes = meta.get('file_hashes', {}) or {}
+    project_root = sspec_root.parent
 
     common_replacements = {'SCHEMA_VERSION': SCHEMA_VERSION, 'SCHEMA': SCHEMA_VERSION}
 
+    # -----------------------------------------------------------------
+    # Phase 1: Detect orphaned skills (renamed/removed from templates)
+    # -----------------------------------------------------------------
+    orphans = collect_orphaned_skills(project_root=project_root, meta=meta)
+
+    if orphans:
+        console.print()
+        orphan_table = Table(title='Orphaned Skills (no longer in templates)')
+        orphan_table.add_column('Skill', style='red')
+        orphan_table.add_column('Locations', style='dim')
+        for orphan in orphans:
+            locs = ', '.join(str(p.relative_to(project_root)) for p in orphan.paths)
+            orphan_table.add_row(orphan.skill_name, locs)
+        console.print(orphan_table)
+
+        if not dry_run:
+            for orphan in orphans:
+                if interactive:
+                    if not questionary.confirm(
+                        f'Remove orphaned skill "{orphan.skill_name}"?', default=True
+                    ).ask():
+                        console.print(f'  [dim]Skipped {orphan.skill_name}[/dim]')
+                        continue
+
+                count = remove_orphaned_skill(orphan)
+                console.print(
+                    f'  [red]-[/red] Removed orphaned skill '
+                    f'"{orphan.skill_name}" ({count} location(s))'
+                )
+
+                # Clean up legacy hash entries
+                for key in list(old_hashes.keys()):
+                    if key.startswith(f'skills/{orphan.skill_name}'):
+                        del old_hashes[key]
+        else:
+            console.print(f'[cyan]Would remove {len(orphans)} orphaned skill(s)[/cyan]')
+
+    # -----------------------------------------------------------------
+    # Phase 2: Collect and apply updates (existing logic, enhanced)
+    # -----------------------------------------------------------------
     updates = collect_update_candidates(
         sspec_root=sspec_root,
         template_dir=template_dir,
@@ -295,7 +340,7 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
         dry_run=True,
     )
 
-    if not actions and not agents_needs_update:
+    if not actions and not agents_needs_update and not orphans:
         console.print('[green]+[/green] All files are up to date')
         return
 
@@ -346,13 +391,14 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
             else:
                 console.print(f'  [green]+[/green] Updated {path}')
 
-        # Update hashes for non-symlink files
-        if not upd.is_symlink:
+        # Update hashes
+        if not upd.is_symlink and upd.new_hash:
             new_hashes[upd.hash_key] = upd.new_hash
 
     # Update metadata
-    if updated_count or skill_updated_count:
+    if updated_count or skill_updated_count or orphans:
         meta['file_hashes'] = new_hashes
+        meta['managed_skills'] = sorted(d.name for d in list_template_skills())
         meta['updated_at'] = datetime.now().isoformat()
         meta['sspec_version'] = __version__
         save_meta(sspec_root, meta)
@@ -371,4 +417,6 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
     total_updated = updated_count + skill_updated_count
     if agents_needs_update:
         total_updated += 1
+    if orphans:
+        console.print(f'[red]-[/red] Removed {len(orphans)} orphaned skill(s)')
     console.print(f'[green]+[/green] Updated {total_updated} item(s)')

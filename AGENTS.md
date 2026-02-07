@@ -1,146 +1,368 @@
-# SSPEC Project Development Guide
+# sspec Development Protocol
 
-## What is This Project?
+## 0. Self-Hosting Notice
 
-**sspec** is a spec-driven CLI framework that helps users practice vibe coding with AI agents. This project is **self-hosted** - we use sspec itself to manage sspec's development.
+This project uses sspec to develop sspec. Two sets of rules coexist:
 
-⚠️ **Important for Agents**: This project develops the SSPEC framework itself. Do NOT use the SSPEC protocol embedded below for development guidance - it may be outdated.
+| | This file (above SSPEC block) | SSPEC block (below) |
+|---|---|---|
+| Purpose | How to **develop** sspec | How to **use** sspec |
+| Audience | Agent working on this repo | Agent using sspec in any project |
+| Authority | **This file wins** on conflicts | Provides workflow structure |
+
+**Rule**: When developing templates, the **template source files** in `src/sspec/templates/` are ground truth — not the installed copies in `.sspec/`.
 
 ---
 
-## Dev Tools
+## 1. Cold Start (Development)
 
-- Use uv to manage the project
-- Use ruff for formatting
+1. Read `.sspec/project.md` — tech stack, conventions, project notes
+2. Determine action:
 
-## For AI Agents Working on SSPEC
+| User Message | Action |
+|--------------|--------|
+| `@resume` or `@change` | Load change context (follow SSPEC block below) |
+| Template/SKILL change | Follow **Template Change Protocol** (Section 2) |
+| Python code change | Follow **Code Change Protocol** (Section 3) |
+| Bug report / feature idea | Follow SSPEC workflow in block below |
 
-### 📍 Ground Truth
+3. If touching unfamiliar area → check `src/sspec/` structure:
 
-**The authoritative SSPEC protocol is the template we're developing**:
-- **Template source**: [src/sspec/templates/AGENTS.md](src/sspec/templates/AGENTS.md)
-- This is what gets copied to user projects during `sspec project init`
+```
+src/sspec/
+├── cli.py              # Entry point
+├── core.py             # Shared types, constants, utilities
+├── commands/           # CLI command implementations (click)
+│   ├── project.py      # init, update, status
+│   ├── change.py       # change new, status, archive
+│   ├── ask.py          # ask create, prompt, list
+│   └── skill.py        # skill list
+├── services/           # Business logic (CLI-agnostic)
+├── libs/               # Pure utilities (hashing, etc.)
+└── templates/          # Product: what users get on `sspec init`
+    ├── AGENTS.md       # ⭐ The protocol template
+    ├── project.md      # Project context template
+    ├── change/         # spec.md, tasks.md, handover.md
+    ├── change-root/    # Root change variants
+    ├── requests/       # Request template
+    └── skills/         # SKILL templates (sspec, sspec-ask, etc.)
+```
 
-**When working on SSPEC features**:
-1. Read the template files to understand current behavior
-2. Test changes using `.venv\Scripts\sspec.exe` in `tmp/` directories
-3. Refer to [.sspec/](.sspec/) for this project's changes and tasks
+---
 
-### 🧪 Testing Protocol
+## 2. Template Change Protocol
 
-**Always test CLI changes before considering them complete**:
+Changing templates = changing the product. Extra care required.
+
+### What counts as a template change
+- Any file under `src/sspec/templates/`
+- SKILL files under `src/sspec/templates/skills/`
+
+### Workflow
+
+1. Edit template source in `src/sspec/templates/`
+2. Reinstall: `uv pip install -e .`  ← **必须，否则模板缓存不更新**
+3. Test in sandbox:
 
 ```powershell
-# Create test directory
+# Create clean test environment
 cd tmp
-New-Item -ItemType Directory test_<feature_name>
-cd test_<feature_name>
+mkdir test_<feature>
+cd test_<feature>
 
-# Test using the editable install
-<ProjectDir>\.venv\Scripts\python.exe -m sspec.cli project init [--options]
-uv run sspec <command>  # Use UV to run sspec command
-# ... test other commands
+# Test init
+uv run sspec project init
+# Verify: check generated files match expectations
+
+# Test update (if applicable)
+uv run sspec project update --dry-run
 ```
 
-### 🛠️ Development Setup
+4. If template structure changed → check `UPDATABLE_FILES`, `USER_FILES` in `core.py`
+5. If skill added/renamed/removed → verify `managed_skills` flow in `project_init_service.py`
 
-**Tech Stack**:
-- Python 3.11+
-- **uv** for package management
-- Click for CLI
-- Rich for terminal output
-- Questionary for user input
+### Template editing rules
 
-**Key directories**:
-- `src/sspec/` - Source code
-  - `cli.py` - Entry point
-  - `commands/` - CLI command implementations
-  - `core.py` - Core utilities
-  - `templates/` - File templates (AGENTS.md, spec.md, etc.)
-- `.sspec/` - This project's own sspec data (dogfooding)
-- `tmp/` - Testing sandbox
+Templates use `{{VARIABLE}}` placeholders. Current variables:
+- `{{SCHEMA_VERSION}}` — from `core.py:SCHEMA_VERSION`
+- `{{TODO}}` — user fills after init
+- `{{NAME}}`, `{{TIME}}`, `{{CHANGE_NAME}}` — CLI fills at creation
 
-**Installation (editable mode)**:
+**Never** put development-specific content in templates. Templates are for users.
+
+---
+
+## 3. Code Change Protocol
+
+### After editing Python files
+
 ```powershell
-# Install/reinstall after code changes
-uv pip install -e .
+uv pip install -e .          # Reinstall editable
+uv run ruff check src/       # Lint
+uv run ruff format src/      # Format
 ```
 
-## SSPEC Ask：轮内用户交互
+### CLI testing pattern
 
-如果 User 明确指定，或者遇到特定条件，必须使用 SSPEC Ask (Ask Prompt) 咨询 User。
+```powershell
+# Always test in tmp/ — never pollute project root
+cd tmp/test_<feature>
+uv run sspec <command>       # Test the command
+```
 
-1. **触发条件**（满足以下任一情况时触发）：
+### Key architectural rules
 
-   - [ ] User 在请求时明确告知在某些情况下推荐/必须使用 Ask Prompt
-   - [ ] 信息缺失，导致后续工作可靠性低、不确定性高。
-     例：User请求中的部分术语缺乏明确上下文，难以确定具体含义，此时Agent需请User澄清具体所指。
-   - [ ] 后续步骤依赖方向性选择（非微调性选择）。
-     例：重构组件可采用多种程序架构风格，Agent需咨询User选择偏好。
-   - [ ] Agent认为工作已完成，需与User确认是否结束。
-     例：Agent完成代码修改后，认为已满足User指令，需请User核实确认是否满意。
-   - [ ] 多次尝试某项操作失败，需向User咨询。
-     例：多次尝试运行某CLI命令均失败，经咨询User后得知需先激活 .venv 环境。
-2. **先决条件**：查看`sspec-ask` SKILL 详细内容，了解 sspec ask 的用法。 **!IMPORTANT!**
-3. **WHY Need Ask**
-
-   1. Effective:  **Human-in-the-loop**——关键决策点引入人类确认，降低幻觉和方向性错误
-   2. Efficient: **节省费用**——Copilot 按对话轮次计费。工具调用序列中使用 `sspec-ask` SKILL可在不结束当前轮次的情况下获取用户输入。
-
-
-> [!WARNING] Agent 结束单轮对话之前必须发起 Ask
->
-> | match "Agent认为工作已完成" --> 请发起一个 SSPEC Ask，询问用户是否已经满意，是否可以结束当前对话轮次
-
-### 📋 Conventions
-
-**Code Style**:
-- Follow existing patterns in codebase
-- Line length ≤ 90 characters (linter enforced)
-- Use type hints for function signatures
-- Docstrings for public functions
-
-**Testing Philosophy**:
-- Real CLI testing over mocks (test in `tmp/`)
-- Verify generated output matches templates
-- Test both happy path and error cases
-
+- `commands/` = CLI layer (click decorators, user I/O, output formatting)
+- `services/` = business logic (no click, no rich — pure functions)
+- `core.py` = shared types and constants (no business logic)
+- Keep commands thin: validate input → call service → format output
 
 ---
 
-## Project Context and Glossary
+## 4. sspec-ask for Development
 
-| Term | Definition |
-|------|------------|
-| **sspec** | The CLI tool / framework this project builds |
-| **template** | Files in `src/sspec/templates/` copied to user projects |
-| **AGENTS.md** | The protocol file for AI agents (the template we're developing) |
-| **self-hosting** | Using sspec to manage sspec's own development |
-| **change** | A unit of work tracked in `.sspec/changes/` |
-| **vibe coding** | Iterative, AI-assisted development workflow |
+Use `@ask` (via sspec-ask SKILL) when:
+- Direction choice needed (architecture, API design)
+- Unsure about backward compatibility impact
+- Work feels complete → confirm with user before ending turn
 
----
+> **End-of-turn rule**: Before ending a conversation turn, always `@ask` to confirm completion.
 
-**Agent Recommendations**:
-1. **Always test in tmp/**: Don't assume template changes work until tested
-2. **Use .sspec/ for planning**: The structure genuinely helps organize complex refactors
-3. **Update handover.md**: It's tedious but critical for session continuity
-4. **Leverage auto mode**: For medium complexity tasks, it saves back-and-forth
+This saves cost in Copilot (tool calls don't consume turns).
 
 ---
 
-## Quick Reference
+<!-- ====================================================================
+     Below: SSPEC protocol block, auto-managed by `sspec project update`.
+     Provides the standard workflow (changes, requests, handover, etc.).
+     When in doubt: Section 0 of this file defines precedence.
+     ==================================================================== -->
 
-### Frequently Modified Files
 
-| File | Purpose | When to Edit |
-|------|---------|--------------|
-| `src/sspec/templates/AGENTS.md` | User-facing protocol | Improving agent guidance |
-| `src/sspec/templates/skills/sspec/SKILL.md` | Extended reference | Status rules, edge cases |
-| `src/sspec/commands/*.py` | CLI implementations | Adding/modifying commands |
-| `src/sspec/core.py` | Shared utilities | Cross-cutting functionality |
-| `pyproject.toml` | Package metadata | Dependencies, version, entry points |
+
+<!-- SSPEC:START -->
+# .sspec Agent Protocol
+
+SSPEC_SCHEMA::6.0
+
+## 0. Protocol Overview
+
+SSPEC is a document-driven AI collaboration framework. All planning, tracking, and handover lives in `.sspec/`.
+
+**Goal**: Any Agent resumes work within 30 seconds by reading `.sspec/` files.
+
+**Folder Structure**:
+```
+.sspec/
+├── project.md              # Identity, conventions, accumulated memory notes
+├── spec-docs/              # Formal specifications (architecture, APIs, standards)
+├── changes/<n>/            # Active change proposals
+│   ├── spec.md | tasks.md | handover.md  # Required
+│   └── reference/ | script/              # Optional
+├── requests/               # Lightweight proposals
+└── asks/                   # Human-in-the-loop Q&A records
+```
 
 ---
 
-**Remember**: You're developing the framework that guides other agents. Test thoroughly, write clear templates, and use `.sspec/` to track your own work.
+## 1. Cold Start
+
+When entering project in new session:
+
+1. Read `.sspec/project.md` — identity, conventions, accumulated notes
+2. Determine action:
+
+| User Message | Action |
+|--------------|--------|
+| `@resume` or `@change` | Load that change's context |
+| `@status` | Project overview (see below) |
+| Micro task (≤3 files, ≤30min, obvious) | Do directly, no change ceremony |
+| Vague request (idea/bug/feature) | Request → Change Workflow (Section 2.0) |
+| Simple task, no directive | Do directly |
+
+3. If touching unfamiliar subsystem → check `spec-docs/`
+
+#### `@status`
+
+Project-wide overview. Output: active changes (name, status, progress%), pending requests, blockers, recent project.md Notes.
+
+---
+
+## 2. SCOPE: Changes
+
+Changes live in `.sspec/changes/<n>/`.
+
+| File/Dir | Contains | Required |
+|----------|----------|----------|
+| spec.md | Problem (A), Solution (B), Implementation (C), Blockers (D) | Yes |
+| tasks.md | Task list with `[ ]`/`[x]` markers + progress | Yes |
+| handover.md | Session context for next Agent | Yes |
+| reference/ | Design drafts, research, diagrams | No |
+| script/ | Migration scripts, test data, one-off tools | No |
+
+### 2.0 Request → Change Workflow
+
+Assess scale FIRST:
+
+**Micro** (≤3 files, ≤30min, no design decisions):
+Track in request file (`## Plan` / `## Done`) or just do it. No change needed.
+
+**Normal+** (anything bigger):
+
+1. **Link**: `sspec change new --from <request>` or create then `sspec request link`
+2. **Understand**: First-principles — find the real problem, not the surface ask
+3. **Research**: Read project.md + relevant code. If unclear, **use `@ask`**(sspec ask)
+4. **Design**:
+   - Simple: Draft spec.md mentally
+   - Complex (>1 week / >15 files / >20 tasks): **`@ask`** about splitting → `sspec change new <n> --root`
+   - Finalize: Distill into spec.md A/B/C
+5. **Confirm**: **`@ask`** to present plan. Wait for approval.
+6. **Execute**: Update tasks.md after each task.
+
+**Principle**: Understand before acting. Wrong direction costs more than extra questions.
+
+📚 Consult `sspec` SKILL for scale assessment, document standards, multi-change patterns
+
+### 2.1 Status Transitions
+
+| From | Trigger | To |
+|------|---------|-----|
+| PLANNING | user approves | DOING |
+| DOING | all tasks `[x]` | REVIEW |
+| DOING | missing info | BLOCKED |
+| DOING | scope changed | PLANNING |
+| BLOCKED | resolved | DOING |
+| REVIEW | accepted | DONE |
+| REVIEW | needs changes | DOING |
+
+**FORBIDDEN**: PLANNING→DONE, DOING→DONE, BLOCKED→DONE
+
+### 2.2 Directives
+
+#### `@change <n>`
+
+Existing change: Read handover.md → tasks.md → spec.md → check reference field → output status + progress + next 3 actions.
+
+New change: `sspec change new <n>` or `--from <request>`. Complex: `--root`. Follow 2.0 workflow. Fill docs per `@RULE` markers. Ask approval.
+
+#### `@resume`
+
+Same as `@change <current_active_change>`.
+
+#### `@handover`
+
+End of session. No exceptions.
+
+1. Update handover.md: background, accomplished, status, next steps, conventions
+2. Update tasks.md: mark `[x]`, update progress%
+3. Update spec.md: update status if changed
+4. If project-level learnings discovered: Update project.md Notes: append project-level learnings (if any)
+
+**Test**: Would a new Agent know what to do in <30 seconds?
+
+#### `@sync`
+
+After autonomous coding without tracking: identify changes → update tasks.md → all done? suggest REVIEW.
+
+#### `@argue`
+
+User disagrees. **STOP immediately**. Follow rejection protocol.
+
+📚 Consult `sspec` SKILL for rejection scope assessment and edge cases
+
+### 2.3 Edit Rules
+
+| Marker | Meaning | Action |
+|--------|---------|--------|
+| `<!-- @RULE: ... -->` | Section constraint | Follow when filling |
+| `<!-- @REPLACE -->` | Replace entirely | Do NOT append |
+
+Task markers: `[ ]` todo, `[x]` done
+
+---
+
+## 3. SCOPE: Requests
+
+Lightweight proposals. Location: `.sspec/requests/`
+
+```
+Create:  sspec request new <n>
+Link:    sspec request link <request> <change>
+Archive: sspec request archive <n>
+```
+
+Request = "I want X" → Change = "Here's how we do X"
+
+**Micro shortcut**: ≤3 files / ≤30min → track in request file directly. No change needed.
+
+---
+
+## 4. SCOPE: Spec-Docs
+
+Formal specifications (architecture, API contracts, standards). Location: `.sspec/spec-docs/`
+
+For knowledge that is **too complex for project.md** and **surviving beyond any single change**.
+
+#### `@doc <n>`
+
+New: `sspec doc new "<n>" [--dir]` → follow write-spec-doc SKILL.
+Update: Read existing → apply changes → update `updated` field.
+
+📚 Consult `write-spec-doc` SKILL for guidelines
+
+---
+
+## 5. SCOPE: sspec ask
+
+**USE ACTIVELY** — Don't hesitate to ask. Better to confirm than guess wrong.
+
+```
+sspec ask create <topic>     # Create ask template
+sspec ask prompt <file>      # Execute and collect answer
+sspec ask list
+```
+
+#### `@ask`
+
+**MUST** Trigger when: confused, before session end, tool call rejected.
+
+📚 Consult `sspec-ask` SKILL for triggers, workflow, syntax
+
+---
+
+## 6. Behavior Summary
+
+```
+ON user_message:
+    IF @directive              → Execute directive
+    IF micro (≤3 files)        → Do directly
+    IF active change DOING     → Continue tasks, update tasks.md
+    ELSE                       → Request → Change Workflow (2.0)
+
+ON need_user_input:
+    USE @ask                   → Persists record, saves cost
+
+ON session_end:
+    MUST @handover             → No exceptions
+    IF project-level learning  → Append to project.md Notes
+
+ON uncertainty:
+    Consult SKILL              → sspec, sspec-ask, write-spec-doc
+    OR @ask
+```
+
+### Directive Quick Reference
+
+| Directive | Scope | Action |
+|-----------|-------|--------|
+| `@change <n>` | Changes | Load or create change |
+| `@resume` | Changes | Continue active change |
+| `@handover` | Changes | Save context for next session |
+| `@sync` | Changes | Reconcile untracked work |
+| `@argue` | Changes | Stop, clarify, re-plan |
+| `@status` | Project | Overview of all work |
+| `@doc <n>` | Spec-Docs | Create or update spec |
+| `@ask` | Ask | Consult user, by using `sspec ask` |
+
+<!-- SSPEC:END -->
+

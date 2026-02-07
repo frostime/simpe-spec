@@ -9,6 +9,7 @@ from pathlib import Path
 
 from sspec.core import (
     ARCHIVE_DIR,
+    CHANGE_ROOT_TEMPLATE_FILES,
     CHANGE_TEMPLATE_FILES,
     CHANGES_DIR,
     ChangeExistsError,
@@ -122,8 +123,14 @@ def parse_change(change_path: Path, archived: bool = False) -> ChangeInfo:
     )
 
 
-def create_change(sspec_root: Path, change_name: str) -> Path:
-    """Create a new change directory with spec.md, tasks.md, and handover.md."""
+def create_change(sspec_root: Path, change_name: str, *, is_root: bool = False) -> Path:
+    """Create a new change directory with spec.md, tasks.md, and handover.md.
+
+    Args:
+        sspec_root: Path to .sspec directory
+        change_name: Name for the change
+        is_root: If True, use root change templates (phase-level coordination)
+    """
 
     # Normalize name: lowercase, replace spaces with hyphens, remove invalid chars
     change_name = re.sub(r'\s+', '-', change_name.strip().lower())
@@ -140,7 +147,9 @@ def create_change(sspec_root: Path, change_name: str) -> Path:
     if change_path.exists():
         raise ChangeExistsError(f"Change '{change_file_name}' already exists")
 
-    template_dir = get_template_dir() / 'change'
+    template_subdir = 'change-root' if is_root else 'change'
+    template_dir = get_template_dir() / template_subdir
+    template_files = CHANGE_ROOT_TEMPLATE_FILES if is_root else CHANGE_TEMPLATE_FILES
     replacements = {
         'CHANGE_NAME': change_name,
         'TIME': datetime.now().isoformat(timespec='seconds'),
@@ -148,7 +157,7 @@ def create_change(sspec_root: Path, change_name: str) -> Path:
 
     change_path.mkdir(parents=True, exist_ok=True)
 
-    for file_name in CHANGE_TEMPLATE_FILES:
+    for file_name in template_files:
         copy_template(template_dir / file_name, change_path / file_name, replacements)
 
     return change_path
@@ -249,3 +258,70 @@ def _update_requests_after_change_archive(
         if should_update:
             updated = update_frontmatter(content, {'attach-change': new_spec_relative})
             md_file.write_text(updated, encoding='utf-8')
+
+
+def validate_change(change_path: Path) -> list[str]:
+    """Validate change directory structure and content quality.
+
+    Returns a list of warning/issue strings. Empty list = all good.
+    """
+    issues: list[str] = []
+
+    # Check required files
+    for fname in CHANGE_TEMPLATE_FILES:
+        fpath = change_path / fname
+        if not fpath.exists():
+            issues.append(f'Missing required file: {fname}')
+
+    spec_file = change_path / 'spec.md'
+    if spec_file.exists():
+        content = spec_file.read_text(encoding='utf-8')
+        meta, body = parse_frontmatter(content)
+
+        if not meta.get('name'):
+            issues.append('spec.md: missing "name" in frontmatter')
+        if not meta.get('status'):
+            issues.append('spec.md: missing "status" in frontmatter')
+
+        sections = ['## A.', '## B.', '## C.']
+        for section in sections:
+            if section in body:
+                idx = body.index(section)
+                next_heading = body.find('\n## ', idx + len(section))
+                section_body = body[idx:next_heading] if next_heading > 0 else body[idx:]
+                lines = [
+                    line for line in section_body.split('\n')
+                    if line.strip()
+                    and not line.startswith('#')
+                    and not line.strip().startswith('<!--')
+                ]
+                if len(lines) == 0:
+                    issues.append(f'spec.md: Section "{section}" has no content (still template)')
+            else:
+                issues.append(f'spec.md: Missing section "{section}"')
+
+    tasks_file = change_path / 'tasks.md'
+    if tasks_file.exists():
+        content = tasks_file.read_text(encoding='utf-8')
+        checkbox_pattern = r'- \[[ xX~\-]](?!\s*<Demo Task>)'
+        total = len(re.findall(checkbox_pattern, content))
+        if total == 0:
+            issues.append('tasks.md: No tasks defined (still template)')
+
+    handover_file = change_path / 'handover.md'
+    if handover_file.exists():
+        content = handover_file.read_text(encoding='utf-8')
+        if '## Background' in content:
+            bg_idx = content.index('## Background')
+            next_heading = content.find('\n## ', bg_idx + 13)
+            bg_body = content[bg_idx:next_heading] if next_heading > 0 else content[bg_idx:]
+            lines = [
+                line for line in bg_body.split('\n')
+                if line.strip()
+                and not line.startswith('#')
+                and not line.strip().startswith('<!--')
+            ]
+            if len(lines) == 0:
+                issues.append('handover.md: Background section empty')
+
+    return issues

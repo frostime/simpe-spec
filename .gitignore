@@ -1,7 +1,7 @@
 # .gitignore
 # 动态生成, 所以不要自动更新
 src/sspec/_version.py
-./sspec.zip
+sspec.zip
 
 # Python
 __pycache__/
@@ -25,7 +25,7 @@ wheels/
 .installed.cfg
 *.egg
 
-.sspec
+# .sspec
 
 # Virtual environments
 .venv/

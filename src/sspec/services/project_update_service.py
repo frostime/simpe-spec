@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
 from sspec.core import UPDATABLE_FILES, list_template_skills
-from sspec.libs.hashing import compute_file_hash, compute_hash
+from sspec.libs.hashing import compute_dir_hash, compute_file_hash, compute_hash
 
 UpdateStatus = Literal['missing', 'current', 'updatable', 'modified', 'unknown']
 
@@ -25,6 +26,55 @@ class UpdateCandidate:
 
     is_symlink: bool = False
     strategy: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class OrphanedSkill:
+    """A skill that exists on disk but is no longer in the template set."""
+
+    skill_name: str
+    paths: list[Path]  # All locations where this orphan exists
+
+
+def collect_orphaned_skills(
+    *,
+    project_root: Path,
+    meta: dict[str, Any],
+) -> list[OrphanedSkill]:
+    """Find skills that were previously managed but are no longer in templates.
+
+    This detects renamed/removed skills that would otherwise leave stale dirs.
+    """
+    managed: set[str] = set(meta.get('managed_skills', []) or [])
+    current_template_names = {d.name for d in list_template_skills()}
+    skill_locations: list[str] = meta.get('skill_locations', []) or []
+
+    orphan_names = managed - current_template_names
+    orphans: list[OrphanedSkill] = []
+
+    for name in sorted(orphan_names):
+        paths: list[Path] = []
+        for loc_str in skill_locations:
+            skill_dir = project_root / loc_str / name
+            if skill_dir.exists():
+                paths.append(skill_dir)
+        if paths:
+            orphans.append(OrphanedSkill(skill_name=name, paths=paths))
+
+    return orphans
+
+
+def remove_orphaned_skill(orphan: OrphanedSkill) -> int:
+    """Remove an orphaned skill from all locations. Returns count of dirs removed."""
+    removed = 0
+    for path in orphan.paths:
+        if path.is_symlink():
+            path.unlink()
+            removed += 1
+        elif path.exists():
+            shutil.rmtree(path)
+            removed += 1
+    return removed
 
 
 def collect_update_candidates(
@@ -88,7 +138,7 @@ def collect_update_candidates(
         )
 
     # ---------------------------------------------------------------------
-    # Skill candidates
+    # Skill candidates — uses directory hash for full content tracking
     # ---------------------------------------------------------------------
     project_root = sspec_root.parent
     skill_locations: list[str] = meta.get('skill_locations', []) or []
@@ -99,6 +149,10 @@ def collect_update_candidates(
         template_skill_file = skill_dir / 'SKILL.md'
         if not template_skill_file.exists():
             continue
+
+        # Hash key: prefer new format, fall back to legacy
+        hash_key = f'skills/{skill_name}'
+        legacy_hash_key = f'skills/{skill_name}/SKILL.md'
 
         for loc_str in skill_locations:
             skill_dest_dir = project_root / loc_str / skill_name
@@ -129,26 +183,36 @@ def collect_update_candidates(
                         template_content='',
                         new_hash=None,
                         current_hash=None,
-                        hash_key=f'skills/{skill_name}/SKILL.md',
+                        hash_key=hash_key,
                         is_symlink=True,
                         strategy=strategy,
                     )
                 )
                 continue
 
-            # Copy: compare content hash
-            template_content = template_skill_file.read_text(encoding='utf-8')
-            for old, new in common_replacements.items():
-                template_content = template_content.replace(f'{{{{{old}}}}}', new)
-
-            new_hash = compute_hash(template_content)
+            # Copy: compare directory hash (catches reference file changes)
+            new_hash = compute_dir_hash(skill_dir, common_replacements)
 
             if not skill_dest_file.exists():
                 status = 'missing'
                 current_hash = None
             else:
-                current_hash = compute_file_hash(skill_dest_file)
-                status = 'current' if current_hash == new_hash else 'updatable'
+                # Check both new and legacy hash keys for backward compat
+                old_hash = old_hashes.get(hash_key) or old_hashes.get(legacy_hash_key)
+
+                current_hash = (
+                    compute_dir_hash(skill_dest_dir, {})
+                    if skill_dest_dir.exists()
+                    else None
+                )
+
+                if old_hash is None:
+                    # No recorded hash — compare directly
+                    status = 'current' if current_hash == new_hash else 'updatable'
+                elif current_hash == new_hash:
+                    status = 'current'
+                else:
+                    status = 'updatable'
 
             try:
                 display_path = str(skill_dest_file.relative_to(project_root))
@@ -161,10 +225,10 @@ def collect_update_candidates(
                     status=status,  # type: ignore[arg-type]
                     template_path=skill_dir,
                     dest_path=skill_dest_dir,
-                    template_content=template_content,
+                    template_content='',  # Not used for dir-level skills
                     new_hash=new_hash,
                     current_hash=current_hash,
-                    hash_key=f'skills/{skill_name}/SKILL.md',
+                    hash_key=hash_key,
                     is_symlink=False,
                     strategy=strategy,
                 )

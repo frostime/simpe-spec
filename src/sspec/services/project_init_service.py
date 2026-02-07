@@ -21,7 +21,7 @@ from sspec.core import (
     get_template_dir,
     list_template_skills,
 )
-from sspec.libs.hashing import compute_hash
+from sspec.libs.hashing import compute_dir_hash, compute_hash
 from sspec.services.agents_service import update_root_agents_block
 from sspec.services.meta_service import save_meta
 
@@ -142,17 +142,17 @@ def initialize_project(
 
     # Compute hashes for installed skills (for update tracking)
     skill_hashes: dict[str, str] = {}
+    managed_skill_names: list[str] = []
     for skill_dir in template_skills:
         skill_name = skill_dir.name
-        template_skill_file = skill_dir / 'SKILL.md'
-        if not template_skill_file.exists():
+        managed_skill_names.append(skill_name)
+
+        if not (skill_dir / 'SKILL.md').exists():
             continue
 
-        template_content = template_skill_file.read_text(encoding='utf-8')
-        for old, new in common_replacements.items():
-            template_content = template_content.replace(f'{{{{{old}}}}}', new)
-
-        skill_hashes[f'skills/{skill_name}/SKILL.md'] = compute_hash(template_content)
+        skill_hashes[f'skills/{skill_name}'] = compute_dir_hash(
+            skill_dir, common_replacements
+        )
 
     # Create initial .meta.json
     meta_data: dict[str, Any] = {
@@ -161,6 +161,7 @@ def initialize_project(
         'created_at': datetime.now().isoformat(),
         'updated_at': datetime.now().isoformat(),
         'file_hashes': skill_hashes,
+        'managed_skills': sorted(managed_skill_names),
         'skill_locations': [],
         'skill_install_strategies': skill_install_strategies,
     }

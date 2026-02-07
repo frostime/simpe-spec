@@ -22,11 +22,7 @@ def ask_group() -> None:
 
 
 @ask_group.command(name='create')
-@click.option(
-    '--name',
-    default='ask',
-    help='Ask name (auto-converted to Python-safe identifier)',
-)
+@click.argument('name')
 def ask_create(name: str) -> None:
     """Create a new ask template (.py file) for editing."""
 
@@ -100,4 +96,41 @@ def ask_prompt(ask_file: Path) -> None:
 
     except (FileNotFoundError, AttributeError, ImportError) as e:
         raise click.ClickException(str(e)) from None
+
+
+@ask_group.command(name='list')
+def ask_list() -> None:
+    """List all asks (pending and completed)."""
+
+    try:
+        sspec_root = get_sspec_root()
+    except SspecNotFoundError:
+        raise click.ClickException(
+            "Not a sspec project. Run 'sspec project init' first."
+        ) from None
+
+    asks_dir = sspec_root / 'asks'
+    if not asks_dir.exists():
+        click.echo('No asks found.')
+        return
+
+    pending = sorted(asks_dir.glob('*.py'))
+    completed = sorted(asks_dir.glob('*.md'))
+
+    if not pending and not completed:
+        click.echo('No asks found.')
+        return
+
+    if pending:
+        click.echo('📝 Pending (unanswered):')
+        for f in pending:
+            click.echo(f'  {f.name}')
+
+    if completed:
+        click.echo('✅ Completed:')
+        for f in completed:
+            click.echo(f'  {f.name}')
+
+    click.echo()
+    click.echo(f'Total: {len(pending)} pending, {len(completed)} completed')
 

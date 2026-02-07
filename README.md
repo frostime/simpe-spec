@@ -113,7 +113,7 @@ When AI needs your input mid-execution, it uses a two-step workflow:
 
 ```bash
 # Step 1: AI creates ask template
-sspec ask create --name api_style
+sspec ask create api_style
 
 # Step 2: AI edits the .py file with REASON + QUESTION
 # (OR you can pre-fill USER_ANSWER in the file)
@@ -231,7 +231,7 @@ sspec doc new <n>        # Create
 sspec doc list              # List
 
 # Human-in-the-loop
-sspec ask create [--name <n>]  # Create ask template
+sspec ask create [<n>]  # Create ask template
 sspec ask prompt <path>        # Execute ask prompt
 ```
 

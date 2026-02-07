@@ -17,7 +17,7 @@ CHANGES_DIR = 'changes'
 ARCHIVE_DIR = 'archive'
 
 # Schema version - increment when template structure changes
-SCHEMA_VERSION = '5.2'
+SCHEMA_VERSION = '6.0'
 
 # Files tracked for updates (relative to .sspec/)
 # NOTE: Empty by design. The .sspec/ directory contains user-managed files that should
@@ -32,6 +32,7 @@ USER_FILES = ['project.md', 'spec-docs/README.md']
 
 # Change template source files
 CHANGE_TEMPLATE_FILES = ['spec.md', 'tasks.md', 'handover.md']
+CHANGE_ROOT_TEMPLATE_FILES: list[str] = ['spec.md', 'tasks.md', 'handover.md']
 
 # Files that should never be touched during update
 PROTECTED_PATTERNS = ['changes/*', 'requests/*', 'skills/*', 'spec-docs/*']
@@ -304,24 +305,26 @@ def list_skills(sspec_root: Path) -> list[SkillInfo]:
     for entry in skills_dir.iterdir():
         if entry.is_file() and entry.suffix == '.md':
             meta = parse_skill_metadata(entry)
-            if meta.get('skill'):
+            name = meta.get('name') or meta.get('skill', entry.stem)
+            if name:
                 skills.append(
                     {
                         'file': entry.name,
                         'path': entry,
-                        'skill': str(meta['skill']),
+                        'skill': str(name),
                         'description': str(meta.get('description', '')),
                     }
                 )
         elif entry.is_dir():
             skill_file = entry / 'SKILL.md'
             meta = parse_skill_metadata(skill_file)
-            if meta.get('skill'):
+            name = meta.get('name') or meta.get('skill', entry.name)
+            if name:
                 skills.append(
                     {
                         'file': f'{entry.name}/SKILL.md',
                         'path': skill_file,
-                        'skill': str(meta['skill']),
+                        'skill': str(name),
                         'description': str(meta.get('description', '')),
                     }
                 )

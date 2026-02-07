@@ -20,6 +20,7 @@ Core protocol lives in AGENTS.md. This SKILL provides judgment for decisions AGE
 | Check before status transition | Read [checklists] |
 | Decide where knowledge belongs | Knowledge Routing below |
 | Handle blockers, rejection, etc. | Edge Cases below |
+| Session getting long / important info at risk | Update handover.md "References & Memory" proactively |
 
 ---
 
@@ -49,9 +50,11 @@ Where does a piece of knowledge go?
 | One-liner, applies across all work | `project.md` **Conventions** |
 | Project-wide gotcha, preference, learning | `project.md` **Notes** (append with date) |
 | Needs paragraphs, diagrams, or sections | `spec-docs/` |
-| Only relevant to current change | `handover.md` **Conventions Discovered** |
+| File path critical to current work | `handover.md` **Key Files** |
+| Non-trivial decision with reasoning | `handover.md` **Decisions & Rationale** |
+| Edge case, implicit knowledge, gotcha | `handover.md` **Gotchas & Context** |
 
-**Notes lifecycle**: Append during `@handover` → Promote to Conventions if permanent → Prune if outdated → Graduate to spec-doc if it grows complex.
+**Memory lifecycle**: Discover → Write to handover.md immediately → At session end, promote project-wide items to project.md → Prune stale entries on next session.
 
 ---
 
@@ -81,6 +84,17 @@ AGENTS.md says STOP. Then assess scope of rejection:
 ### Design Iteration Loop
 
 spec.md keeps being revised → Archive current to `reference/spec-v1.md` → Brainstorm in `reference/` → Iterate via `@ask` → Write final to spec.md.
+
+### Long Session Memory Management
+
+Context window has hard limits; compression is silent — Agent won't notice lost context.
+
+Trigger: session feels long (>50 exchanges), multi-file complex work, or extensive design discussion.
+
+Action:
+1. Write key decisions, file refs, and gotchas to handover.md "References & Memory"
+2. Continue working — handover.md is the safety net against compression
+3. If previously-discussed info seems missing from memory, re-read handover.md
 
 ---
 

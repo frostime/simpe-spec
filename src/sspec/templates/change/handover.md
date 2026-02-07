@@ -1,6 +1,6 @@
 # Handover: {{CHANGE_NAME}}
 
-**Updated**: <!-- Update at session end -->
+**Updated**: <!-- Update during work AND at session end -->
 
 ---
 
@@ -20,5 +20,31 @@ One sentence: what this change does and why. Details are in spec.md. -->
 2. Add tests in `tests/test_jwt.py`
 -->
 
-## Conventions Discovered
-<!-- Patterns, naming rules found this session (if any) -->
+## References & Memory
+<!-- @RULE: Agent's external working memory. Serves two purposes:
+1. INTRA-SESSION: Survive context window compression in long conversations
+2. CROSS-SESSION: Let next Agent resume with full context
+
+Update PROACTIVELY as you work — don't wait until session end.
+Trigger: important decision made, key file found, non-obvious insight gained.
+Test: "Would I struggle to reconstruct this after context compression?" → Write it NOW. -->
+
+### Key Files
+<!-- Files critical to understanding/continuing this change.
+Include: source files, reference docs, sspec ask records, related requests.
+Format:
+- `path/file` — what it contains, why it matters -->
+
+### Decisions & Rationale
+<!-- Important decisions and the FULL reasoning chain. This is the most
+compression-vulnerable info — conclusions survive but reasoning gets lost.
+For complex decisions, capture: problem → alternatives → analysis → conclusion.
+Format:
+- **Decision**: <what was decided>
+  **Why**: <reasoning, alternatives considered, tradeoffs> -->
+
+### Gotchas & Context
+<!-- Non-obvious findings, edge cases, implicit knowledge from discussions,
+implementation cautions, and risk warnings.
+Things you'd need to re-derive or re-discover if context were lost.
+Project-wide learnings → ALSO append to project.md Notes. -->

@@ -29,10 +29,23 @@ Quick verification at key checkpoints. Load at the relevant moment.
 
 - [ ] handover.md "Accomplished" updated?
 - [ ] handover.md "Next Steps" clear (1-3 specific actions)?
-- [ ] handover.md "Conventions" updated if new patterns found?
+- [ ] handover.md "Key Files" — all critical files listed?
+- [ ] handover.md "Decisions & Rationale" — non-obvious choices captured with reasoning?
+- [ ] handover.md "Gotchas & Context" — edge cases, risks, implicit knowledge recorded?
 - [ ] tasks.md progress percentage updated?
 - [ ] spec.md status accurate?
 - [ ] Project-level learnings → appended to project.md Notes?
+
+## Mid-Session Memory Check
+
+Trigger: session getting long (>50 exchanges), complex multi-file work, or extensive discussion/design.
+
+- [ ] Any important decision in recent messages not yet in handover?
+- [ ] Any key file paths discussed but not recorded in Key Files?
+- [ ] Any design rationale that would be hard to reconstruct from compressed context?
+- [ ] Any gotcha, risk, or edge case discovered but not written down?
+
+→ If yes to any: update handover.md "References & Memory" now. Quick append, no ceremony.
 
 ## Before Archiving Root
 

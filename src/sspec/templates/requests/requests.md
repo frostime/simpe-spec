@@ -26,12 +26,16 @@ This becomes the starting point for the change's spec.md Section A/B. -->
 ## Additional Context
 <!-- Constraints, preferences, related links -->
 
----
+<!-- ============================================================
+     MICRO-CHANGE ZONE (optional)
+     For tiny changes (≤3 files, ≤30min) that don't need a full change.
+     Remove these sections if a change is created instead.
+     ============================================================ -->
 
-
-<!-- Optional: For micro-changes that don't need a full change -->
+<!--
 ## Plan
-<!-- Quick implementation plan if doing inline -->
+Quick implementation plan (what files to touch, what to do)
 
 ## Done
-<!-- What was actually done -->
+What was actually done + any notes for future reference
+-->

@@ -1,43 +1,42 @@
-# SSPEC Checklists Reference
+# Checklists
 
-Quick-reference checklists for key checkpoints. Load at the relevant moment rather than reading the full SKILL.
+Quick verification at key checkpoints. Load at the relevant moment.
 
 ---
 
 ## Starting New Work
 
-- [ ] Assessed complexity: Micro / Single / Multi-change?
-- [ ] If micro (≤3 files, ≤30min): Skip change, track in request or do directly
-- [ ] If multi-change: Created root change first (`--root`)?
-- [ ] Spec.md Section A: Problem quantified with metrics?
-- [ ] Spec.md Section B: Solution approach + rationale stated?
-- [ ] Spec.md Section C: File-level task breakdown (single/sub) or phase breakdown (root)?
-- [ ] Tasks.md: Each task <2h with verification criteria (single/sub)?
-- [ ] Handover.md: Initial context documented?
-- [ ] Reference field: Linked to originating request (if applicable)?
-- [ ] If sub-change: Linked to root via `type: "root-change"` reference?
+- [ ] Assessed scale: Micro / Single / Multi?
+- [ ] If micro (≤3 files, ≤30min): skip change, do directly or track in request
+- [ ] If multi: root change created first (`--root`)?
+- [ ] spec.md A: problem quantified?
+- [ ] spec.md B: approach + rationale?
+- [ ] spec.md C: file-level tasks (single/sub) or phases (root)?
+- [ ] tasks.md: each task <2h with pass criteria?
+- [ ] Reference field: linked to originating request?
+- [ ] If sub-change: linked to root via `type: "root-change"`?
 
-## Before Transitioning to REVIEW
+## Before REVIEW
 
-- [ ] All tasks marked `[x]` in tasks.md?
-- [ ] All phase verification criteria met?
-- [ ] Handover.md reflects completion?
-- [ ] Spec.md Section D: No undocumented blockers?
+- [ ] All tasks `[x]` in tasks.md?
+- [ ] Verification criteria met?
+- [ ] handover.md reflects completion?
+- [ ] spec.md D: no undocumented blockers?
 - [ ] Code tested and passing?
-- [ ] If this change modifies architecture: corresponding spec-doc updated?
+- [ ] Architecture change? → spec-doc updated?
 
-## Before @handover (End of Session)
+## Before @handover
 
-- [ ] Handover.md: "Accomplished" updated?
-- [ ] Handover.md: "Next Steps" clear (1-3 specific actions)?
-- [ ] Handover.md: "Conventions" updated if new patterns found?
-- [ ] Tasks.md: Progress percentage updated?
-- [ ] Spec.md: Status accurate?
-- [ ] project.md Notes: Project-level learnings appended? (gotchas, preferences, etc.)
+- [ ] handover.md "Accomplished" updated?
+- [ ] handover.md "Next Steps" clear (1-3 specific actions)?
+- [ ] handover.md "Conventions" updated if new patterns found?
+- [ ] tasks.md progress percentage updated?
+- [ ] spec.md status accurate?
+- [ ] Project-level learnings → appended to project.md Notes?
 
-## Before Archiving Root Change
+## Before Archiving Root
 
 - [ ] All sub-changes archived?
-- [ ] Root tasks.md: All milestones marked `[x]`?
-- [ ] Coordination notes captured in reference/ (if valuable for future)?
+- [ ] Root tasks.md: all milestones `[x]`?
+- [ ] Valuable coordination notes preserved in reference/?
 - [ ] Linked spec-docs up to date?

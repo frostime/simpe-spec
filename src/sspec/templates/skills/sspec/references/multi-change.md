@@ -1,15 +1,15 @@
-# Multi-Change Management Reference
+# Multi-Change Coordination
 
-Patterns for coordinating complex projects that span multiple changes. Load when creating or managing root/sub-change structures.
+Patterns for projects that need a root change + sub-changes. Load when Assess Scale → Multi.
 
 ---
 
-## Root vs Sub-Change
+## Root vs Sub
 
 | Aspect | Root Change | Sub-Change |
 |--------|------------|------------|
-| Template | `--root` flag → phase-level | Default → file-level |
-| spec.md Section C | Phase/sub-change breakdown | File-level task breakdown |
+| Create | `sspec change new <n> --root` | `sspec change new <n>` |
+| spec.md C | Phase/sub-change breakdown | File-level task breakdown |
 | tasks.md | Milestones (one per sub-change) | Atomic tasks (<2h each) |
 | handover.md | Sub-change status tracking | File-level next steps |
 | Lifecycle | Active until all subs complete | Normal: PLANNING→DONE |
@@ -17,51 +17,49 @@ Patterns for coordinating complex projects that span multiple changes. Load when
 ## Structure
 
 ```
-Root change (coordinator):
-  - changes/<root-name>/
-    ├── spec.md         # Overall vision, phase overview (change-type: root)
-    ├── tasks.md        # Milestones per sub-change
-    ├── handover.md     # Sub-change status tracking
-    ├── reference/      # Shared design docs
-    └── script/         # Shared scripts
+changes/<root>/
+├── spec.md          # Overall vision (change-type: root)
+├── tasks.md         # Milestones per sub-change
+├── handover.md      # Sub-change status tracking
+├── reference/       # Shared design docs
+└── script/          # Shared scripts
 
-Sub-changes (execution):
-  - changes/<sub-name>/
-    ├── spec.md         # Focused scope (change-type: sub)
-    ├── tasks.md        # File-level tasks
-    └── handover.md
+changes/<sub>/
+├── spec.md          # Focused scope (change-type: sub)
+├── tasks.md         # File-level tasks
+└── handover.md
 ```
 
 ## Workflow
 
-1. **Create root**: `sspec change new <n> --root` → design phases
-2. **Create sub-change**: `sspec change new <sub-n>` → link to root via `reference`
-3. **Execute sub-change**: Normal PLANNING→DOING→REVIEW→DONE cycle
-4. **Archive sub-change → create next**: Repeat for each phase
-5. **Archive root**: When all sub-changes complete
+1. `sspec change new <n> --root` → design phases in spec.md C
+2. `sspec change new <sub>` → link to root via reference field
+3. Execute sub: normal PLANNING→DOING→REVIEW→DONE
+4. Archive sub → create next sub
+5. All subs done → archive root
 
 ## Reference Linking
 
-Sub-change spec.md frontmatter:
+Sub → Root:
 ```yaml
 reference:
-  - source: "changes/<root-name>"
+  - source: "changes/<root>"
     type: "root-change"
     note: "Phase 1 of auth overhaul"
 ```
 
-Root spec.md can back-link:
+Root → Sub:
 ```yaml
 reference:
-  - source: "changes/<sub-name>"
+  - source: "changes/<sub>"
     type: "sub-change"
 ```
 
-## Anti-Patterns (Multi-Change Specific)
+## Pitfalls
 
-| Bad Practice | Correct Approach |
-|--------------|------------------|
-| File-level tasks in root change | Root is coordinator — use milestone-level tasks |
-| Skip root, jump to sub-changes | Root provides vision and coordination |
-| Forget to back-link root ↔ sub | Use reference field in both directions |
-| Archive root before all subs done | Root stays active until all subs complete |
+| Mistake | Fix |
+|---------|-----|
+| File-level tasks in root | Root is coordinator — milestone-level only |
+| Skip root, jump to subs | Root provides vision and phase coordination |
+| Forget to link root ↔ sub | Use reference field in both directions |
+| Archive root before subs done | Root stays active until all subs complete |

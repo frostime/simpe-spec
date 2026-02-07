@@ -69,7 +69,7 @@ Track in request file (`## Plan` / `## Done`) or just do it. No change needed.
 
 1. **Link**: `sspec change new --from <request>` or create then `sspec request link`
 2. **Understand**: First-principles — find the real problem, not the surface ask
-3. **Research**: Read project.md + relevant code. If unclear, **use `@ask`**(sspec ask)
+3. **Research**: Read project.md + relevant code. If unclear, **use `@ask`** (sspec ask)
 4. **Design**:
    - Simple: Draft spec.md mentally
    - Complex (>1 week / >15 files / >20 tasks): **`@ask`** about splitting → `sspec change new <n> --root`
@@ -114,7 +114,7 @@ End of session. No exceptions.
 1. Update handover.md: background, accomplished, status, next steps, conventions
 2. Update tasks.md: mark `[x]`, update progress%
 3. Update spec.md: update status if changed
-4. If project-level learnings discovered: Update project.md Notes: append project-level learnings (if any)
+4. project.md Notes: append project-level learnings (if any)
 
 **Test**: Would a new Agent know what to do in <30 seconds?
 
@@ -182,7 +182,7 @@ sspec ask list
 
 #### `@ask`
 
-**MUST** Trigger when: confused, before session end, tool call rejected.
+**MUST** trigger when: confused, before session end, tool call rejected.
 
 📚 Consult `sspec-ask` SKILL for triggers, workflow, syntax
 

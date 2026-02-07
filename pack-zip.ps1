@@ -1,6 +1,6 @@
 # 语法：7z a <压缩包名> <包含的文件/目录列表> <排除规则>
 
-7z a sspec.zip src pyproject.toml -xr!__pycache__
+7z a sspec.zip src pyproject.toml AGENTS.md README.md i18n-glossary.md README_zh-CN.md pack-zip.ps1 -xr!__pycache__
 
 # 最终交付
 # - CHANGE.md 里面记录了所有变更，文件级别到内部说明

@@ -17,7 +17,7 @@ CHANGES_DIR = 'changes'
 ARCHIVE_DIR = 'archive'
 
 # Schema version - increment when template structure changes
-SCHEMA_VERSION = '5.2'
+SCHEMA_VERSION = '6.0'
 
 # Files tracked for updates (relative to .sspec/)
 # NOTE: Empty by design. The .sspec/ directory contains user-managed files that should

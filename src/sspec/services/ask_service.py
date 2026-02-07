@@ -49,8 +49,7 @@ def normalize_ask_name(name: str) -> tuple[str, str | None]:
 
     if not normalized:
         raise ValueError(
-            f'Invalid ask name: "{name}". '
-            'Must contain at least one letter or number.'
+            f'Invalid ask name: "{name}". ' 'Must contain at least one letter or number.'
         )
 
     # Check if conversion happened
@@ -75,7 +74,7 @@ def collect_multiline_input(
         file=output_stream,
     )
     print(
-        f"💡 Enter response (type {end_token} on new line to finish):",
+        f'💡 Enter response (type {end_token} on new line to finish):',
         file=output_stream,
     )
     lines: list[str] = []
@@ -162,8 +161,10 @@ def execute_ask_prompt(ask_file_path: Path) -> str:
     if not ask_file_path.exists():
         md_file_path = ask_file_path.with_suffix('.md')
         if md_file_path.exists():
-            return f'Warning: Ask already completed and converted to MD: {md_file_path}.' \
-                   ' See that file if needed.'
+            return (
+                f'Warning: Ask already completed and converted to MD: {md_file_path}.'
+                ' See that file if needed.'
+            )
         else:
             raise FileNotFoundError(f'Ask file not found: {ask_file_path}')
 
@@ -274,4 +275,3 @@ def convert_ask_to_md(py_path: Path) -> Path:
     py_path.unlink()
 
     return md_path
-

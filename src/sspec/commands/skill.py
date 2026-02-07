@@ -6,7 +6,7 @@ import click
 from rich.console import Console
 from rich.table import Table
 
-from sspec.core import SCHEMA_VERSION, SspecNotFoundError, get_sspec_root, list_skills
+from sspec.core import SspecNotFoundError, get_sspec_root, list_skills
 
 console = Console()
 
@@ -74,7 +74,7 @@ def new(name: str, to_claude: bool, to_github: bool) -> None:
         targets.append(candidates[1])
 
     if not explicit:
-        # Auto-detect: prefer existing skill dirs, then existing workspace parents, otherwise fallback to .claude/skills
+        # Auto-detect: prefer existing skill dirs, then existing workspace parents
         # This matches the default behavior of 'sspec project init --skill-loc .claude'
         existing_skill_dirs = [p for p in candidates if p.exists()]
         if existing_skill_dirs:

@@ -29,9 +29,7 @@ def ask_create(name: str) -> None:
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException(
-            "Not a sspec project. Run 'sspec project init' first."
-        ) from None
+        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     try:
         py_path, warning = create_ask_template(sspec_root=sspec_root, name=name)
@@ -61,9 +59,7 @@ def ask_prompt(ask_file: Path) -> None:
     """Execute ask prompt, collect answer, and convert to .md."""
 
     if ask_file.suffix != '.py':
-        raise click.ClickException(
-            f'Ask file must be .py file, got: {ask_file.suffix}'
-        )
+        raise click.ClickException(f'Ask file must be .py file, got: {ask_file.suffix}')
 
     if not ask_file.exists():
         md_file = ask_file.with_suffix('.md')
@@ -105,9 +101,7 @@ def ask_list() -> None:
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException(
-            "Not a sspec project. Run 'sspec project init' first."
-        ) from None
+        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     asks_dir = sspec_root / 'asks'
     if not asks_dir.exists():
@@ -133,4 +127,3 @@ def ask_list() -> None:
 
     click.echo()
     click.echo(f'Total: {len(pending)} pending, {len(completed)} completed')
-

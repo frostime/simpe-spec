@@ -14,7 +14,6 @@ from sspec.core import (
     CHANGES_DIR,
     ChangeExistsError,
     ChangeInfo,
-    ChangeNotFoundError,
     ChangeStatus,
     InvalidChangeNameError,
     copy_template,
@@ -42,20 +41,14 @@ def find_change_matches(changes_dir: Path, name: str) -> list[Path]:
     matches = [
         d
         for d in changes_dir.iterdir()
-        if d.is_dir()
-        and d.name != ARCHIVE_DIR
-        and d.name.endswith(f'_{name}')
+        if d.is_dir() and d.name != ARCHIVE_DIR and d.name.endswith(f'_{name}')
     ]
     if matches:
         return sorted(matches)
 
     # Contains match (fallback)
     contains = [
-        d
-        for d in changes_dir.iterdir()
-        if d.is_dir()
-        and d.name != ARCHIVE_DIR
-        and name in d.name
+        d for d in changes_dir.iterdir() if d.is_dir() and d.name != ARCHIVE_DIR and name in d.name
     ]
     return sorted(contains)
 
@@ -290,7 +283,8 @@ def validate_change(change_path: Path) -> list[str]:
                 next_heading = body.find('\n## ', idx + len(section))
                 section_body = body[idx:next_heading] if next_heading > 0 else body[idx:]
                 lines = [
-                    line for line in section_body.split('\n')
+                    line
+                    for line in section_body.split('\n')
                     if line.strip()
                     and not line.startswith('#')
                     and not line.strip().startswith('<!--')
@@ -316,10 +310,9 @@ def validate_change(change_path: Path) -> list[str]:
             next_heading = content.find('\n## ', bg_idx + 13)
             bg_body = content[bg_idx:next_heading] if next_heading > 0 else content[bg_idx:]
             lines = [
-                line for line in bg_body.split('\n')
-                if line.strip()
-                and not line.startswith('#')
-                and not line.strip().startswith('<!--')
+                line
+                for line in bg_body.split('\n')
+                if line.strip() and not line.startswith('#') and not line.strip().startswith('<!--')
             ]
             if len(lines) == 0:
                 issues.append('handover.md: Background section empty')

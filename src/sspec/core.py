@@ -17,7 +17,7 @@ CHANGES_DIR = 'changes'
 ARCHIVE_DIR = 'archive'
 
 # Schema version - increment when template structure changes
-SCHEMA_VERSION = '6.0'
+SCHEMA_VERSION = '6.1'
 
 # Files tracked for updates (relative to .sspec/)
 # NOTE: Empty by design. The .sspec/ directory contains user-managed files that should
@@ -85,7 +85,6 @@ STATUS_ALIASES: dict[str, str] = {
     # PLANNING
     'DESIGN': ChangeStatus.PLANNING.value,
     '设计中': ChangeStatus.PLANNING.value,
-
     # DOING
     'DEV': ChangeStatus.DOING.value,
     'IN_DEV': ChangeStatus.DOING.value,
@@ -94,42 +93,35 @@ STATUS_ALIASES: dict[str, str] = {
     'INPROGRESS': ChangeStatus.DOING.value,
     '进行中': ChangeStatus.DOING.value,
     '开发中': ChangeStatus.DOING.value,
-
     # BLOCKED
     'HANGUP': ChangeStatus.BLOCKED.value,
     'WAIT': ChangeStatus.BLOCKED.value,
     '已阻塞': ChangeStatus.BLOCKED.value,
     '挂起': ChangeStatus.BLOCKED.value,
-
     # REVIEW
     'IN_REVIEW': ChangeStatus.REVIEW.value,
     'IN-REVIEW': ChangeStatus.REVIEW.value,
     'REVIEWING': ChangeStatus.REVIEW.value,
     '待审核': ChangeStatus.REVIEW.value,
     '审核中': ChangeStatus.REVIEW.value,
-
     # DONE
     'COMPLETED': ChangeStatus.DONE.value,
     'FINISHED': ChangeStatus.DONE.value,
     '已完成': ChangeStatus.DONE.value,
-
     # CLOSED
     'CANCELLED': ChangeStatus.CLOSED.value,
     'CANCELED': ChangeStatus.CLOSED.value,
     'ARCHIVED': ChangeStatus.CLOSED.value,
     '已关闭': ChangeStatus.CLOSED.value,
-
     # ===== RequestStatus Aliases =====
     # OPEN
     'TODO': RequestStatus.OPEN.value,
     'TO_DO': RequestStatus.OPEN.value,
     'TO-DO': RequestStatus.OPEN.value,
     '待办': RequestStatus.OPEN.value,
-
     # DONE
     'RESOLVED': RequestStatus.DONE.value,
 }
-
 
 
 def normalize_status(raw: str, valid_enum: type[Enum]) -> str:
@@ -220,9 +212,7 @@ def render_template(content: str, replacements: Mapping[str, str]) -> str:
     return re.sub(r'{{\s*(.+?)\s*}}', _replace, content)
 
 
-def parse_skill_metadata(
-    skill_path: Path, replacements: Mapping[str, str] | None = None
-) -> dict:
+def parse_skill_metadata(skill_path: Path, replacements: Mapping[str, str] | None = None) -> dict:
     """Parse YAML front matter from a SKILL.md file."""
 
     if not skill_path.exists():
@@ -244,9 +234,7 @@ def parse_skill_metadata(
         return {}
 
 
-def get_workspace_skill_targets(
-    project_root: Path, primary_loc: str | None = None
-) -> list[Path]:
+def get_workspace_skill_targets(project_root: Path, primary_loc: str | None = None) -> list[Path]:
     """Return workspace directories that should host skills.
 
     Args:
@@ -286,11 +274,7 @@ def list_template_skills() -> list[Path]:
     if not template_skills_dir.exists():
         return []
 
-    return [
-        d
-        for d in template_skills_dir.iterdir()
-        if d.is_dir() and (d / 'SKILL.md').exists()
-    ]
+    return [d for d in template_skills_dir.iterdir() if d.is_dir() and (d / 'SKILL.md').exists()]
 
 
 def list_skills(sspec_root: Path) -> list[SkillInfo]:

@@ -150,9 +150,7 @@ def initialize_project(
         if not (skill_dir / 'SKILL.md').exists():
             continue
 
-        skill_hashes[f'skills/{skill_name}'] = compute_dir_hash(
-            skill_dir, common_replacements
-        )
+        skill_hashes[f'skills/{skill_name}'] = compute_dir_hash(skill_dir, common_replacements)
 
     # Create initial .meta.json
     meta_data: dict[str, Any] = {

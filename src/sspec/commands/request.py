@@ -341,7 +341,7 @@ def _archive_requests_interactive(sspec_root: Path) -> None:
     # Multi-select: DONE/CLOSED pre-checked
     choices = [
         questionary.Choice(
-            title=f"{r.name} [{r.status}] - {r.tldr[:50]}",
+            title=f'{r.name} [{r.status}] - {r.tldr[:50]}',
             value=r,
             checked=(r.status in (RequestStatus.DONE.value, RequestStatus.CLOSED.value)),
         )

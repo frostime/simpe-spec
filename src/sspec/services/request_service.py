@@ -264,10 +264,13 @@ def link_request_to_change(
     # Store spec.md relative path in request
     spec_relative = (change_path / 'spec.md').relative_to(sspec_root).as_posix()
     request_content = request_file.read_text(encoding='utf-8')
-    request_content = update_frontmatter(request_content, {
-        'attach-change': spec_relative,
-        'status': RequestStatus.DOING.value,
-    })
+    request_content = update_frontmatter(
+        request_content,
+        {
+            'attach-change': spec_relative,
+            'status': RequestStatus.DOING.value,
+        },
+    )
     request_file.write_text(request_content, encoding='utf-8')
 
     # Add reference in change spec.md

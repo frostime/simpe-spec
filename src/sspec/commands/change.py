@@ -99,7 +99,7 @@ def _resolve_from_request(sspec_root: Path, from_value: str) -> Path:
 @change.command()
 @click.argument('name', required=False)
 @click.option('--from', 'from_request', help='Link to existing request (name or path)')
-@click.option('--root', is_flag=True, default=False, help='Create root change for multi-change coordination')
+@click.option('--root', is_flag=True, default=False, help='Create root change for multi-change')
 def new(name: str | None = None, from_request: str | None = None, root: bool = False) -> None:
     """Create a new change proposal (spec, tasks, handover).
 
@@ -108,10 +108,10 @@ def new(name: str | None = None, from_request: str | None = None, root: bool = F
     """
     if not name and not from_request:
         raise click.ClickException(
-            "Provide a change name or use --from <request>.\n"
-            "  sspec change new my-feature\n"
-            "  sspec change new --from my-request\n"
-            "  sspec change new my-feature --from my-request"
+            'Provide a change name or use --from <request>.\n'
+            '  sspec change new my-feature\n'
+            '  sspec change new --from my-request\n'
+            '  sspec change new my-feature --from my-request'
         )
 
     try:
@@ -243,7 +243,7 @@ def _print_changes_table(changes: list[ChangeInfo], dim: bool = False) -> None:
             flags.append('🚧blocked')
 
         table.add_row(
-            f"[{color}]{change.name}[/{color}]",
+            f'[{color}]{change.name}[/{color}]',
             f'[{color}]{icon} {status}[/{color}]',
             progress_str,
             str(change.path.relative_to(Path.cwd()) / 'spec.md'),
@@ -325,7 +325,7 @@ def _show_change_detail(change_path: Path) -> None:
     if status == 'PLANNING':
         console.print('\n[dim]Next: Fill spec.md sections A/B/C, then transition to DOING[/dim]')
     elif status == 'DOING':
-        console.print('\n[dim]Next: Continue tasks. Run \'sspec change status\' for progress[/dim]')
+        console.print("\n[dim]Next: Continue tasks. Run 'sspec change status' for progress[/dim]")
     elif status == 'REVIEW':
         console.print('\n[dim]Next: Awaiting user review. After approval → DONE → archive[/dim]')
 
@@ -472,7 +472,9 @@ def validate(name: str) -> None:
     if not issues:
         console.print(f'[green]✓[/green] Change [bold]{change_path.name}[/bold] looks good!')
     else:
-        console.print(f'[yellow]⚠[/yellow] Change [bold]{change_path.name}[/bold] has {len(issues)} issue(s):')
+        console.print(
+            f'[yellow]⚠[/yellow] Change [bold]{change_path.name}[/bold] has {len(issues)} issue(s):'
+        )
         console.print()
         for issue in issues:
             console.print(f'  [yellow]•[/yellow] {issue}')

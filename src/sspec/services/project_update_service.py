@@ -201,9 +201,7 @@ def collect_update_candidates(
                 old_hash = old_hashes.get(hash_key) or old_hashes.get(legacy_hash_key)
 
                 current_hash = (
-                    compute_dir_hash(skill_dest_dir, {})
-                    if skill_dest_dir.exists()
-                    else None
+                    compute_dir_hash(skill_dest_dir, {}) if skill_dest_dir.exists() else None
                 )
 
                 if old_hash is None:

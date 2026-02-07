@@ -207,8 +207,7 @@ def run_command(
         script_path = _get_commands_dir(sspec_root) / cmd.script_file
         if not script_path.exists():
             raise FileNotFoundError(
-                f"Script file not found: {cmd.script_file}\n"
-                f"Expected at: {script_path}"
+                f'Script file not found: {cmd.script_file}\n' f'Expected at: {script_path}'
             )
 
     result = subprocess.run(

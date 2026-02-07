@@ -36,8 +36,19 @@ def _suggest_name_from_invoke(invoke: str) -> str:
     parts = invoke.strip().split()
 
     # Skip common prefixes
-    skip = {'uv', 'run', 'npx', 'python', 'python3', 'node', 'bash', 'sh',
-            'powershell', '-File', '-c'}
+    skip = {
+        'uv',
+        'run',
+        'npx',
+        'python',
+        'python3',
+        'node',
+        'bash',
+        'sh',
+        'powershell',
+        '-File',
+        '-c',
+    }
 
     for part in parts:
         token = Path(part).stem if ('/' in part or '\\' in part) else part
@@ -75,9 +86,7 @@ def add(cmd_name: str | None) -> None:
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException(
-            "Not a sspec project. Run 'sspec project init' first."
-        ) from None
+        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     # 1. Choose type
     cmd_type = questionary.select(
@@ -168,7 +177,7 @@ def add(cmd_name: str | None) -> None:
     except CommandExistsError:
         raise click.ClickException(
             f"Command '{cmd_name}' already exists. "
-            f"Remove it first with: sspec cmd remove {cmd_name}"
+            f'Remove it first with: sspec cmd remove {cmd_name}'
         ) from None
 
     console.print(f'[green]✓[/green] Added command "{cmd_name}" ({cmd_type})')
@@ -188,9 +197,7 @@ def list_cmd() -> None:
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException(
-            "Not a sspec project. Run 'sspec project init' first."
-        ) from None
+        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     commands = load_registry(sspec_root)
 
@@ -233,9 +240,7 @@ def remove(name: str) -> None:
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException(
-            "Not a sspec project. Run 'sspec project init' first."
-        ) from None
+        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     commands = load_registry(sspec_root)
     if name not in commands:
@@ -282,9 +287,7 @@ def run_cmd(ctx: click.Context, name: str) -> None:
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException(
-            "Not a sspec project. Run 'sspec project init' first."
-        ) from None
+        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     commands = load_registry(sspec_root)
     if name not in commands:

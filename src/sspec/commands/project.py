@@ -1,6 +1,5 @@
 """sspec project command - project-level operations."""
 
-import json
 from datetime import datetime
 from pathlib import Path
 
@@ -13,11 +12,8 @@ from sspec import __version__
 from sspec.core import (
     SCHEMA_VERSION,
     SSPEC_DIR,
-    UPDATABLE_FILES,
-    USER_FILES,
     ChangeStatus,
     SspecNotFoundError,
-    copy_template,
     get_sspec_root,
     get_template_dir,
     list_template_skills,

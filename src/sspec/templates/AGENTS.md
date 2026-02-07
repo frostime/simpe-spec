@@ -68,6 +68,8 @@ When user provides a vague request (idea, bug, feature), process BEFORE creating
 
 **Key principle**: Understand before acting. Wrong direction costs more than extra questions.
 
+ **No need for sspec change**: Very tiny change OR user says no need for change -> plan a mini-change inside request files is ok.
+
 📚 For quality standards, complexity assessment, multi-change patterns → Consult `sspec` SKILL
 
 ### 2.1 Status Transitions
@@ -98,8 +100,8 @@ If new:
 - Run `sspec change new <name>` or `sspec change new --from <request>`
 - For complex scope: `sspec change new <name> --root` (creates phase-level coordinator)
 - Follow Request → Change Workflow (Section 2.0)
-- Fill spec.md Sections A/B/C
-- Generate tasks.md from Section C
+- Fill spec.md Sections A/B/C, (follow `@RULE` inside template)
+- Generate tasks.md from Section C, (follow `@RULE` inside template)
 - Ask for approval to execute
 
 #### `@resume`

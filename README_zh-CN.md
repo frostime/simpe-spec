@@ -113,7 +113,7 @@ sspec doc new "支付系统" --dir  # 复杂主题用目录
 
 ```bash
 # 步骤 1：AI 创建问题模板
-sspec ask create --name api_style
+sspec ask create api_style
 
 # 步骤 2：AI 编辑 .py 文件，填写 REASON + QUESTION
 # （或者你可以在文件中预先填写 USER_ANSWER）
@@ -231,7 +231,7 @@ sspec doc new <name>        # 创建
 sspec doc list              # 列表
 
 # 人机协作
-sspec ask create [--name <n>]  # 创建问题模板
+sspec ask create [<n>]  # 创建问题模板
 sspec ask prompt <path>        # 执行问题提示
 ```
 

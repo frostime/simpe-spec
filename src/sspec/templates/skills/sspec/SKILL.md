@@ -24,6 +24,15 @@ metadata:
 
 **FIRST DECISION**: Single change or multi-change?
 
+### No Change Needed (micro)
+
+Use when ALL of:
+- **Scope**: ≤3 files
+- **Time**: ≤30 minutes
+- **Complexity**: No design decisions, obvious implementation
+
+**Action**: Track in request file or do directly. No change ceremony.
+
 ### Single Change (default)
 
 Use when ALL of:

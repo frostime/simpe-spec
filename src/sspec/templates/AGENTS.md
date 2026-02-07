@@ -35,6 +35,7 @@ When entering project in new session:
 | Contains `@resume` or `@change` | Load that change's context |
 | Vague request (idea/bug/feature) | Follow Request → Change Workflow (Section 2.0) |
 | Simple task, no directive | Do directly, skip sspec ceremony |
+| Micro change (≤3 files, ≤30 min) | Plan inline in request file, skip change ceremony |
 
 ---
 
@@ -52,7 +53,13 @@ Changes live in `.sspec/changes/<name>/`.
 
 ### 2.0 Request → Change Workflow
 
-When user provides a vague request (idea, bug, feature), process BEFORE creating change:
+<!-- Request → Change Pre-check -->
+**First**: Assess if a change is needed at all.
+- **Micro change** (≤3 files, ≤30 min, user says OK): Track in request file directly. Add a `## Plan` and `## Done` section to the request. No change ceremony needed.
+- **Normal change**: Proceed with workflow below.
+
+<!-- Request → Change Main Workflow -->
+User provides a vague request (idea, bug, feature), process following BEFORE creating change:
 
 1. **Change**: Invoke `sspec change new` with `--from` or invoke `link` after new, make request-change pair.
 2. **Understand**: Read the request carefully. Identify the underlying need, not the surface ask. Requests are often confused—apply first-principles thinking to find the real problem.
@@ -67,8 +74,6 @@ When user provides a vague request (idea, bug, feature), process BEFORE creating
 6. **Execute**: Proceed per SSPEC protocol. Update tasks.md after each task.
 
 **Key principle**: Understand before acting. Wrong direction costs more than extra questions.
-
- **No need for sspec change**: Very tiny change OR user says no need for change -> plan a mini-change inside request files is ok.
 
 📚 For quality standards, complexity assessment, multi-change patterns → Consult `sspec` SKILL
 

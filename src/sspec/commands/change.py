@@ -302,7 +302,7 @@ def _show_change_detail(change_path: Path) -> None:
         status = meta.get('status', 'PLANNING')
         in_why = False
         for line in body.split('\n'):
-            if line.startswith('## Why'):
+            if line.startswith('## A.'):
                 in_why = True
                 continue
             if in_why and line.strip() and not line.startswith('<!--'):

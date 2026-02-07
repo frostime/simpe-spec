@@ -25,3 +25,13 @@ This becomes the starting point for the change's spec.md Section A/B. -->
 
 ## Additional Context
 <!-- Constraints, preferences, related links -->
+
+---
+
+
+<!-- Optional: For micro-changes that don't need a full change -->
+## Plan
+<!-- Quick implementation plan if doing inline -->
+
+## Done
+<!-- What was actually done -->

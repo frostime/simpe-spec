@@ -27,15 +27,7 @@ AI-assisted development suffers from memory loss:
 sspec request new forgot-password
 ```
 
-Edit the generated file (3-5 sentences):
-
-```markdown
-## Problem
-Users cannot reset passwords. 50+ support tickets/month.
-
-## Initial Direction
-Email-based reset link, 15min expiry.
-```
+Edit the generated file.
 
 ### 2. Delegate to AI
 
@@ -51,9 +43,10 @@ AI workflow:
 2. **Clarify** via `sspec ask`:
    ```bash
    sspec ask create token-storage
-   # AI fills: "Store reset tokens in Redis or DB?"
+   # AI fills question: "Store reset tokens in Redis or DB?"
+   # User fills answer in the generated Python file
    sspec ask prompt .sspec/asks/<file>
-   # Human answers → AI receives decision
+   # AI receives decision
    ```
 3. **Create change** — AI executes `sspec change new --from forgot-password`
 4. **Write spec** — AI populates `spec.md`:
@@ -88,7 +81,7 @@ AI reads `handover.md` → restores context → continues work.
 | `sspec request new <idea>` | Capture idea (3-5 sentences) |
 | `@change <n>` | Initiate work on request |
 | `@resume` | Resume previous session |
-| `sspec ask prompt <file>` | Answer AI questions |
+| Answer AI questions | After Agent runs `sspec ask create` |
 | Approve plan | Respond to design `@ask` |
 | Verify implementation | Review REVIEW-status changes |
 
@@ -134,10 +127,8 @@ project/
 │   ├── changes/                 # Active work (AI-managed)
 │   ├── requests/                # Intent captures (human-created)
 │   └── asks/                    # AI-to-human queries
-└── .claude/skills/              # AI skill definitions
+└── .xxx/skills/              # AI skill definitions
 ```
-
-Supported tools: Claude Code, Cursor, Windsurf, GitHub Copilot, VS Code Copilot
 
 ---
 
@@ -145,18 +136,13 @@ Supported tools: Claude Code, Cursor, Windsurf, GitHub Copilot, VS Code Copilot
 
 ### Request (Human-Created)
 
-Entry point for work. 3-5 sentences describing intent.
+Entry point for work. Describe intent as clearly as possible.
 
 ```bash
 sspec request new <idea>
 ```
 
-Examples:
-- "Auth latency 5s, user complaints increasing"
-- "OAuth support needed for Google/GitHub"
-- "Payment webhooks returning 500, Stripe logs failing"
-
-AI converts requests to changes.
+Reference the request file in conversation and tell Agent "sspec@change from this request".
 
 ### Change (AI-Managed)
 
@@ -195,17 +181,15 @@ Cross-session persistence mechanism:
 
 Updated during work and at session end. Read-first on `@resume`.
 
-Mid-session updates triggered when context window approaches limits (>50 exchanges).
+### Spec-doc
 
-### Spec-doc (AI-Generated)
-
-Project-level design documents for patterns transcending individual changes:
+Project-level design documents transcending individual changes:
 
 - API standards
 - Architecture decisions
 - Schema definitions
 
-Created via `sspec doc new` when AI identifies project-wide patterns. Auto-referenced during change execution.
+Tell Agent to create document `sspec@doc`, Agent calls CLI and auto-fills.
 
 ### sspec ask (AI-to-Human Query)
 
@@ -216,17 +200,16 @@ AI creates:
 sspec ask create <topic>
 ```
 
-Human responds:
+Generates question document, user fills answer in the document.
+
+Agent runs command to get answer:
 ```bash
 sspec ask prompt .sspec/asks/<file>
 ```
 
-Usage examples:
-- Design choice resolution ("Redis vs Postgres caching?")
-- Destructive operation confirmation ("Delete test data?")
-- Multiple valid approaches ("Auth strategy A vs B?")
-
-Related questions batched in single ask.
+> [!note]
+> This process depends on tool call approval
+> User should answer before `sspec ask prompt` tool runs
 
 ---
 
@@ -254,11 +237,11 @@ Chat-based workflow control:
 # Capture intent
 sspec request new <idea>
 
-# Respond to AI queries
-sspec ask prompt .sspec/asks/<file>
-
 # Status check
 sspec project status
+
+sspec request archive
+sspec change archive
 ```
 
 ### AI-Executed Commands
@@ -283,120 +266,16 @@ sspec ask list
 # Request management
 sspec request list
 sspec request link <req> <change>
-sspec request archive <n>
 ```
 
 ---
 
 ## Compatibility
 
-Works with AI tools supporting file-based context:
-
-- Claude Code (agentic CLI)
-- Cursor (AI-first editor)
-- Windsurf (flow-based coding)
-- GitHub Copilot (in-editor)
-- VS Code Copilot (chat + inline)
-
-Requires `AGENTS.md` at project root (auto-loaded).
-
----
-
-## When Not to Use
-
-Skip for:
-- Typo corrections
-- 5-minute bug fixes
-- Configuration adjustments
-
-Use for work requiring:
-- Multi-session continuity
-- Decision documentation
-- Cross-file coordination
-
----
-
-## Usage Examples
-
-### SaaS Development
-
-```
-Workflow:
-├── sspec request new stripe-integration
-├── @change stripe-integration
-│   └── AI: design → ask webhook handling → implement
-├── @handover (session end)
-├── @resume (next session)
-└── sspec change archive stripe-integration (completion)
-
-Project structure:
-├── project.md: Next.js + Postgres + Railway
-├── spec-docs/api-standards.md: REST conventions
-└── changes/stripe-integration/: feature history
-```
-
-### Open Source Maintenance
-
-```
-Workflow:
-├── GitHub issue → sspec request new issue-245
-├── @change issue-245
-├── AI: analyze → ask compatibility → implement
-└── REVIEW → verify → archive
-
-Project structure:
-├── requests/: issue triage
-├── changes/: active work
-└── spec-docs/architecture.md: contributor reference
-```
-
-### Consulting
-
-```
-Workflow:
-├── Client requirement → sspec request new payment-fix
-├── @change payment-fix
-├── AI: design → ask environment → implement
-└── handover documents billable work
-
-Project structure:
-├── project.md: client conventions, deployment
-├── changes/: deliverable tracking
-└── handover.md: handoff-ready documentation
-```
-
----
-
-## FAQ
-
-**Spec.md population?**
-AI-automated. Human writes 3-5 sentence request.
-
-**When to execute `sspec change new`?**
-Rarely manual. AI executes after `@change <request>` directive.
-
-**Handover.md maintenance?**
-AI-managed. Updates during work, automatic at `@handover`. Human reads on resume.
-
-**Disagreement handling?**
-Issue `@argue` directive for re-planning, or reject approval `@ask`.
-
-**Usage without AI?**
-Possible but suboptimal. Framework designed for AI collaboration.
+Works with AI tools supporting file-based context. `AGENTS.md` is created and filled during project init.
 
 ---
 
 ## License
 
-MIT
-
----
-
-## Links
-
-- Repository: [github.com/frostime/sspec](https://github.com/frostime/sspec)
-- Issues: [GitHub Issues](https://github.com/frostime/sspec/issues)
-
----
-
-**Summary**: Requests capture intent, AI implements and maintains memory, humans control via checkpoints.
+AGPL-V3.0

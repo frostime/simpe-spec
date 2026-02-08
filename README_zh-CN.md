@@ -27,15 +27,8 @@ AI 辅助开发的记忆丢失问题：
 sspec request new forgot-password
 ```
 
-编辑生成的文件（3-5 句话）：
+编辑生成的文件。
 
-```markdown
-## Problem
-用户无法重置密码。每月 50+ 客服工单。
-
-## Initial Direction
-邮件重置链接，15 分钟过期。
-```
 
 ### 2. 委托给 AI
 
@@ -51,9 +44,10 @@ AI 工作流：
 2. **澄清** 通过 `sspec ask`：
    ```bash
    sspec ask create token-storage
-   # AI 填写："重置令牌存 Redis 还是 DB？"
+   # AI 填写提问："重置令牌存 Redis 还是 DB？"
+   # User 在自动生成的 py 文件中填写回答
    sspec ask prompt .sspec/asks/<file>
-   # 人工回答 → AI 接收决策
+   # AI 接收决策
    ```
 3. **创建变更** — AI 执行 `sspec change new --from forgot-password`
 4. **编写规格** — AI 填充 `spec.md`：
@@ -88,7 +82,7 @@ AI 读取 `handover.md` → 恢复上下文 → 继续工作。
 | `sspec request new <idea>` | 捕获想法（3-5 句话） |
 | `@change <n>` | 启动 request 工作 |
 | `@resume` | 恢复上次会话 |
-| `sspec ask prompt <file>` | 回答 AI 提问 |
+| 回答 AI 提问  | Agent 运行 ``sspec ask create` 之后 |
 | 批准方案 | 响应设计 `@ask` |
 | 验证实现 | 审查 REVIEW 状态变更 |
 
@@ -134,10 +128,8 @@ project/
 │   ├── changes/                 # 活动工作（AI 管理）
 │   ├── requests/                # 意图捕获（人工创建）
 │   └── asks/                    # AI 对人提问
-└── .claude/skills/              # AI 技能定义
+└── .xxx/skills/              # AI 技能定义
 ```
-
-支持工具：Claude Code、Cursor、Windsurf、GitHub Copilot、VS Code Copilot
 
 ---
 
@@ -145,18 +137,14 @@ project/
 
 ### Request（人工创建）
 
-工作入口点。3-5 句话描述意图。
+工作入口点。尽可能清晰地描述意图。
 
 ```bash
 sspec request new <idea>
 ```
 
-示例：
-- "认证延迟 5 秒，用户投诉增加"
-- "需要 Google/GitHub OAuth 支持"
-- "支付 webhook 返回 500，Stripe 日志失败"
 
-AI 将 request 转换为 change。
+在对话中引用 reqeust 文件，并告知 Agent "ssepc@change from this request".
 
 ### Change（AI 管理）
 
@@ -195,9 +183,7 @@ PLANNING → DOING → REVIEW → DONE
 
 工作中和会话结束时更新。`@resume` 时首先读取。
 
-上下文窗口接近限制时（>50 次交互）触发会话中更新。
-
-### Spec-doc（AI 生成）
+### Spec-doc\
 
 超越单个变更的项目级设计文档：
 
@@ -205,7 +191,7 @@ PLANNING → DOING → REVIEW → DONE
 - 架构决策
 - Schema 定义
 
-AI 识别项目级模式时通过 `sspec doc new` 创建。变更执行时自动引用。
+告知 Agent 创建文档 `sspec@doc`，Agent 调用 CLI 并自动填写。
 
 ### sspec ask（AI 对人提问）
 
@@ -216,17 +202,16 @@ AI 创建：
 sspec ask create <topic>
 ```
 
-人工响应：
+生成提问文档，人工在文档中填写回答。
+
+Agent 运行指令获取回答。
 ```bash
 sspec ask prompt .sspec/asks/<file>
 ```
 
-使用示例：
-- 设计选择解决（"Redis vs Postgres 缓存？"）
-- 破坏性操作确认（"删除测试数据？"）
-- 多个有效方法（"认证策略 A vs B？"）
-
-相关问题批量处理在单个 ask 中。
+> [!note]
+> 这个流程依赖工具调用审批
+> 人工回答的时机应在 `sspec ask prompt` 工具运行之前
 
 ---
 
@@ -254,11 +239,11 @@ sspec ask prompt .sspec/asks/<file>
 # 捕获意图
 sspec request new <idea>
 
-# 响应 AI 查询
-sspec ask prompt .sspec/asks/<file>
-
 # 状态检查
 sspec project status
+
+sspec request archive
+sspec change archive
 ```
 
 ### AI 执行命令
@@ -283,120 +268,16 @@ sspec ask list
 # Request 管理
 sspec request list
 sspec request link <req> <change>
-sspec request archive <n>
 ```
 
 ---
 
 ## 兼容性
 
-适用于支持基于文件上下文的 AI 工具：
-
-- Claude Code（代理式 CLI）
-- Cursor（AI 优先编辑器）
-- Windsurf（流程式编码）
-- GitHub Copilot（编辑器内）
-- VS Code Copilot（对话 + 内联）
-
-要求项目根目录有 `AGENTS.md`（自动加载）。
-
----
-
-## 不适用场景
-
-跳过以下情况：
-- 错字修正
-- 5 分钟 bug 修复
-- 配置调整
-
-使用于需要以下的工作：
-- 多会话连续性
-- 决策文档化
-- 跨文件协调
-
----
-
-## 使用示例
-
-### SaaS 开发
-
-```
-工作流：
-├── sspec request new stripe-integration
-├── @change stripe-integration
-│   └── AI：设计 → 询问 webhook 处理 → 实现
-├── @handover（会话结束）
-├── @resume（下次会话）
-└── sspec change archive stripe-integration（完成）
-
-项目结构：
-├── project.md：Next.js + Postgres + Railway
-├── spec-docs/api-standards.md：REST 约定
-└── changes/stripe-integration/：功能历史
-```
-
-### 开源维护
-
-```
-工作流：
-├── GitHub issue → sspec request new issue-245
-├── @change issue-245
-├── AI：分析 → 询问兼容性 → 实现
-└── REVIEW → 验证 → 归档
-
-项目结构：
-├── requests/：问题分类
-├── changes/：活动工作
-└── spec-docs/architecture.md：贡献者参考
-```
-
-### 咨询
-
-```
-工作流：
-├── 客户需求 → sspec request new payment-fix
-├── @change payment-fix
-├── AI：设计 → 询问环境 → 实现
-└── handover 记录计费工作
-
-项目结构：
-├── project.md：客户约定、部署
-├── changes/：交付物跟踪
-└── handover.md：交接就绪文档
-```
-
----
-
-## FAQ
-
-**spec.md 填充？**
-AI 自动化。人工编写 3-5 句 request。
-
-**何时执行 `sspec change new`？**
-很少手动。AI 在 `@change <request>` 指令后执行。
-
-**handover.md 维护？**
-AI 管理。工作中更新，`@handover` 时自动。人工恢复时读取。
-
-**分歧处理？**
-发出 `@argue` 指令重新规划，或拒绝批准 `@ask`。
-
-**无 AI 使用？**
-可能但次优。框架为 AI 协作设计。
+适用于支持基于文件上下文的 AI 工具，在 project init 的时候会创建填写 `AGENTS.md`。
 
 ---
 
 ## License
 
-MIT
-
----
-
-## 链接
-
-- 仓库：[github.com/frostime/sspec](https://github.com/frostime/sspec)
-- Issues：[GitHub Issues](https://github.com/frostime/sspec/issues)
-
----
-
-**总结**：Request 捕获意图，AI 实现并维护记忆，人工通过检查点控制。
+AGPL-V3.0

@@ -262,7 +262,7 @@ def link_request_to_change(
         raise FileNotFoundError(f"Change '{change_path.name}' not found")
 
     # Store spec.md relative path in request
-    spec_relative = (change_path / 'spec.md').relative_to(sspec_root).as_posix()
+    spec_relative = (change_path / 'spec.md').relative_to(sspec_root.parent).as_posix()
     request_content = request_file.read_text(encoding='utf-8')
     request_content = update_frontmatter(
         request_content,
@@ -283,7 +283,7 @@ def link_request_to_change(
         if not isinstance(reference, list):
             reference = []
 
-        request_relative = request_file.relative_to(sspec_root).as_posix()
+        request_relative = request_file.relative_to(sspec_root.parent).as_posix()
         new_ref = {
             'source': request_relative,
             'type': 'request',
@@ -337,8 +337,8 @@ def archive_request(sspec_root: Path, request_info: RequestInfo) -> Path:
     # Update cross-references in linked change
     _update_change_after_request_archive(
         sspec_root,
-        request_file.relative_to(sspec_root).as_posix(),
-        dest_path.relative_to(sspec_root).as_posix(),
+        request_file.relative_to(sspec_root.parent).as_posix(),
+        dest_path.relative_to(sspec_root.parent).as_posix(),
         attach_change,
     )
 
@@ -355,19 +355,17 @@ def _update_change_after_request_archive(
     if not attach_change:
         return
 
+    change_path = Path(attach_change)
+
     # Resolve change spec path (supports new and old format)
     if 'spec.md' in attach_change:
-        spec_path = sspec_root / attach_change
+        spec_path = change_path
     else:
-        spec_path = sspec_root / 'changes' / attach_change / 'spec.md'
+        spec_path = change_path / 'spec.md'
 
     # Also check archive directory
     if not spec_path.exists():
-        archive_spec = sspec_root / 'changes' / ARCHIVE_DIR / attach_change / 'spec.md'
-        if archive_spec.exists():
-            spec_path = archive_spec
-        else:
-            return
+        return
 
     content = spec_path.read_text(encoding='utf-8')
     meta, _body = parse_frontmatter(content)

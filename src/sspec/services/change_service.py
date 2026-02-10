@@ -232,7 +232,7 @@ def _update_requests_after_change_archive(
         return
 
     # New archive path relative to sspec_root
-    new_spec_relative = (new_archive_path / 'spec.md').relative_to(sspec_root).as_posix()
+    new_spec_relative = (new_archive_path / 'spec.md').relative_to(sspec_root.parent).as_posix()
     # e.g. "changes/archive/26-02-05T19-28_refactor-clean-code/spec.md"
 
     for md_file in requests_dir.glob('*.md'):

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import re
+import shutil
 import sys
 from dataclasses import dataclass
 from datetime import datetime
@@ -9,12 +10,62 @@ from pathlib import Path
 
 import yaml
 
+from sspec.core import ARCHIVE_DIR
+
 
 @dataclass
 class AskPrompt:
     question: str
     answer: str | None = None
     time: datetime | None = None
+
+
+def extract_ask_name_from_filename(filename: str) -> str:
+    """Extract ask name from filename (strip timestamp prefix)."""
+    if '_' in filename:
+        parts = filename.split('_', 1)
+        if len(parts) > 1:
+            return parts[1]
+    return filename
+
+
+def find_ask_matches(asks_dir: Path, name: str) -> list[Path]:
+    """Find ask file candidates by exact or fuzzy match."""
+    if not asks_dir.exists():
+        return []
+
+    normalized = name
+    if normalized.endswith('.md'):
+        normalized = normalized[:-3]
+
+    exact_path = asks_dir / f'{normalized}.md'
+    if exact_path.exists():
+        return [exact_path]
+
+    matches = list(asks_dir.glob(f'*_{normalized}.md'))
+    if matches:
+        return sorted(matches)
+
+    contains = [p for p in asks_dir.glob('*.md') if normalized in p.stem]
+    if contains:
+        return sorted(contains)
+
+    return []
+
+
+def archive_ask(asks_dir: Path, ask_path: Path) -> Path:
+    """Archive a completed ask (.md) by moving it into asks/archive/."""
+    archive_dir = asks_dir / ARCHIVE_DIR
+    archive_dir.mkdir(parents=True, exist_ok=True)
+
+    dest_path = archive_dir / ask_path.name
+    counter = 1
+    while dest_path.exists():
+        dest_path = archive_dir / f'{ask_path.stem}_{counter}.md'
+        counter += 1
+
+    shutil.move(str(ask_path), str(dest_path))
+    return dest_path
 
 
 def ask_prompt(q: str, tldr: str | None = None) -> str:

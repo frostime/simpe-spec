@@ -153,6 +153,8 @@ def create_change(sspec_root: Path, change_name: str, *, is_root: bool = False) 
     for file_name in template_files:
         copy_template(template_dir / file_name, change_path / file_name, replacements)
 
+    (change_path / 'reference').mkdir(exist_ok=True)
+
     return change_path
 
 

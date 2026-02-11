@@ -362,30 +362,32 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
                 console.print(f'  [dim]Skipped {path}[/dim]')
                 continue
 
-        # Handle skills (symlink/copy) vs regular files
-        if upd.strategy == 'symlink':
-            SkillInstaller.update_skill(
-                source_dir=upd.template_path, target_dir=upd.dest_path, strategy='symlink'
+        # 区分 skill 和普通文件的更新
+        if upd.strategy in ('symlink', 'copy'):
+            # Skill 更新
+            SkillInstaller._get_installer().update_skill(
+                source=upd.template_path,
+                target=upd.dest_path,
+                strategy=upd.strategy,
             )
             skill_updated_count += 1
-            console.print(f'  [green]+[/green] Updated symlink {path}')
-        elif upd.strategy == 'copy':
-            SkillInstaller.update_skill(
-                source_dir=upd.template_path, target_dir=upd.dest_path, strategy='copy'
-            )
-            skill_updated_count += 1
+
+            # 输出信息
             if upd.status == 'missing':
-                console.print(f'  [green]+[/green] Created skill {path}')
+                action = 'Created'
+            elif upd.strategy == 'symlink':
+                action = 'Updated symlink'
             else:
-                console.print(f'  [green]+[/green] Updated skill {path}')
+                action = 'Updated'
+            console.print(f'  [green]+[/green] {action} {path}')
         else:
+            # 普通文件更新
             dest_path.parent.mkdir(parents=True, exist_ok=True)
             dest_path.write_text(upd.template_content, encoding='utf-8')
             updated_count += 1
-            if upd.status == 'missing':
-                console.print(f'  [green]+[/green] Created {path}')
-            else:
-                console.print(f'  [green]+[/green] Updated {path}')
+
+            action = 'Created' if upd.status == 'missing' else 'Updated'
+            console.print(f'  [green]+[/green] {action} {path}')
 
         # Update hashes
         if not upd.is_symlink and upd.new_hash:

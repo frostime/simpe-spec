@@ -1,19 +1,67 @@
-"""SKILL installation strategy abstraction with symlink fallback to copy."""
+"""优化后的 SKILL 安装策略模块
 
+核心改进：
+1. 职责分离：ElevationManager 专门处理 Windows 提权
+2. 统一接口：单一批量安装方法支持所有场景
+3. 清晰状态：使用实例变量和结果对象
+4. 消除重复：合并相似逻辑
+"""
+
+from __future__ import annotations
+
+import shutil
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
 SkillStrategy = Literal['symlink', 'copy']
 
 
-class SkillInstaller:
-    """Handles SKILL installation with symlink + copy fallback."""
+@dataclass(frozen=True)
+class SkillInstallResult:
+    """Skill 安装结果"""
 
-    _elevation_attempted = False
-    _elevation_disabled = False
+    target: Path
+    source: Path
+    strategy: SkillStrategy
+    success: bool = True
+    error: str | None = None
+
+
+class ElevationManager:
+    """Windows 提权管理器（单例模式）"""
+
+    _instance: ElevationManager | None = None
+
+    def __new__(cls) -> ElevationManager:
+        if cls._instance is None:
+            instance = super().__new__(cls)
+            instance._attempted = False
+            instance._disabled = False
+            cls._instance = instance
+        return cls._instance
+
+    @property
+    def attempted(self) -> bool:
+        """是否已尝试过提权"""
+        return self._attempted
+
+    @property
+    def disabled(self) -> bool:
+        """提权是否被禁用"""
+        return self._disabled
+
+    def mark_attempted(self) -> None:
+        """标记已尝试提权"""
+        self._attempted = True
+
+    def mark_disabled(self) -> None:
+        """标记提权被禁用"""
+        self._disabled = True
 
     @staticmethod
-    def _is_windows_admin() -> bool:
+    def is_windows_admin() -> bool:
+        """检查是否已有管理员权限"""
         try:
             import ctypes
 
@@ -21,33 +69,42 @@ class SkillInstaller:
         except Exception:
             return False
 
-    @staticmethod
-    def _ps_escape(value: str) -> str:
-        return value.replace('`', '``').replace('"', '`"')
+    def try_elevated_symlinks(self, pairs: list[tuple[Path, Path]]) -> list[bool]:
+        """尝试使用提权创建批量符号链接
 
-    @staticmethod
-    def _try_symlink_with_elevation(source_dir: Path, target_dir: Path) -> bool:
-        if SkillInstaller._elevation_disabled:
-            return False
-        if SkillInstaller._is_windows_admin():
-            return False
-        if SkillInstaller._elevation_attempted:
-            return False
+        Args:
+            pairs: (source, target) 路径对列表
 
-        SkillInstaller._elevation_attempted = True
+        Returns:
+            每个 pair 的成功状态列表
+        """
+        if not pairs:
+            return []
+
+        # 跳过条件检查
+        if self._disabled or self.is_windows_admin() or self._attempted:
+            return [False] * len(pairs)
+
+        self.mark_attempted()
 
         import subprocess
+        import sys
         import tempfile
 
-        source_path = str(source_dir)
-        target_path = str(target_dir)
+        if sys.platform != 'win32':
+            return [False] * len(pairs)
 
-        ps_content = (
-            f'$src = "{source_path}"; $dst = "{target_path}"; '
-            f'if (Test-Path -LiteralPath $dst) {{ '
-            f'Remove-Item -LiteralPath $dst -Recurse -Force }}; '
-            f'New-Item -ItemType SymbolicLink -Path $dst -Target $src | Out-Null'
-        )
+        # 生成 PowerShell 脚本
+        ps_lines = []
+        for source, target in pairs:
+            ps_lines.append(
+                f'$src = "{source}"; $dst = "{target}"; '
+                f'if (Test-Path -LiteralPath $dst) {{ '
+                f'Remove-Item -LiteralPath $dst -Recurse -Force }}; '
+                f'New-Item -ItemType SymbolicLink -Path $dst -Target $src | Out-Null'
+            )
+
+        ps_content = '\n'.join(ps_lines)
 
         with tempfile.NamedTemporaryFile(mode='w', suffix='.ps1', delete=False) as f:
             f.write(ps_content)
@@ -61,10 +118,12 @@ class SkillInstaller:
                 f'-ArgumentList "-NoProfile","-File","{ps_path}" -Wait',
             ]
             subprocess.run(cmd, check=True)
-            return target_dir.is_symlink()
+
+            # 验证每个符号链接是否创建成功
+            return [target.is_symlink() for _, target in pairs]
         except Exception:
-            SkillInstaller._elevation_disabled = True
-            return False
+            self.mark_disabled()
+            return [False] * len(pairs)
         finally:
             import os
 
@@ -73,356 +132,228 @@ class SkillInstaller:
             except Exception:
                 pass
 
+
+class SkillInstaller:
+    """Skill 安装器：处理 symlink/copy 策略及 hub-spoke 模式"""
+
+    _default_installer: SkillInstaller | None = None
+
+    def __init__(self, elevation_manager: ElevationManager | None = None):
+        self._elevation = elevation_manager or ElevationManager()
+
+    @classmethod
+    def _get_installer(cls) -> SkillInstaller:
+        """获取默认安装器实例"""
+        if cls._default_installer is None:
+            cls._default_installer = cls()
+        return cls._default_installer
+
+    @staticmethod
+    def _prepare_target(target: Path) -> None:
+        """准备目标路径：创建父目录，清理已存在内容"""
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if target.exists():
+            if target.is_symlink():
+                target.unlink()
+            else:
+                shutil.rmtree(target)
+
+    @staticmethod
+    def _add_to_gitignore(target: Path) -> None:
+        """将 skill 目录添加到父目录的 .gitignore"""
+        gitignore_path = target.parent / '.gitignore'
+        skill_name = target.name
+
+        if gitignore_path.exists():
+            with gitignore_path.open('r', encoding='utf-8') as f:
+                lines = f.read().splitlines()
+        else:
+            lines = []
+
+        pattern = f'{skill_name}/**'
+        if pattern not in lines:
+            lines.append(pattern)
+            with gitignore_path.open('w', encoding='utf-8') as f:
+                f.write('\n'.join(lines) + '\n')
+
+    def _try_create_symlink(self, source: Path, target: Path) -> bool:
+        """尝试创建符号链接（不提权）"""
+        try:
+            target.symlink_to(source, target_is_directory=True)
+            return True
+        except (OSError, NotImplementedError):
+            return False
+
+    def install_batch(
+        self,
+        items: list[tuple[Path, Path]],
+        prefer_symlink: bool = True,
+    ) -> list[SkillInstallResult]:
+        """批量安装 skills
+
+        Args:
+            items: (source, target) 路径对列表
+            prefer_symlink: 优先使用符号链接
+
+        Returns:
+            安装结果列表
+        """
+        if not items:
+            return []
+
+        results: list[SkillInstallResult] = []
+
+        # 准备所有目标路径
+        for _source, target in items:
+            self._prepare_target(target)
+
+        if not prefer_symlink:
+            # 直接全部复制
+            for source, target in items:
+                shutil.copytree(source, target)
+                self._add_to_gitignore(target)
+                results.append(SkillInstallResult(target, source, 'copy'))
+            return results
+
+        # 优先 symlink：第一轮尝试不提权
+        failed_pairs: list[tuple[Path, Path]] = []
+        for source, target in items:
+            if self._try_create_symlink(source, target):
+                self._add_to_gitignore(target)
+                results.append(SkillInstallResult(target, source, 'symlink'))
+            else:
+                failed_pairs.append((source, target))
+
+        # 第二轮：Windows 提权尝试
+        if failed_pairs:
+            elevated_success = self._elevation.try_elevated_symlinks(failed_pairs)
+            for (source, target), success in zip(failed_pairs, elevated_success, strict=True):
+                if success:
+                    self._add_to_gitignore(target)
+                    results.append(SkillInstallResult(target, source, 'symlink'))
+                else:
+                    # 最终回退到 copy
+                    shutil.copytree(source, target)
+                    self._add_to_gitignore(target)
+                    results.append(SkillInstallResult(target, source, 'copy'))
+
+        return results
+
+    def install_hub_and_spokes_batch(
+        self,
+        items: list[tuple[Path, Path, list[Path]]],
+        prefer_symlink: bool = True,
+    ) -> dict[Path, SkillStrategy]:
+        """批量 hub-spoke 安装（返回字典格式以兼容旧代码）
+
+        Args:
+            items: (source, hub, spokes) 三元组列表
+            prefer_symlink: spokes 是否优先使用符号链接
+
+        Returns:
+            {target_path: strategy} 字典
+        """
+        result_dict: dict[Path, SkillStrategy] = {}
+
+        # 第一步：安装所有 hubs（总是复制）
+        for source, hub, _spokes in items:
+            self._prepare_target(hub)
+            shutil.copytree(source, hub)
+            self._add_to_gitignore(hub)
+            result_dict[hub] = 'copy'
+
+        # 第二步：收集所有 spokes 对，批量创建 symlink（只提权一次）
+        all_spoke_pairs: list[tuple[Path, Path]] = []
+        for _source, hub, spokes in items:
+            for spoke in spokes:
+                all_spoke_pairs.append((hub, spoke))
+
+        if all_spoke_pairs:
+            spoke_results = self.install_batch(all_spoke_pairs, prefer_symlink)
+            for result in spoke_results:
+                result_dict[result.target] = result.strategy
+
+        return result_dict
+
+    def update_skill(self, source: Path, target: Path, strategy: SkillStrategy) -> None:
+        """更新已安装的 skill
+
+        Args:
+            source: 模板 skill 目录
+            target: 已安装的 skill 目录
+            strategy: 记录的安装策略
+        """
+        if strategy == 'symlink':
+            # 符号链接：确保链接有效且指向正确
+            if target.is_symlink():
+                try:
+                    if target.exists() and target.resolve() == source.resolve():
+                        return  # 已是正确的符号链接
+                except OSError:
+                    pass  # 损坏的链接，下面重建
+                target.unlink(missing_ok=True)
+            elif target.exists():
+                shutil.rmtree(target)
+
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.symlink_to(source, target_is_directory=True)
+        else:
+            # 复制策略：重新复制
+            if target.exists():
+                shutil.rmtree(target)
+            shutil.copytree(source, target)
+
+    # ========================================================================
+    # 向后兼容的类方法接口
+    # ========================================================================
+
     @staticmethod
     def install_skills_batch(
         installs: list[tuple[Path, Path]], prefer_symlink: bool = True
     ) -> list[tuple[Path, Path, SkillStrategy]]:
-        """Install multiple skills with single elevation prompt on Windows.
+        """兼容旧 API：批量安装
 
         Args:
-            installs: List of (source_dir, target_dir) tuples
-            prefer_symlink: Try symlink first if True
+            installs: (source, target) 路径对列表
+            prefer_symlink: 优先使用符号链接
 
         Returns:
-            List of (target_dir, source_dir, strategy) tuples for each install
+            (target, source, strategy) 三元组列表
         """
-        if not installs:
-            return []
-
-        import shutil
-        import sys
-
-        result: list[tuple[Path, Path, SkillStrategy]] = []
-
-        # Prepare all targets first (create parents, remove existing)
-        for _source_dir, target_dir in installs:
-            target_dir.parent.mkdir(parents=True, exist_ok=True)
-            if target_dir.exists():
-                if target_dir.is_symlink():
-                    target_dir.unlink()
-                else:
-                    shutil.rmtree(target_dir)
-
-        if prefer_symlink:
-            # First pass: try creating all symlinks without elevation
-            symlink_candidates: list[tuple[Path, Path]] = []
-            failed_indices: list[int] = []
-
-            for idx, (source_dir, target_dir) in enumerate(installs):
-                try:
-                    target_dir.symlink_to(source_dir, target_is_directory=True)
-                    SkillInstaller.add_skill_to_gitignore(target_dir)
-                    result.append((target_dir, source_dir, 'symlink'))
-                except (OSError, NotImplementedError):
-                    symlink_candidates.append((source_dir, target_dir))
-                    failed_indices.append(idx)
-
-            # Second pass: try elevation for remaining (Windows only)
-            if symlink_candidates and sys.platform == 'win32':
-                elevated_success = SkillInstaller._try_elevated_symlinks_batch(symlink_candidates)
-                for (source_dir, target_dir), success in zip(
-                    symlink_candidates, elevated_success, strict=True
-                ):
-                    if success:
-                        SkillInstaller.add_skill_to_gitignore(target_dir)
-                        result.append((target_dir, source_dir, 'symlink'))
-                    else:
-                        # Fall through to copy
-                        installs_to_copy = [
-                            (s, t)
-                            for i, (s, t) in enumerate(symlink_candidates)
-                            if not elevated_success[i]
-                        ]
-                        if installs_to_copy:
-                            for copy_source, copy_target in installs_to_copy:
-                                shutil.copytree(copy_source, copy_target)
-                                SkillInstaller.add_skill_to_gitignore(copy_target)
-                                result.append((copy_target, copy_source, 'copy'))
-                        break
-
-            # Fallback remaining to copy (if not handled above)
-            if len(result) < len(installs):
-                for _idx, (source_dir, target_dir) in enumerate(installs):
-                    if _idx >= len(result) or result[_idx][2] != 'symlink':
-                        shutil.copytree(source_dir, target_dir)
-                        SkillInstaller.add_skill_to_gitignore(target_dir)
-                        result.append((target_dir, source_dir, 'copy'))
-        else:
-            # No symlink preference: copy all
-            for source_dir, target_dir in installs:
-                shutil.copytree(source_dir, target_dir)
-                SkillInstaller.add_skill_to_gitignore(target_dir)
-                result.append((target_dir, source_dir, 'copy'))
-
-        return result
+        installer = SkillInstaller._get_installer()
+        results = installer.install_batch(installs, prefer_symlink)
+        return [(r.target, r.source, r.strategy) for r in results]
 
     @staticmethod
     def install_hub_and_links_batch(
         installs: list[tuple[Path, Path, list[Path]]],
         prefer_symlink: bool = True,
     ) -> dict[Path, SkillStrategy]:
-        """Batch install skills to hub directories, then symlink to other locations.
+        """兼容旧 API：批量 hub-spoke 安装
 
         Args:
-            installs: List of (source_dir, hub_dir, link_dirs) tuples
-            prefer_symlink: Try symlink for links if True
+            installs: (source, hub, spokes) 三元组列表
+            prefer_symlink: spokes 是否优先使用符号链接
 
         Returns:
-            Dict mapping target directories to strategies used
+            {target_path: strategy} 字典
         """
-        import shutil
-
-        result: dict[Path, SkillStrategy] = {}
-
-        # Prepare all hubs and link directories first
-        hub_targets: list[tuple[Path, Path]] = []
-        all_link_dirs: list[tuple[Path, Path]] = []
-
-        for source_dir, hub_dir, link_dirs in installs:
-            # Prepare hub
-            hub_dir.parent.mkdir(parents=True, exist_ok=True)
-            if hub_dir.exists():
-                if hub_dir.is_symlink():
-                    hub_dir.unlink()
-                else:
-                    shutil.rmtree(hub_dir)
-            hub_targets.append((source_dir, hub_dir))
-
-            # Prepare link dirs
-            for link_dir in link_dirs:
-                link_dir.parent.mkdir(parents=True, exist_ok=True)
-                if link_dir.exists():
-                    if link_dir.is_symlink():
-                        link_dir.unlink()
-                    else:
-                        shutil.rmtree(link_dir)
-                all_link_dirs.append((hub_dir, link_dir))
-
-        # Copy all hubs first
-        for source_dir, hub_dir in hub_targets:
-            shutil.copytree(source_dir, hub_dir)
-            SkillInstaller.add_skill_to_gitignore(hub_dir)
-            result[hub_dir] = 'copy'
-
-        # Create all symlinks to hubs
-        if prefer_symlink:
-            # First pass: try creating all symlinks without elevation
-            failed_links: list[tuple[Path, Path]] = []
-            for hub_dir, link_dir in all_link_dirs:
-                try:
-                    link_dir.symlink_to(hub_dir, target_is_directory=True)
-                    SkillInstaller.add_skill_to_gitignore(link_dir)
-                    result[link_dir] = 'symlink'
-                except (OSError, NotImplementedError):
-                    failed_links.append((hub_dir, link_dir))
-
-            # Second pass: try elevation for failed links (Windows only)
-            if failed_links:
-                import sys
-
-                if sys.platform == 'win32' and not SkillInstaller._elevation_attempted:
-                    elevated_success = SkillInstaller._try_elevated_hub_links_batch(failed_links)
-                    for (hub, link), success in zip(failed_links, elevated_success, strict=True):
-                        if success:
-                            SkillInstaller.add_skill_to_gitignore(link)
-                            result[link] = 'symlink'
-                        else:
-                            # Fallback to copy
-                            shutil.copytree(hub, link)
-                            SkillInstaller.add_skill_to_gitignore(link)
-                            result[link] = 'copy'
-                else:
-                    # Non-Windows or elevation disabled: copy remaining
-                    for hub, link in failed_links:
-                        shutil.copytree(hub, link)
-                        SkillInstaller.add_skill_to_gitignore(link)
-                        result[link] = 'copy'
-        else:
-            # No symlink preference: copy to all link locations
-            for hub_dir, link_dir in all_link_dirs:
-                shutil.copytree(hub_dir, link_dir)
-                SkillInstaller.add_skill_to_gitignore(link_dir)
-                result[link_dir] = 'copy'
-
-        return result
-
-    @staticmethod
-    def install_hub_and_links(
-        source_dir: Path,
-        hub_dir: Path,
-        link_dirs: list[Path],
-        prefer_symlink: bool = True,
-    ) -> dict[Path, SkillStrategy]:
-        """Install skills to a central hub directory, then symlink to other locations.
-
-        Args:
-            source_dir: Template skill directory to install from
-            hub_dir: Target hub location (copy mode)
-            link_dirs: Target link locations (symlink mode)
-            prefer_symlink: Try symlink for links if True
-
-        Returns:
-            Dict mapping target directories to strategies used
-        """
-        return SkillInstaller.install_hub_and_links_batch(
-            installs=[(source_dir, hub_dir, link_dirs)],
-            prefer_symlink=prefer_symlink,
-        )
-
-    @staticmethod
-    def _try_elevated_hub_links_batch(pairs: list[tuple[Path, Path]]) -> list[bool]:
-        """Try to create multiple symlinks to hubs with single elevation prompt.
-
-        Args:
-            pairs: List of (hub_dir, link_dir) tuples
-
-        Returns:
-            List of booleans indicating success for each pair
-        """
-        if not pairs:
-            return []
-
-        if SkillInstaller._elevation_disabled:
-            return [False] * len(pairs)
-
-        if SkillInstaller._is_windows_admin():
-            return [False] * len(pairs)
-
-        if SkillInstaller._elevation_attempted:
-            return [False] * len(pairs)
-
-        SkillInstaller._elevation_attempted = True
-
-        import subprocess
-        import tempfile
-
-        ps_lines = []
-        for hub_dir, link_dir in pairs:
-            hub_path = str(hub_dir)
-            link_path = str(link_dir)
-            ps_lines.append(
-                f'$src = "{hub_path}"; $dst = "{link_path}"; '
-                f'if (Test-Path -LiteralPath $dst) {{ '
-                f'Remove-Item -LiteralPath $dst -Recurse -Force }}; '
-                f'New-Item -ItemType SymbolicLink -Path $dst -Target $src | Out-Null'
-            )
-
-        ps_content = '\n'.join(ps_lines)
-
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.ps1', delete=False) as f:
-            f.write(ps_content)
-            ps_path = f.name
-
-        try:
-            cmd = [
-                'powershell',
-                '-Command',
-                f'Start-Process -Verb RunAs powershell.exe '
-                f'-ArgumentList "-NoProfile","-File","{ps_path}" -Wait',
-            ]
-            subprocess.run(cmd, check=True)
-
-            results = []
-            for _hub_dir, link_dir in pairs:
-                results.append(link_dir.is_symlink())
-            return results
-        except Exception:
-            SkillInstaller._elevation_disabled = True
-            return [False] * len(pairs)
-        finally:
-            import os
-
-            try:
-                os.unlink(ps_path)
-            except Exception:
-                pass
-
-        return results
-
-    @staticmethod
-    def _try_elevated_symlinks_batch(pairs: list[tuple[Path, Path]]) -> list[bool]:
-        """Try to create multiple symlinks with single elevation prompt.
-
-        Args:
-            pairs: List of (source_dir, target_dir) tuples
-
-        Returns:
-            List of booleans indicating success for each pair
-        """
-        if not pairs:
-            return []
-
-        if SkillInstaller._elevation_disabled:
-            return [False] * len(pairs)
-
-        if SkillInstaller._is_windows_admin():
-            return [False] * len(pairs)
-
-        if SkillInstaller._elevation_attempted:
-            return [False] * len(pairs)
-
-        SkillInstaller._elevation_attempted = True
-
-        import subprocess
-        import tempfile
-
-        ps_lines = []
-        for source_dir, target_dir in pairs:
-            source_path = str(source_dir)
-            target_path = str(target_dir)
-            ps_lines.append(
-                f'$src = "{source_path}"; $dst = "{target_path}"; '
-                f'if (Test-Path -LiteralPath $dst) {{ '
-                f'Remove-Item -LiteralPath $dst -Recurse -Force }}; '
-                f'New-Item -ItemType SymbolicLink -Path $dst -Target $src | Out-Null'
-            )
-
-        ps_content = '\n'.join(ps_lines)
-
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.ps1', delete=False) as f:
-            f.write(ps_content)
-            ps_path = f.name
-
-        try:
-            cmd = [
-                'powershell',
-                '-Command',
-                f'Start-Process -Verb RunAs powershell.exe '
-                f'-ArgumentList "-NoProfile","-File","{ps_path}" -Wait',
-            ]
-            subprocess.run(cmd, check=True)
-
-            results = []
-            for _source_dir, target_dir in pairs:
-                results.append(target_dir.is_symlink())
-            return results
-        except Exception:
-            SkillInstaller._elevation_disabled = True
-            return [False] * len(pairs)
-        finally:
-            import os
-
-            try:
-                os.unlink(ps_path)
-            except Exception:
-                pass
+        installer = SkillInstaller._get_installer()
+        return installer.install_hub_and_spokes_batch(installs, prefer_symlink)
 
     @staticmethod
     def install_skill(
         source_dir: Path, target_dir: Path, prefer_symlink: bool = True
     ) -> SkillStrategy:
-        """Install a skill directory using best available strategy.
+        """兼容旧 API：单个安装
 
         Args:
-            source_dir: Template skill directory to install from
-            target_dir: Target location to install to
-            prefer_symlink: Try symlink first if True
+            source_dir: 模板 skill 目录
+            target_dir: 目标安装位置
+            prefer_symlink: 优先使用符号链接
 
         Returns:
-            Strategy used: 'symlink' or 'copy'
-
-        Raises:
-            OSError: If both symlink and copy fail
+            使用的安装策略
         """
         results = SkillInstaller.install_skills_batch([(source_dir, target_dir)], prefer_symlink)
         if results:
@@ -431,59 +362,9 @@ class SkillInstaller:
 
     @staticmethod
     def add_skill_to_gitignore(target_dir: Path) -> None:
-        """Add the skill directory name to .gitignore in the parent directory.
+        """兼容旧 API：添加到 gitignore
 
         Args:
-            target_dir: The installed skill directory path.
+            target_dir: skill 目录路径
         """
-        gitignore_path = target_dir.parent / '.gitignore'
-        skill_name = target_dir.name
-        if gitignore_path.exists():
-            with gitignore_path.open('r', encoding='utf-8') as f:
-                lines = f.read().splitlines()
-        else:
-            lines = []
-        if skill_name not in lines:
-            lines.append(f'{skill_name}/**')
-            with gitignore_path.open('w', encoding='utf-8') as f:
-                f.write('\n'.join(lines) + '\n')
-
-    @staticmethod
-    def update_skill(source_dir: Path, target_dir: Path, strategy: SkillStrategy) -> None:
-        """Update an installed skill using recorded strategy.
-
-        Args:
-            source_dir: Template skill directory
-            target_dir: Installed skill location
-            strategy: Strategy to use ('symlink' or 'copy')
-        """
-        if strategy == 'symlink':
-            # Symlinked skills auto-update (pointing to template).
-            # Ensure the link exists and points to the expected source.
-            if target_dir.is_symlink():
-                try:
-                    if target_dir.exists() and target_dir.resolve() == source_dir.resolve():
-                        return
-                except OSError:
-                    # Broken symlink or resolution error, recreate below.
-                    pass
-                target_dir.unlink(missing_ok=True)
-            elif target_dir.exists():
-                # Existing real directory/file at target path.
-                import shutil
-
-                shutil.rmtree(target_dir)
-
-            target_dir.parent.mkdir(parents=True, exist_ok=True)
-            target_dir.symlink_to(source_dir, target_is_directory=True)
-            return
-
-        else:
-            # Copy strategy: re-copy to update
-            if target_dir.exists():
-                import shutil
-
-                shutil.rmtree(target_dir)
-            import shutil
-
-            shutil.copytree(source_dir, target_dir)
+        SkillInstaller._add_to_gitignore(target_dir)

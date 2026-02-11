@@ -143,7 +143,7 @@ This saves cost in Copilot (tool calls don't consume turns).
 <!-- SSPEC:START -->
 # .sspec Agent Protocol
 
-SSPEC_SCHEMA::6.0
+SSPEC_SCHEMA::6.1
 
 ## 0. Protocol Overview
 
@@ -196,7 +196,7 @@ Changes live in `.sspec/changes/<n>/`.
 |----------|----------|----------|
 | spec.md | Problem (A), Solution (B), Implementation (C), Blockers (D) | Yes |
 | tasks.md | Task list with `[ ]`/`[x]` markers + progress | Yes |
-| handover.md | Session context for next Agent | Yes |
+| handover.md | Session context + agent working memory | Yes |
 | reference/ | Design drafts, research, diagrams | No |
 | script/ | Migration scripts, test data, one-off tools | No |
 
@@ -211,7 +211,7 @@ Track in request file (`## Plan` / `## Done`) or just do it. No change needed.
 
 1. **Link**: `sspec change new --from <request>` or create then `sspec request link`
 2. **Understand**: First-principles — find the real problem, not the surface ask
-3. **Research**: Read project.md + relevant code. If unclear, **use `@ask`**(sspec ask)
+3. **Research**: Read project.md + relevant code. If unclear, **use `@ask`** (sspec ask)
 4. **Design**:
    - Simple: Draft spec.md mentally
    - Complex (>1 week / >15 files / >20 tasks): **`@ask`** about splitting → `sspec change new <n> --root`
@@ -220,6 +220,8 @@ Track in request file (`## Plan` / `## Done`) or just do it. No change needed.
 6. **Execute**: Update tasks.md after each task.
 
 **Principle**: Understand before acting. Wrong direction costs more than extra questions.
+
+**Memory**: In long sessions, proactively update handover.md "References & Memory" — context compression is silent and lossy.
 
 📚 Consult `sspec` SKILL for scale assessment, document standards, multi-change patterns
 
@@ -241,7 +243,7 @@ Track in request file (`## Plan` / `## Done`) or just do it. No change needed.
 
 #### `@change <n>`
 
-Existing change: Read handover.md → tasks.md → spec.md → check reference field → output status + progress + next 3 actions.
+Existing change: Read handover.md (especially References & Memory) → tasks.md → spec.md → check reference field → output status + progress + next 3 actions.
 
 New change: `sspec change new <n>` or `--from <request>`. Complex: `--root`. Follow 2.0 workflow. Fill docs per `@RULE` markers. Ask approval.
 
@@ -251,14 +253,24 @@ Same as `@change <current_active_change>`.
 
 #### `@handover`
 
-End of session. No exceptions.
+Update handover.md as agent memory. Two modes:
 
-1. Update handover.md: background, accomplished, status, next steps, conventions
-2. Update tasks.md: mark `[x]`, update progress%
-3. Update spec.md: update status if changed
-4. If project-level learnings discovered: Update project.md Notes: append project-level learnings (if any)
+**End-of-session** (mandatory before ending):
+1. Update "Accomplished" — what got done
+2. Update "Next Steps" — 1-3 specific file-level actions
+3. Update "References & Memory" — key files, decisions, gotchas
+4. Append project-wide learnings to `project.md` Notes
+5. Verify tasks.md progress percentage
 
-**Test**: Would a new Agent know what to do in <30 seconds?
+**Mid-session** (proactive, trigger on any of):
+- Session getting long (>50 exchanges or complex multi-file work)
+- Important decision just made with non-trivial reasoning
+- Key file discovered that future work depends on
+- Design tradeoff resolved after discussion
+
+Mid-session update: append to "References & Memory" only. Quick, targeted, no ceremony.
+
+**Principle**: If you'd struggle to reconstruct info after context compression, write it to handover NOW.
 
 #### `@sync`
 
@@ -274,8 +286,8 @@ User disagrees. **STOP immediately**. Follow rejection protocol.
 
 | Marker | Meaning | Action |
 |--------|---------|--------|
-| `<!-- @RULE: ... -->` | Section constraint | Follow when filling |
-| `<!-- @REPLACE -->` | Replace entirely | Do NOT append |
+| `<!-- @RULE: ... -->` | Section constraint | Follow when filling, DO NOT delete it |
+| `<!-- @REPLACE -->` | Replace entirely | Use as the anchor of Edit/Replace Tools |
 
 Task markers: `[ ]` todo, `[x]` done
 
@@ -324,7 +336,7 @@ sspec ask list
 
 #### `@ask`
 
-**MUST** Trigger when: confused, before session end, tool call rejected.
+**MUST** trigger when: confused, before session end, tool call rejected.
 
 📚 Consult `sspec-ask` SKILL for triggers, workflow, syntax
 
@@ -365,4 +377,5 @@ ON uncertainty:
 | `@ask` | Ask | Consult user, by using `sspec ask` |
 
 <!-- SSPEC:END -->
+
 

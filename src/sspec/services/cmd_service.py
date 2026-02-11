@@ -105,10 +105,7 @@ def save_registry(sspec_root: Path, commands: dict[str, CommandInfo]) -> None:
 
     registry_path = _get_registry_path(sspec_root)
     content = yaml.dump(
-        {'commands': data},
-        default_flow_style=False,
-        allow_unicode=True,
-        sort_keys=False,
+        {'commands': data}, default_flow_style=False, allow_unicode=True, sort_keys=False
     )
     registry_path.write_text(content, encoding='utf-8')
 
@@ -145,9 +142,7 @@ def remove_command(sspec_root: Path, name: str) -> CommandInfo:
 
 
 def handle_script_file(
-    sspec_root: Path,
-    source: Path,
-    strategy: ScriptStrategy,
+    sspec_root: Path, source: Path, strategy: ScriptStrategy
 ) -> str | None:
     """Handle script file according to strategy.
 
@@ -197,10 +192,29 @@ def handle_script_file(
 # ---------------------------------------------------------------------------
 
 
+# check if have pwsh
+def has_powershell() -> bool:
+    try:
+        subprocess.run(
+            ['pwsh', '-Command', 'exit'],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return False
+    except Exception:
+        return False
+
+
+has_pwsh = has_powershell()
+
+
 # Extension → default invoke pattern
 INVOKE_PATTERNS: dict[str, str] = {
     '.py': 'python {script}',
-    '.ps1': 'powershell -File {script}',
+    '.ps1': 'powershell -File {script}' if not has_pwsh else 'pwsh -File {script}',
     '.sh': 'bash {script}',
     '.bash': 'bash {script}',
     '.bat': '{script}',
@@ -239,11 +253,7 @@ def resolve_script_path(cmd: CommandInfo, sspec_root: Path) -> Path | None:
     return _get_commands_dir(sspec_root) / cmd.script_file
 
 
-def run_command(
-    cmd: CommandInfo,
-    sspec_root: Path,
-    extra_args: list[str],
-) -> int:
+def run_command(cmd: CommandInfo, sspec_root: Path, extra_args: list[str]) -> int:
     """Execute a command from project root. Returns exit code."""
     project_root = sspec_root.parent
     invoke_str = resolve_invoke(cmd, sspec_root, extra_args)
@@ -254,9 +264,5 @@ def run_command(
             f'Script file not found: {cmd.script_file}\n' f'Expected at: {script_path}'
         )
 
-    result = subprocess.run(
-        invoke_str,
-        shell=True,
-        cwd=project_root,
-    )
+    result = subprocess.run(invoke_str, shell=True, cwd=project_root)
     return result.returncode

@@ -80,8 +80,8 @@ def ask_create(name: str) -> None:
     click.echo('')
     click.echo('Next steps:')
     click.echo(f'  1. Edit REASON and QUESTION in {rel_str}')
-    click.echo(f'  2. Run: sspec ask prompt {rel_str} (User will approve once answer is ready)')
-    click.echo('  3. Wait for user to fill the USER_ANSWER field.')
+    click.echo(f'  2. Run: sspec ask prompt {rel_str}')
+    click.echo('  3. Agent will get user\'s answer from `sspec ask prompt`.')
     click.echo('Note:')
     click.echo('  - Simple/Complex question -> write in QUESTION fields.')
     click.echo(

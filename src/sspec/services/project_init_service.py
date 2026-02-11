@@ -91,7 +91,7 @@ def initialize_project(
     (sspec_path / 'skills').mkdir(exist_ok=True)
     (sspec_path / 'spec-docs').mkdir(exist_ok=True)
 
-    # Install skills
+    # Install skills using hub-and-spoke pattern
     template_skills = list_template_skills()
     skill_targets = get_skill_targets_from_locations(
         project_root=project_root,
@@ -101,28 +101,32 @@ def initialize_project(
 
     from sspec.skill_installer import SkillInstaller
 
+    hub_skills_dir = sspec_path / 'skills'
+    spoke_dirs = [t for t in skill_targets if t != hub_skills_dir]
+
+    # 批量安装所有 skills：hub 复制，spokes 链接
+    installs = [
+        (skill_dir, hub_skills_dir / skill_dir.name, [t / skill_dir.name for t in spoke_dirs])
+        for skill_dir in template_skills
+    ]
+
+    results = SkillInstaller.install_hub_and_links_batch(
+        installs=installs,
+        prefer_symlink=prefer_symlink,
+    )
+
+    # 记录每个位置的安装策略
     skill_install_strategies: dict[str, str] = {}
-
-    for skill_dir in template_skills:
-        skill_name = skill_dir.name
-        for target_dir in skill_targets:
-            dest_skill_dir = target_dir / skill_name
-
-            strategy = SkillInstaller.install_skill(
-                source_dir=skill_dir,
-                target_dir=dest_skill_dir,
-                prefer_symlink=prefer_symlink,
-            )
-
-            # Record first observed strategy for this location.
-            try:
-                rel_target = target_dir.relative_to(project_root)
-            except ValueError:
-                continue
-
-            location_key = str(rel_target)
-            if location_key not in skill_install_strategies:
+    for target_dir, strategy in results.items():
+        try:
+            location_key = str(target_dir.parent.relative_to(project_root))
+            existing = skill_install_strategies.get(location_key)
+            if existing is None:
                 skill_install_strategies[location_key] = strategy
+            elif existing == 'symlink' and strategy == 'copy':
+                skill_install_strategies[location_key] = 'copy'
+        except ValueError:
+            continue
 
     # Initialize templates
     for file_path in [*UPDATABLE_FILES, *USER_FILES]:

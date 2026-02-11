@@ -4,3 +4,8 @@ commands:
     type: script
     invoke: powershell -File {script}
     script_file: pack-zip.ps1
+  test-project-init:
+    description: 测试 project init  以及 project  update
+    type: script
+    invoke: pwsh -File {script}
+    script_file: run_sspec_temp.ps1

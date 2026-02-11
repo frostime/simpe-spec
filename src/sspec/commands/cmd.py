@@ -1,9 +1,11 @@
 """sspec cmd command - project command registry."""
 
 from pathlib import Path
+from typing import cast
 
 import click
 import questionary
+from click.shell_completion import CompletionItem
 from rich.console import Console
 from rich.table import Table
 
@@ -12,8 +14,9 @@ from sspec.services.cmd_service import (
     CommandExistsError,
     CommandInfo,
     CommandNotFoundError,
+    ScriptStrategy,
     add_command,
-    copy_script_file,
+    handle_script_file,
     load_registry,
     remove_command,
     run_command,
@@ -21,6 +24,29 @@ from sspec.services.cmd_service import (
 )
 
 console = Console()
+
+
+class CommandNameParam(click.ParamType):
+    """Custom parameter type for command name with shell completion."""
+
+    name = 'command'
+
+    def shell_complete(self, ctx: click.Context, param: click.Parameter, incomplete: str):
+        """Provide shell completion for command names."""
+        try:
+            sspec_root = get_sspec_root()
+        except SspecNotFoundError:
+            return []
+
+        commands = load_registry(sspec_root)
+        completions = []
+        for name in commands.keys():
+            if name.startswith(incomplete):
+                completions.append(CompletionItem(name, type=self.name))
+        return completions
+
+
+COMMAND_NAME_PARAM = CommandNameParam()
 
 
 # ============================================================================
@@ -108,6 +134,7 @@ def add(cmd_name: str | None) -> None:
 
     script_file: str | None = None
     invoke: str = ''
+    strategy: ScriptStrategy = 'copy'
 
     if cmd_type == 'cmd-line':
         # 2a. cmd-line: get invoke string
@@ -149,8 +176,30 @@ def add(cmd_name: str | None) -> None:
 
         default_name = cmd_name or _suggest_name_from_path(source_path)
 
-        # Copy script file
-        script_file = copy_script_file(sspec_root, source_path)
+        strategy_raw = questionary.select(
+            'Script handling strategy:',
+            choices=[
+                questionary.Choice(
+                    'ref  — Only reference script location (no copy/move)',
+                    value='ref',
+                ),
+                questionary.Choice(
+                    'move — Move script to .sspec/commands/',
+                    value='move',
+                ),
+                questionary.Choice(
+                    'copy — Copy script to .sspec/commands/',
+                    value='copy',
+                ),
+            ],
+            default='ref',
+        ).ask()
+        if strategy_raw is None:
+            return
+
+        strategy = cast(ScriptStrategy, strategy_raw)
+
+        script_file = handle_script_file(sspec_root, source_path, strategy)
 
     # 3. Name
     if cmd_name is None:
@@ -170,6 +219,7 @@ def add(cmd_name: str | None) -> None:
         type=cmd_type,
         invoke=invoke,
         script_file=script_file,
+        script_strategy=strategy,
     )
 
     try:
@@ -234,7 +284,7 @@ def list_cmd() -> None:
 
 
 @cmd.command()
-@click.argument('name')
+@click.argument('name', type=COMMAND_NAME_PARAM)
 def remove(name: str) -> None:
     """Remove a registered command."""
     try:
@@ -280,9 +330,9 @@ def remove(name: str) -> None:
         'allow_extra_args': True,
     },
 )
-@click.argument('name')
+@click.argument('name', type=COMMAND_NAME_PARAM, required=False, default=None)
 @click.pass_context
-def run_cmd(ctx: click.Context, name: str) -> None:
+def run_cmd(ctx: click.Context, name: str | None) -> None:
     """Run a registered command. Extra args are appended to the invoke string."""
     try:
         sspec_root = get_sspec_root()
@@ -290,16 +340,45 @@ def run_cmd(ctx: click.Context, name: str) -> None:
         raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     commands = load_registry(sspec_root)
+
+    if not commands:
+        console.print('[dim]No commands registered.[/dim]')
+        console.print('Add one with: sspec cmd add')
+        return
+
+    if name is None:
+        choices = [
+            questionary.Choice(
+                f'{cmd_name} — {cmd_info.description}',
+                value=cmd_name,
+            )
+            for cmd_name, cmd_info in commands.items()
+        ]
+        name = questionary.select(
+            'Select command to run:',
+            choices=choices,
+        ).ask()
+        if name is None:
+            return
+
     if name not in commands:
         raise click.ClickException(
             f"Command '{name}' not found. Run 'sspec cmd list' to see available commands."
         )
 
     cmd_info = commands[name]
+
     extra_args = ctx.args
+    if not extra_args:
+        extra_args_input = questionary.text(
+            f'Extra args for "{name}":',
+            default='',
+        ).ask()
+        if extra_args_input:
+            extra_args = extra_args_input.strip().split()
 
     try:
-        exit_code = run_command(cmd_info, sspec_root, extra_args)
+        exit_code = run_command(cmd_info, sspec_root, extra_args or [])
     except FileNotFoundError as e:
         raise click.ClickException(str(e)) from None
 

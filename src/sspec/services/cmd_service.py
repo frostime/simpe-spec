@@ -13,10 +13,13 @@ from typing import Any, Literal
 
 import yaml
 
+from sspec.commands import project
+
 COMMANDS_DIR = 'commands'
 REGISTRY_FILE = 'registry.yaml'
 
 CommandType = Literal['cmd-line', 'script']
+ScriptStrategy = Literal['copy', 'move', 'ref']
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,6 +31,7 @@ class CommandInfo:
     type: CommandType
     invoke: str
     script_file: str | None = None  # Relative to .sspec/commands/
+    script_strategy: ScriptStrategy = 'copy'  # copy/move/ref
 
 
 class CommandExistsError(RuntimeError):
@@ -76,6 +80,7 @@ def load_registry(sspec_root: Path) -> dict[str, CommandInfo]:
             type=entry.get('type', 'cmd-line'),
             invoke=entry.get('invoke', ''),
             script_file=entry.get('script_file'),
+            script_strategy=entry.get('script_strategy', 'copy'),
         )
     return result
 
@@ -94,6 +99,8 @@ def save_registry(sspec_root: Path, commands: dict[str, CommandInfo]) -> None:
         }
         if cmd.script_file:
             entry['script_file'] = cmd.script_file
+        if cmd.script_strategy != 'copy':
+            entry['script_strategy'] = cmd.script_strategy
         data[name] = entry
 
     registry_path = _get_registry_path(sspec_root)
@@ -128,8 +135,7 @@ def remove_command(sspec_root: Path, name: str) -> CommandInfo:
 
     removed = commands.pop(name)
 
-    # Delete managed script file if applicable
-    if removed.script_file:
+    if removed.script_file and removed.script_strategy in ('copy', 'move'):
         script_path = _get_commands_dir(sspec_root) / removed.script_file
         if script_path.exists():
             script_path.unlink()
@@ -138,23 +144,51 @@ def remove_command(sspec_root: Path, name: str) -> CommandInfo:
     return removed
 
 
-def copy_script_file(sspec_root: Path, source: Path) -> str:
-    """Copy a script file into .sspec/commands/. Returns the filename."""
+def handle_script_file(
+    sspec_root: Path,
+    source: Path,
+    strategy: ScriptStrategy,
+) -> str | None:
+    """Handle script file according to strategy.
+
+    - copy: Copy the script file to .sspec/commands/. Returns the filename.
+    - move: Move the script file to .sspec/commands/. Returns the filename.
+    - ref: Only reference the script location. Returns the absolute path.
+    """
     commands_dir = _get_commands_dir(sspec_root)
     commands_dir.mkdir(parents=True, exist_ok=True)
 
+    if strategy == 'ref':
+        source = source.resolve().absolute()
+        project_root = sspec_root.parent.resolve().absolute()
+        # source is outside project → return absolute path
+        is_under_project = source.is_relative_to(project_root)
+        if is_under_project:
+            return str(source.relative_to(sspec_root.parent))
+        else:
+            return str(source)
+
     dest = commands_dir / source.name
 
-    # Handle name collision
-    if dest.exists():
-        stem = source.stem
-        suffix = source.suffix
-        counter = 1
-        while dest.exists():
-            dest = commands_dir / f'{stem}_{counter}{suffix}'
-            counter += 1
+    if strategy == 'copy':
+        if dest.exists():
+            stem = source.stem
+            suffix = source.suffix
+            counter = 1
+            while dest.exists():
+                dest = commands_dir / f'{stem}_{counter}{suffix}'
+                counter += 1
+        shutil.copy2(source, dest)
+    elif strategy == 'move':
+        if dest.exists():
+            stem = source.stem
+            suffix = source.suffix
+            counter = 1
+            while dest.exists():
+                dest = commands_dir / f'{stem}_{counter}{suffix}'
+                counter += 1
+        shutil.move(str(source), str(dest))
 
-    shutil.copy2(source, dest)
     return dest.name
 
 
@@ -184,13 +218,25 @@ def resolve_invoke(cmd: CommandInfo, sspec_root: Path, extra_args: list[str]) ->
     invoke = cmd.invoke
 
     if cmd.script_file and '{script}' in invoke:
-        script_abs = str((_get_commands_dir(sspec_root) / cmd.script_file).resolve())
+        if cmd.script_strategy == 'ref':
+            script_abs = str(cmd.script_file)
+        else:
+            script_abs = str((_get_commands_dir(sspec_root) / cmd.script_file).resolve())
         invoke = invoke.replace('{script}', script_abs)
 
     if extra_args:
         invoke = invoke + ' ' + ' '.join(extra_args)
 
     return invoke
+
+
+def resolve_script_path(cmd: CommandInfo, sspec_root: Path) -> Path | None:
+    """Get the absolute path to the script file."""
+    if not cmd.script_file:
+        return None
+    if cmd.script_strategy == 'ref':
+        return Path(cmd.script_file)
+    return _get_commands_dir(sspec_root) / cmd.script_file
 
 
 def run_command(
@@ -202,13 +248,11 @@ def run_command(
     project_root = sspec_root.parent
     invoke_str = resolve_invoke(cmd, sspec_root, extra_args)
 
-    # Validate script file exists before running
-    if cmd.script_file:
-        script_path = _get_commands_dir(sspec_root) / cmd.script_file
-        if not script_path.exists():
-            raise FileNotFoundError(
-                f'Script file not found: {cmd.script_file}\n' f'Expected at: {script_path}'
-            )
+    script_path = resolve_script_path(cmd, sspec_root)
+    if script_path and not script_path.exists():
+        raise FileNotFoundError(
+            f'Script file not found: {cmd.script_file}\n' f'Expected at: {script_path}'
+        )
 
     result = subprocess.run(
         invoke_str,

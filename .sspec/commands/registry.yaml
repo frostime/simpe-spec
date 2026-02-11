@@ -9,3 +9,9 @@ commands:
     type: script
     invoke: pwsh -File {script}
     script_file: run_sspec_temp.ps1
+  build-install:
+    description: 编译并安装项目
+    type: script
+    invoke: pwsh -File {script}
+    script_file: scripts\build_install.ps1
+    script_strategy: ref

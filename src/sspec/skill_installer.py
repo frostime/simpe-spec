@@ -168,9 +168,9 @@ class SkillInstaller:
             with gitignore_path.open('r', encoding='utf-8') as f:
                 lines = f.read().splitlines()
         else:
-            lines = []
+            lines = ['.gitignore']
 
-        pattern = f'{skill_name}/**'
+        pattern = f'{skill_name}'
         if pattern not in lines:
             lines.append(pattern)
             with gitignore_path.open('w', encoding='utf-8') as f:

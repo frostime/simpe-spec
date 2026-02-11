@@ -84,7 +84,8 @@ def ask_create(name: str) -> None:
     click.echo('  3. Wait for user to fill the USER_ANSWER field.')
     click.echo('Note:')
     click.echo('  - Simple/Complex question -> write in QUESTION fields.')
-    click.echo('  - Attached reusable long design/research content -> ' \
+    click.echo(
+        '  - Attached reusable long design/research content -> '
         'dump it in standalone file under <change>/reference and links in QUESTION.'
     )
 
@@ -209,7 +210,7 @@ def _archive_asks_interactive(sspec_root: Path) -> None:
 
     choices = [
         questionary.Choice(
-            title=f"{extract_ask_name_from_filename(p.stem)} ({p.stem})",
+            title=f'{extract_ask_name_from_filename(p.stem)} ({p.stem})',
             value=p,
         )
         for p in active

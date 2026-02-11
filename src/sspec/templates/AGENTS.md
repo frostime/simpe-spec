@@ -144,8 +144,8 @@ User disagrees. **STOP immediately**. Follow rejection protocol.
 
 | Marker | Meaning | Action |
 |--------|---------|--------|
-| `<!-- @RULE: ... -->` | Section constraint | Follow when filling |
-| `<!-- @REPLACE -->` | Replace entirely | Do NOT append |
+| `<!-- @RULE: ... -->` | Section constraint | Follow when filling, DO NOT delete it |
+| `<!-- @REPLACE -->` | Replace entirely | Use as the anchor of Edit/Replace Tools |
 
 Task markers: `[ ]` todo, `[x]` done
 

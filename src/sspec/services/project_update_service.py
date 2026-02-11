@@ -142,7 +142,10 @@ def collect_update_candidates(
     # ---------------------------------------------------------------------
     project_root = sspec_root.parent
     skill_locations: list[str] = meta.get('skill_locations', []) or []
-    skill_install_strategies: dict[str, str] = meta.get('skill_install_strategies', {}) or {}
+    # NOTE: Skill update behavior is based on actual filesystem state.
+    # - If the installed skill directory is a symlink, we skip it entirely.
+    # - If it's a real directory (copy), we update it via directory hash.
+    # meta.skill_install_strategies is kept for informational purposes only.
 
     for skill_dir in list_template_skills():
         skill_name = skill_dir.name
@@ -158,36 +161,9 @@ def collect_update_candidates(
             skill_dest_dir = project_root / loc_str / skill_name
             skill_dest_file = skill_dest_dir / 'SKILL.md'
 
-            strategy = skill_install_strategies.get(loc_str, 'copy')
-
-            # Symlink: only check link validity
-            if strategy == 'symlink':
-                if skill_dest_dir.is_symlink():
-                    try:
-                        status = (
-                            'current'
-                            if skill_dest_dir.resolve() == skill_dir.resolve()
-                            else 'updatable'
-                        )
-                    except OSError:
-                        status = 'missing'
-                else:
-                    status = 'missing'
-
-                updates.append(
-                    UpdateCandidate(
-                        display_path=str(Path(loc_str) / skill_name),
-                        status=status,  # type: ignore[arg-type]
-                        template_path=skill_dir,
-                        dest_path=skill_dest_dir,
-                        template_content='',
-                        new_hash=None,
-                        current_hash=None,
-                        hash_key=hash_key,
-                        is_symlink=True,
-                        strategy=strategy,
-                    )
-                )
+            # Skip symlinked skills entirely during update.
+            # They should always point to the hub (.sspec/skills) and are not managed here.
+            if skill_dest_dir.is_symlink():
                 continue
 
             # Copy: compare directory hash (catches reference file changes)
@@ -228,7 +204,7 @@ def collect_update_candidates(
                     current_hash=current_hash,
                     hash_key=hash_key,
                     is_symlink=False,
-                    strategy=strategy,
+                    strategy='copy',
                 )
             )
 

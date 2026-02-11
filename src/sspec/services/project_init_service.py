@@ -101,28 +101,46 @@ def initialize_project(
 
     from sspec.skill_installer import SkillInstaller
 
+    # New logic: .sspec/skills is the hub (copy), other locations link to it
+    hub_skills_dir = sspec_path / 'skills'
+    link_targets: list[Path] = []
+
+    for target_dir in skill_targets:
+        if target_dir == hub_skills_dir:
+            continue
+        link_targets.append(target_dir)
+
     skill_install_strategies: dict[str, str] = {}
 
+    # Collect all installs: (source, hub_target, link_targets)
+    installs: list[tuple[Path, Path, list[Path]]] = []
     for skill_dir in template_skills:
         skill_name = skill_dir.name
-        for target_dir in skill_targets:
-            dest_skill_dir = target_dir / skill_name
+        hub_skill_dir = hub_skills_dir / skill_name
+        link_skill_dirs = [t / skill_name for t in link_targets]
+        installs.append((skill_dir, hub_skill_dir, link_skill_dirs))
 
-            strategy = SkillInstaller.install_skill(
-                source_dir=skill_dir,
-                target_dir=dest_skill_dir,
-                prefer_symlink=prefer_symlink,
-            )
+    # Batch install all skills with single elevation prompt
+    results = SkillInstaller.install_hub_and_links_batch(
+        installs=installs,
+        prefer_symlink=prefer_symlink,
+    )
 
-            # Record first observed strategy for this location.
-            try:
-                rel_target = target_dir.relative_to(project_root)
-            except ValueError:
-                continue
+    # Record strategies per location
+    for target_dir, strategy in results.items():
+        try:
+            rel_target = target_dir.parent.relative_to(project_root)
+        except ValueError:
+            continue
 
-            location_key = str(rel_target)
-            if location_key not in skill_install_strategies:
-                skill_install_strategies[location_key] = strategy
+        location_key = str(rel_target)
+        # If any skill in a location falls back to copy, treat the whole location as copy.
+        # Update-time logic should still rely on actual filesystem symlink state.
+        existing = skill_install_strategies.get(location_key)
+        if existing is None:
+            skill_install_strategies[location_key] = strategy
+        elif existing == 'symlink' and strategy == 'copy':
+            skill_install_strategies[location_key] = 'copy'
 
     # Initialize templates
     for file_path in [*UPDATABLE_FILES, *USER_FILES]:

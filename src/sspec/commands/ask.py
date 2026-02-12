@@ -86,7 +86,7 @@ def ask_create(name: str) -> None:
     click.echo('  - Simple/Complex question -> write in QUESTION fields.')
     click.echo(
         '  - Attached reusable long design/research content -> '
-        'dump it in standalone file under <change>/reference and links in QUESTION.'
+        'dump it in standalone file under .sspec/tmp and links in QUESTION.'
     )
 
 

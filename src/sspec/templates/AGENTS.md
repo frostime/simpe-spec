@@ -18,6 +18,7 @@ SSPEC is a document-driven AI collaboration framework. All planning, tracking, a
 │   ├── spec.md | tasks.md | handover.md  # Required
 │   └── reference/ | script/              # Optional
 ├── requests/               # Lightweight proposals
+├── tmp/                        #  Informal proposals, plans, scripts, etc., for user review.
 └── asks/                   # Human-in-the-loop Q&A records
 ```
 
@@ -191,6 +192,8 @@ sspec ask create <topic>     # Create ask template
 sspec ask prompt <file>      # Execute and collect answer
 sspec ask list
 ```
+
+**NOTE**: Long resuable doc should be fill directly in ASK file -> write them in `.sspec/tmp` and ref it in QUESTION.
 
 #### `@ask`
 

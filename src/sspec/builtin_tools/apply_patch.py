@@ -38,8 +38,8 @@ __all__ = [
 
 # ============ Tool Interface (Minimal 1.0) ============
 
-TOOL_NAME = "patch"
-TOOL_DESCRIPTION = "Apply SEARCH/REPLACE format patches to files"
+TOOL_NAME = 'patch'
+TOOL_DESCRIPTION = 'Apply SEARCH/REPLACE format patches to files'
 # TOOL_PROMPT defined at end of file (same as PATCH_PROMPT)
 
 # ============ 数据结构 ============
@@ -118,6 +118,34 @@ def convert_newlines(text: str, newline: str) -> str:
     """把 text 中的所有换行统一成目标 newline（不额外添加/删除末尾换行）"""
     t = text.replace('\r\n', '\n').replace('\r', '\n')
     return t.replace('\n', newline)
+
+
+def read_text_robust(file_path: Path) -> str:
+    """
+    健壮地读取文本文件，处理编码和换行符问题：
+    - 保留原始换行符（\\r\\n, \\n, \\r）
+    - 尝试多种编码（UTF-8, UTF-8-SIG, GBK, Latin1）
+    - 自动去除 BOM（Byte Order Mark）
+    """
+    encodings = ['utf-8', 'utf-8-sig', 'gbk', 'latin1']
+
+    for encoding in encodings:
+        try:
+            with file_path.open('r', encoding=encoding, newline='') as f:
+                text = f.read()
+                # 去除 BOM（如果 encoding='utf-8' 且文件包含 BOM）
+                if text.startswith('\ufeff'):
+                    text = text[1:]
+                return text
+        except (UnicodeDecodeError, LookupError):
+            continue
+
+    # 最后尝试 errors='replace' 作为兜底
+    with file_path.open('r', encoding='utf-8', errors='replace', newline='') as f:
+        text = f.read()
+        if text.startswith('\ufeff'):
+            text = text[1:]
+        return text
 
 
 def safe_resolve_under_root(root: Path, user_path: str) -> Path:
@@ -225,9 +253,7 @@ class LRRResult:
         start, end = match.span(group)  # 这里 start/end 是 schema 字符索引 == 行索引
         return self.lines[start:end]
 
-    def extract_line_range(
-        self, match: re.Match, group: int | str = 0
-    ) -> tuple[int, int]:
+    def extract_line_range(self, match: re.Match, group: int | str = 0) -> tuple[int, int]:
         return match.span(group)
 
 
@@ -245,9 +271,7 @@ def lrr_scan(text: str) -> LRRResult:
 PATCH_PATTERN = re.compile(r'F(?P<gap>B*)S(?P<search>[BC]*?)D(?P<replace>[BC]*?)R')
 
 
-def parse_patches(
-    patch_text: str, *, project_root: Path | None = None
-) -> PatchParseResult:
+def parse_patches(patch_text: str, *, project_root: Path | None = None) -> PatchParseResult:
     """解析 patch 文本，提取所有 patch 块（保持 LRR 风格）"""
     root = (project_root or Path.cwd()).resolve()
 
@@ -274,9 +298,7 @@ def parse_patches(
             try:
                 file_path = safe_resolve_under_root(root, file_path_str)
             except Exception as e:
-                errors.append(
-                    f'Line {file_line_idx + 1}: 路径不合法: {display_path} ({e})'
-                )
+                errors.append(f'Line {file_line_idx + 1}: 路径不合法: {display_path} ({e})')
                 continue
 
             # 检查文件是否存在
@@ -291,9 +313,7 @@ def parse_patches(
             if start_str and end_str:
                 start_i, end_i = int(start_str), int(end_str)
                 if start_i <= 0 or end_i <= 0 or end_i < start_i:
-                    errors.append(
-                        f'Line {file_line_idx + 1}: 非法行范围: {start_str}-{end_str}'
-                    )
+                    errors.append(f'Line {file_line_idx + 1}: 非法行范围: {start_str}-{end_str}')
                     continue
                 line_range = (start_i, end_i)
 
@@ -481,9 +501,7 @@ def format_patch_header(patch: PatchBlock) -> str:
     return header
 
 
-def apply_patches(
-    patch_text: str, *, project_root: Path | None = None
-) -> BatchApplyResult:
+def apply_patches(patch_text: str, *, project_root: Path | None = None) -> BatchApplyResult:
     """解析并批量应用 patches（保持原语义：解析阶段出现错误则不应用）"""
     parse_result = parse_patches(patch_text, project_root=project_root)
 
@@ -675,7 +693,7 @@ def register_command(group):
         else:
             patch_path = file_sources[0]
             try:
-                patch_text = patch_path.read_text(encoding='utf-8')
+                patch_text = read_text_robust(patch_path)
             except Exception as e:
                 console.print(f'[red]Error reading patch file:[/red] {e}')
                 raise click.Abort() from None
@@ -761,7 +779,7 @@ def _display_results(console: Console, results: list[PatchApplyResult]) -> None:
             continue
         if result.success:
             succeeded += 1
-            match = (result.match_mode or '-')
+            match = result.match_mode or '-'
             if result.match_line is not None:
                 match = f'{match} @L{result.match_line}'
 
@@ -792,9 +810,7 @@ def _display_results(console: Console, results: list[PatchApplyResult]) -> None:
     if failed == 0:
         console.print(f'[green]Summary:[/green] All {succeeded} patch(es) applied successfully')
     else:
-        console.print(
-            f'[yellow]Summary:[/yellow] {succeeded} succeeded, {failed} failed'
-        )
+        console.print(f'[yellow]Summary:[/yellow] {succeeded} succeeded, {failed} failed')
 
 
 def _save_failed_patches(
@@ -815,19 +831,18 @@ def _save_failed_patches(
     for i, result in enumerate(failed_results, start=1):
         if result.patch:
             # Reconstruct patch text
-            patch_text = f"# {result.patch.display_path}"
+            patch_text = f'# {result.patch.display_path}'
             if result.patch.line_range:
-                patch_text += f":L{result.patch.line_range[0]}-L{result.patch.line_range[1]}"
-            patch_text += "\n"
-            patch_text += "<<<<<<< SEARCH\n"
+                patch_text += f':L{result.patch.line_range[0]}-L{result.patch.line_range[1]}'
+            patch_text += '\n'
+            patch_text += '<<<<<<< SEARCH\n'
             patch_text += result.patch.search_content
-            patch_text += "=======\n"
+            patch_text += '=======\n'
             patch_text += result.patch.replace_content
-            patch_text += ">>>>>>> REPLACE\n"
+            patch_text += '>>>>>>> REPLACE\n'
 
             # Save to file
-            filename = f"patch_{i:02d}.md"
+            filename = f'patch_{i:02d}.md'
             (output_dir / filename).write_text(patch_text, encoding='utf-8')
 
     console.print(f'[yellow]Failed patches saved to:[/yellow] {output_dir}')
-

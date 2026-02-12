@@ -156,6 +156,16 @@ Proceed? (yes/no)
 
 ---
 
+## Long Attached Content should not placed in ASK file.
+
+If long resuable design doc / research finding / other drafts should be attached, write them in `.sspec/tmp` and ref it in QUESTION.
+
+After user reply, omit the draft file, or move to change/reference.
+
+e.g. After research, write design draft in tmp, and ask user if it is ok. If ok -> apply in change, and move draft to change/reference
+
+---
+
 ## Guidelines
 
 | Do | Don't |

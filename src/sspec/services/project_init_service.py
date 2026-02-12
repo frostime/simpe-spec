@@ -59,12 +59,25 @@ def get_skill_targets_from_locations(
     return targets
 
 
+
+DEFAULT_GITIGNORE = """
+!project.md
+!spec-docs/**
+!commands/**
+!.meta.json
+changes/**
+requests/**
+skills/**
+asks/**
+tmp/**
+""".strip()
+
+
 def initialize_project(
     *,
     project_root: Path,
     force: bool,
     skill_locations: list[str],
-    default_gitignore: str,
     prefer_symlink: bool = True,
 ) -> InitResult:
     """Initialize `.sspec/` in a project root.
@@ -90,6 +103,7 @@ def initialize_project(
     (sspec_path / 'asks').mkdir(exist_ok=True)
     (sspec_path / 'skills').mkdir(exist_ok=True)
     (sspec_path / 'spec-docs').mkdir(exist_ok=True)
+    (sspec_path / 'tmp').mkdir(exist_ok=True)
 
     # Install skills using hub-and-spoke pattern
     template_skills = list_template_skills()
@@ -142,7 +156,7 @@ def initialize_project(
     # Create .gitignore
     gitignore_path = sspec_path / '.gitignore'
     if not gitignore_path.exists():
-        gitignore_path.write_text(default_gitignore, encoding='utf-8')
+        gitignore_path.write_text(DEFAULT_GITIGNORE, encoding='utf-8')
 
     # Compute hashes for installed skills (for update tracking)
     skill_hashes: dict[str, str] = {}

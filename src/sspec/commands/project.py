@@ -35,18 +35,6 @@ from sspec.services.project_update_service import (
 console = Console()
 
 
-DEFAULT_GITIGNORE = """
-!spec-docs/**
-!project.md
-!commands/**
-!.meta.json
-changes/**
-requests/**
-skills/**
-asks/**
-""".strip()
-
-
 def _interactive_skill_selection(project_root: Path) -> list[str]:
     """Interactive skill location selection.
 
@@ -114,7 +102,6 @@ def init(force: bool, skill_loc: tuple[str, ...]) -> None:
             project_root=project_root,
             force=force,
             skill_locations=skill_locations,
-            default_gitignore=DEFAULT_GITIGNORE,
             prefer_symlink=True,
         )
     except ProjectAlreadyInitializedError as e:

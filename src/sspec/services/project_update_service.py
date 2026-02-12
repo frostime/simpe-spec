@@ -151,6 +151,7 @@ def collect_update_candidates(
         skill_name = skill_dir.name
         template_skill_file = skill_dir / 'SKILL.md'
         if not template_skill_file.exists():
+            #TODO 无法增加新的 SKILL
             continue
 
         # Hash key: prefer new format, fall back to legacy

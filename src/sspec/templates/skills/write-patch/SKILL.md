@@ -2,7 +2,7 @@
 name: write-patch
 description: Use patch files + `sspec tool patch` for code modifications instead of direct file edits. Trigger when user requests patch-based workflow.
 metadata:
-  author: sspec-tools
+  author: frostime
   version: 1.0.0
 ---
 

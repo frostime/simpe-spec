@@ -25,7 +25,7 @@ def update_root_agents_block(
     rendered = render_template(
         template_agents_path.read_text(encoding='utf-8'),
         replacements,
-    )
+    ).strip()
 
     root_agents = project_root / 'AGENTS.md'
 
@@ -34,7 +34,7 @@ def update_root_agents_block(
             root_agents.write_text(rendered, encoding='utf-8')
         return True
 
-    content = root_agents.read_text(encoding='utf-8').strip()
+    content = root_agents.read_text(encoding='utf-8')
 
     start_marker = '<!-- SSPEC:START -->'
     end_marker = '<!-- SSPEC:END -->'

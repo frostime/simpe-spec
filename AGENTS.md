@@ -377,8 +377,3 @@ ON uncertainty:
 | `@ask` | Ask | Consult user, by using `sspec ask` |
 
 <!-- SSPEC:END -->
-
-
-
-
-

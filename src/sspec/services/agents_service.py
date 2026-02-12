@@ -34,7 +34,7 @@ def update_root_agents_block(
             root_agents.write_text(rendered, encoding='utf-8')
         return True
 
-    content = root_agents.read_text(encoding='utf-8')
+    content = root_agents.read_text(encoding='utf-8').strip()
 
     start_marker = '<!-- SSPEC:START -->'
     end_marker = '<!-- SSPEC:END -->'

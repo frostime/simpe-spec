@@ -460,32 +460,31 @@ def apply_patches(
 
 # ============ Prompt 模板 ============
 
-PATCH_PROMPT = """请返回代码更改的 patch，遵循如下的 SEARCH/REPLACE 规范：
+PATCH_PROMPT = """Please return the code changes as patches, following the SEARCH/REPLACE specification below:
 
-## 格式规范
+## Format Specification
 
-每个 patch 块由两部分组成：
+Each patch block consists of two parts:
 
-1) 文件路径行（SEARCH 必须紧跟其后；允许中间有空行，但不要插入其它文字）
+1) File path line (SEARCH must immediately follow; blank lines are allowed in between, but do not insert other text)
 
-写法 A（推荐，通常情况）：
+Format A (Recommended, common case):
 # path/to/file.py
 
-写法 B（可选，仅在 SEARCH 片段太短、可能多处匹配时使用）：
+Format B (Optional, used only when the SEARCH fragment is too short and may match multiple locations):
 # path/to/file.py:10-25
-或
+or
 # path/to/file.py:L10-L25
 
-说明：
-- 行号范围是可选的，只用于缩小搜索范围以避免多重匹配
-- 行号是 1-based，且为闭区间（包含起止行）
+Notes:
+- Line number ranges are optional and only used to narrow the search scope to avoid multiple matches
+- Line numbers are 1-based and inclusive (including both start and end lines)
 
+2) SEARCH/REPLACE block (marker lines must be on their own line without extra spaces)
 
-2) SEARCH/REPLACE 块（标记行必须独占一行，不能有额外空格）
+#### Example A: Without line number range (most common)
 
-#### 案例 A：不带行号范围（最常用）
-
-```text
+```example
 # src/utils.py
 <<<<<<< SEARCH
 return x * 2
@@ -494,9 +493,9 @@ return x * 3
 >>>>>>> REPLACE
 ```
 
-#### 案例 B：带行号范围（不带 L）
+#### Example B: With line number range (without L)
 
-```text
+```example
 # src/utils.py:10-25
 <<<<<<< SEARCH
 return x * 2
@@ -505,9 +504,9 @@ return x * 3
 >>>>>>> REPLACE
 ```
 
-#### 案例 C：带行号范围（带 L）
+#### Example C: With line number range (with L)
 
-```text
+```example
 # src/utils.py:L10-L25
 <<<<<<< SEARCH
 return x * 2
@@ -516,13 +515,13 @@ return x * 3
 >>>>>>> REPLACE
 ```
 
-## 重要规则
+## Important Rules
 
-1. 精确匹配优先：SEARCH 内容应与文件中的代码完全一致（包括缩进）
-2. 空白容忍兜底：匹配时允许忽略行尾空格/Tab 与纯空白行差异，但行首缩进必须一致
-3. 唯一匹配：若匹配到多处会失败（建议使用行范围限定）
-4. 路径安全：必须是相对项目根目录路径，禁止绝对路径和 .. 越界
-5. 文件存在性：patch 应用前会检查文件是否存在
+1. Exact match priority: SEARCH content should exactly match the code in the file (including indentation)
+2. Whitespace tolerance fallback: Differences in trailing whitespace/tabs and pure blank lines are ignored during matching, but leading indentation must be consistent
+3. Unique match: If multiple matches are found, the operation will fail (recommend using line range restrictions)
+4. Path safety: Must be relative to the project root directory; absolute paths and ".." boundary violations are prohibited
+5. File existence: Files will be checked for existence before applying patches
 """
 
 # Alias for Tool Interface

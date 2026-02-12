@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 # patch_handler.py
 """
 SEARCH/REPLACE Patch Handler (LRR Optimized)
@@ -21,7 +22,10 @@ import re
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from rich.console import Console
 
 __all__ = [
     'apply_patches',
@@ -47,7 +51,7 @@ class PatchBlock:
 
     file_path: Path
     display_path: str
-    line_range: Optional[tuple[int, int]]  # (start, end) 1-based, inclusive
+    line_range: tuple[int, int] | None  # (start, end) 1-based, inclusive
     search_content: str
     replace_content: str
     source_line_start: int  # patch 在源文本中的起始行号（用于错误报告）
@@ -65,9 +69,13 @@ class PatchParseResult:
 class PatchApplyResult:
     """单个 patch 应用结果"""
 
-    patch: Optional[PatchBlock]
+    patch: PatchBlock | None
     success: bool
-    error: Optional[str] = None
+    error: str | None = None
+    match_mode: str | None = None  # exact | loose
+    match_line: int | None = None  # 1-based line number in file
+    search_line_count: int = 0
+    replace_line_count: int = 0
 
 
 @dataclass
@@ -128,7 +136,7 @@ def safe_resolve_under_root(root: Path, user_path: str) -> Path:
     try:
         resolved.relative_to(root_abs)
     except ValueError:
-        raise ValueError(f'路径越界（疑似使用 ..）: {user_path}')
+        raise ValueError(f'路径越界（疑似使用 ..）: {user_path}') from None
 
     return resolved
 
@@ -238,7 +246,7 @@ PATCH_PATTERN = re.compile(r'F(?P<gap>B*)S(?P<search>[BC]*?)D(?P<replace>[BC]*?)
 
 
 def parse_patches(
-    patch_text: str, *, project_root: Optional[Path] = None
+    patch_text: str, *, project_root: Path | None = None
 ) -> PatchParseResult:
     """解析 patch 文本，提取所有 patch 块（保持 LRR 风格）"""
     root = (project_root or Path.cwd()).resolve()
@@ -406,42 +414,75 @@ def apply_patch(patch: PatchBlock) -> PatchApplyResult:
         exact = find_block_matches(region, search_lines, loose=False)
         if len(exact) == 1:
             match_start = exact[0]
+            match_mode = 'exact'
         elif len(exact) > 1:
             return PatchApplyResult(
                 patch=patch,
                 success=False,
                 error=f'找到 {len(exact)} 处精确匹配，存在歧义（建议加行范围限定）',
+                search_line_count=len(search_lines),
+                replace_line_count=len(replace_lines),
             )
         else:
             # 2) 容忍匹配（行尾空白/纯空白行）
             loose = find_block_matches(region, search_lines, loose=True)
             if len(loose) == 1:
                 match_start = loose[0]
+                match_mode = 'loose'
             elif len(loose) > 1:
                 return PatchApplyResult(
                     patch=patch,
                     success=False,
-                    error=f'找到 {len(loose)} 处匹配（忽略行尾空白后），存在歧义（建议加行范围限定）',
+                    error=(
+                        f'找到 {len(loose)} 处匹配（忽略行尾空白后），存在歧义（建议加行范围限定）'
+                    ),
+                    search_line_count=len(search_lines),
+                    replace_line_count=len(replace_lines),
                 )
             else:
                 return PatchApplyResult(
-                    patch=patch, success=False, error='未找到匹配的 SEARCH 内容'
+                    patch=patch,
+                    success=False,
+                    error='未找到匹配的 SEARCH 内容',
+                    search_line_count=len(search_lines),
+                    replace_line_count=len(replace_lines),
                 )
 
         match_end = match_start + len(search_lines)
+
+        # 计算匹配的文件行号（1-based）
+        match_line = len(prefix) + match_start + 1
 
         new_region = region[:match_start] + replace_lines + region[match_end:]
         new_content = ''.join(prefix + new_region + suffix)
 
         atomic_write_text(patch.file_path, new_content, encoding='utf-8')
-        return PatchApplyResult(patch=patch, success=True)
+        return PatchApplyResult(
+            patch=patch,
+            success=True,
+            match_mode=match_mode,
+            match_line=match_line,
+            search_line_count=len(search_lines),
+            replace_line_count=len(replace_lines),
+        )
 
     except Exception as e:
-        return PatchApplyResult(patch=patch, success=False, error=f'应用 patch 失败: {e}')
+        return PatchApplyResult(
+            patch=patch,
+            success=False,
+            error=f'应用 patch 失败: {e}',
+        )
+
+
+def format_patch_header(patch: PatchBlock) -> str:
+    header = f'# {patch.display_path}'
+    if patch.line_range:
+        header += f':L{patch.line_range[0]}-L{patch.line_range[1]}'
+    return header
 
 
 def apply_patches(
-    patch_text: str, *, project_root: Optional[Path] = None
+    patch_text: str, *, project_root: Path | None = None
 ) -> BatchApplyResult:
     """解析并批量应用 patches（保持原语义：解析阶段出现错误则不应用）"""
     parse_result = parse_patches(patch_text, project_root=project_root)
@@ -528,19 +569,10 @@ return x * 3
 TOOL_PROMPT = PATCH_PROMPT
 
 
-# ============ Tool Registration (Minimal Interface 1.0) ============
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from rich.console import Console
-
 def register_command(group):
     """Register patch command to the tool group."""
-    from datetime import datetime
-
     import click
     from rich.console import Console
-    from rich.progress import Progress, SpinnerColumn, TextColumn
     from rich.table import Table
 
     from sspec.core import find_sspec_root
@@ -548,7 +580,25 @@ def register_command(group):
     console = Console()
 
     @group.command(name=TOOL_NAME, help=TOOL_DESCRIPTION)
-    @click.argument('patch_file', type=click.Path(exists=True, path_type=Path), required=False)
+    @click.argument(
+        'patch_file',
+        type=click.Path(exists=True, path_type=Path),
+        required=False,
+    )
+    @click.option(
+        '-f',
+        '--file',
+        'patch_file_opt',
+        type=click.Path(exists=True, path_type=Path),
+        help='Read patch text from a file (alternative to positional PATCH_FILE)',
+    )
+    @click.option(
+        '-i',
+        '--input',
+        'input_mode',
+        is_flag=True,
+        help='Enter patch text interactively (default when no file is provided)',
+    )
     @click.option(
         '--dry-run',
         is_flag=True,
@@ -571,6 +621,8 @@ def register_command(group):
     )
     def patch_command(
         patch_file: Path | None,
+        patch_file_opt: Path | None,
+        input_mode: bool,
         dry_run: bool,
         output_failed: Path | None,
         yes: bool,
@@ -583,20 +635,20 @@ def register_command(group):
             console.print(TOOL_PROMPT)
             return
 
-        # Ensure patch_file is provided when not using --prompt
-        if patch_file is None:
-            console.print('[red]Error:[/red] Missing argument PATCH_FILE.')
-            console.print('Use --prompt to show format specification, or provide a patch file.')
+        # Determine input source (default to --input when no file is provided)
+        file_sources = [p for p in [patch_file, patch_file_opt] if p is not None]
+        if input_mode and file_sources:
+            console.print('[red]Error:[/red] Use either --input or --file/PATCH_FILE, not both.')
+            raise click.Abort()
+        if len(file_sources) > 1:
+            console.print(
+                '[red]Error:[/red] Provide only one patch file source (PATCH_FILE or --file).'
+            )
             raise click.Abort()
 
-        # Read patch file
-        try:
-            patch_text = patch_file.read_text(encoding='utf-8')
-        except Exception as e:
-            console.print(f'[red]Error reading patch file:[/red] {e}')
-            raise click.Abort()
+        use_input = input_mode or (not file_sources)
 
-        # Determine project root
+        # Determine project root (used for path safety + prompt file completion)
         sspec_root = find_sspec_root()
         if sspec_root is None:
             project_root = Path.cwd()
@@ -607,6 +659,27 @@ def register_command(group):
             # find_sspec_root() returns .sspec dir, we need its parent (project root)
             project_root = sspec_root.parent
 
+        patch_text = ''
+        if use_input:
+            from sspec.builtin_tools.prompt import run_interactive_editor
+
+            console.print(
+                '[cyan]Interactive input:[/cyan] paste/write patch text, then Esc+Enter to submit.'
+            )
+            text, _ = run_interactive_editor(root_dir=project_root)
+            patch_text = text
+
+            if not patch_text.strip():
+                console.print('[yellow]No input. Skipped.[/yellow]')
+                return
+        else:
+            patch_path = file_sources[0]
+            try:
+                patch_text = patch_path.read_text(encoding='utf-8')
+            except Exception as e:
+                console.print(f'[red]Error reading patch file:[/red] {e}')
+                raise click.Abort() from None
+
         # Parse patches
         parse_result = parse_patches(patch_text, project_root=project_root)
 
@@ -616,33 +689,33 @@ def register_command(group):
                 console.print(f'  • {err}')
             raise click.Abort()
 
-        num_patches = len(parse_result.patches)
-        console.print(f'[green]✓[/green] Found {num_patches} patch(es)\n')
+        patches = parse_result.patches
+        console.print(f'[green]✓[/green] Found {len(patches)} patch(es)\n')
 
-        # Display preview
-        if not yes and not dry_run:
-            table = Table(title='Patches to Apply', show_header=True)
-            table.add_column('File', style='cyan')
-            table.add_column('Line Range', style='dim')
+        # Always show preview table (helps understand what will happen)
+        table = Table(title='Patches', show_header=True)
+        table.add_column('# header', style='cyan', no_wrap=True)
+        table.add_column('Scope', style='dim')
 
-            for patch in parse_result.patches:
-                line_range = (
-                    f'L{patch.line_range[0]}-L{patch.line_range[1]}'
-                    if patch.line_range
-                    else 'Full file'
-                )
-                table.add_row(str(patch.display_path), line_range)
+        for patch in patches:
+            scope = (
+                f'L{patch.line_range[0]}-L{patch.line_range[1]}'
+                if patch.line_range
+                else 'Full file'
+            )
+            table.add_row(format_patch_header(patch), scope)
 
-            console.print(table)
-            console.print()
+        console.print(table)
+        console.print()
 
+        if dry_run:
+            console.print('[yellow]Dry-run mode:[/yellow] no changes will be applied')
+            return
+
+        if not yes:
             if not click.confirm('Apply these patches?', default=False):
                 console.print('[yellow]Aborted.[/yellow]')
                 raise click.Abort()
-
-        if dry_run:
-            console.print('[yellow]Dry-run mode: no changes will be applied[/yellow]')
-            return
 
         # Apply patches
         console.print('[cyan]Applying patches...[/cyan]')
@@ -661,12 +734,15 @@ def register_command(group):
             raise click.exceptions.Exit(code=1)
 
 
-def _display_results(console: 'Console', results: list['PatchApplyResult']) -> None:
+def _display_results(console: Console, results: list[PatchApplyResult]) -> None:
     """Display patch application results in a table."""
     from rich.table import Table
+
     table = Table(title='Results', show_header=True)
-    table.add_column('File', style='cyan')
+    table.add_column('# header', style='cyan', no_wrap=True)
     table.add_column('Status', justify='center')
+    table.add_column('Match', style='dim', no_wrap=True)
+    table.add_column('Δ lines', style='dim', justify='right', no_wrap=True)
     table.add_column('Note', style='dim')
 
     succeeded = 0
@@ -678,23 +754,33 @@ def _display_results(console: 'Console', results: list['PatchApplyResult']) -> N
             table.add_row(
                 'N/A',
                 '[red]✗[/red]',
+                '-',
+                '-',
                 result.error or 'Unknown parsing error',
             )
             continue
         if result.success:
             succeeded += 1
+            match = (result.match_mode or '-')
+            if result.match_line is not None:
+                match = f'{match} @L{result.match_line}'
+
+            delta = result.replace_line_count - result.search_line_count
             table.add_row(
-                str(result.patch.display_path),
+                format_patch_header(result.patch),
                 '[green]✓[/green]',
+                match,
+                f'{delta:+d}',
                 'Applied',
             )
         else:
             failed += 1
-            file_path = result.patch.display_path if result.patch else 'Unknown'
             error_msg = result.error or 'Unknown error'
             table.add_row(
-                str(file_path),
+                format_patch_header(result.patch),
                 '[red]✗[/red]',
+                (result.match_mode or '-'),
+                '-',
                 error_msg,
             )
 
@@ -712,8 +798,8 @@ def _display_results(console: 'Console', results: list['PatchApplyResult']) -> N
 
 
 def _save_failed_patches(
-    console: 'Console',
-    failed_results: list['PatchApplyResult'],
+    console: Console,
+    failed_results: list[PatchApplyResult],
     output_dir: Path | None,
     project_root: Path,
 ) -> None:

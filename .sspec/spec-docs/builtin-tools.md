@@ -134,7 +134,13 @@ for module_file in tools_dir.glob('*.py'):
 
 **Module**: `/src/sspec/builtin_tools/apply_patch.py`
 
-**Usage**: `sspec tool patch <file> [--dry-run] [--yes] [--output-failed DIR] [--prompt]`
+**Usage**: `sspec tool patch [PATCH_FILE] [--file PATH] [--input] [--dry-run] [--yes] [--output-failed DIR] [--prompt]`
+
+**Input rules**:
+- Provide exactly one input source:
+    - `PATCH_FILE` (positional) OR `--file/-f PATH` OR `--input/-i`
+- If no file is provided, defaults to interactive input (`--input`)
+- Interactive input is skipped if the submitted text is empty
 
 **Features**:
 - Parses SEARCH/REPLACE format patches

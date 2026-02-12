@@ -1,25 +1,35 @@
-"""Interactive prompt editor with file path completion and command mode."""
+"""Interactive prompt editor with file path completion and command mode.
+
+Design goal: a clean, "Vim-like" TUI where the editor and command line are
+separate fixed regions (no awkward newline + input for command mode).
+"""
 
 from __future__ import annotations
 
-import sys
-from dataclasses import dataclass, field
+from collections.abc import Iterable
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import cast
 
 from prompt_toolkit import PromptSession
+from prompt_toolkit.application import Application
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.document import Document
-from prompt_toolkit.formatted_text import HTML
+from prompt_toolkit.filters import Condition, has_focus
+from prompt_toolkit.formatted_text import AnyFormattedText
 from prompt_toolkit.key_binding import KeyBindings
-from prompt_toolkit.keys import Keys
+from prompt_toolkit.layout import HSplit, Layout
+from prompt_toolkit.layout.containers import (
+    ConditionalContainer,
+    Float,
+    FloatContainer,
+    Window,
+)
+from prompt_toolkit.layout.controls import FormattedTextControl
+from prompt_toolkit.layout.menus import CompletionsMenu
+from prompt_toolkit.widgets import Frame, TextArea
 
-__all__ = [
-    'TOOL_NAME',
-    'TOOL_DESCRIPTION',
-    'TOOL_PROMPT',
-    'register_command',
-]
+__all__ = ['TOOL_NAME', 'TOOL_DESCRIPTION', 'TOOL_PROMPT', 'register_command']
 
 TOOL_NAME = 'prompt'
 TOOL_DESCRIPTION = 'Interactive command editor with file path completion'
@@ -35,8 +45,8 @@ class EditorState:
     """Mutable state shared between the editing loop and key bindings."""
 
     output_path: Path | None = None
-    enter_command_mode: bool = False
-    pending_text: str = ''
+    in_command_mode: bool = False
+    status: str = ''
 
 
 # ============================================================================
@@ -99,9 +109,7 @@ class FilePathCompleter(Completer):
         matches.sort(key=lambda x: x[0])
         return [path for _, path in matches[: self.max_results]]
 
-    def get_completions(
-        self, document: Document, complete_event
-    ) -> Iterable[Completion]:
+    def get_completions(self, document: Document, complete_event) -> Iterable[Completion]:
         """Generate completions when ``@`` is detected on the current line."""
         # Use CURRENT LINE only — prevents cross-line false matches
         text = document.current_line_before_cursor
@@ -138,11 +146,7 @@ class FilePathCompleter(Completer):
         # Generate completions
         for match in matches:
             path_str = str(match).replace('\\', '/')
-            yield Completion(
-                path_str,
-                start_position=-len(query),
-                display=path_str,
-            )
+            yield Completion(path_str, start_position=-len(query), display=path_str)
 
 
 # ============================================================================
@@ -150,88 +154,201 @@ class FilePathCompleter(Completer):
 # ============================================================================
 
 
-# ANSI helpers (stderr output)
-_YELLOW = '\x1b[33m'
-_GREEN = '\x1b[32m'
-_RED = '\x1b[31m'
-_DIM = '\x1b[2m'
-_RESET = '\x1b[0m'
+def _process_command(raw: str, state: EditorState) -> tuple[bool, str | None]:
+    """Process a ``/command`` string.
 
+    Returns (should_exit, editor_op).
 
-def _process_command(raw: str, state: EditorState) -> bool:
-    """Process a ``/command`` string.  Returns True to signal exit."""
-    cmd = raw.strip().lstrip('/')
+    This function updates ``state`` (status/output_path) instead of printing,
+    so it can be used inside a full-screen prompt_toolkit Application.
+    """
+    cmd = raw.strip()
+    if cmd.startswith('/'):
+        cmd = cmd[1:]
     if not cmd:
-        return False
+        state.status = 'No command'
+        return False, None
 
     parts = cmd.split(None, 1)
     action = parts[0].lower()
     arg = parts[1].strip() if len(parts) > 1 else ''
 
     if action in ('exit', 'quit', 'q'):
-        return True
+        state.status = 'Exit'
+        return True, None
 
     elif action == 'clear':
-        state.pending_text = ''
-        print(f'{_GREEN}✓ Buffer cleared{_RESET}', file=sys.stderr)
+        state.status = '✓ Buffer cleared'
+        return False, 'clear'
 
     elif action == 'output':
         if arg:
             state.output_path = Path(arg)
-            print(f'{_GREEN}✓ Output → {arg}{_RESET}', file=sys.stderr)
+            state.status = f'✓ Output → {arg}'
         else:
             if state.output_path:
-                print(f'Current output: {state.output_path}', file=sys.stderr)
+                state.status = f'Current output: {state.output_path}'
             else:
-                print(f'{_DIM}No output path set. Usage: /output <path>{_RESET}', file=sys.stderr)
+                state.status = 'No output path set. Usage: /output <path>'
 
     elif action == 'help':
-        print(f'{_YELLOW}Commands:{_RESET}', file=sys.stderr)
-        print(f'  /exit            Finish editing and output text', file=sys.stderr)
-        print(f'  /clear           Clear the buffer', file=sys.stderr)
-        print(f'  /output <path>   Set output file path', file=sys.stderr)
-        print(f'  /help            Show this help', file=sys.stderr)
+        state.status = 'Commands: /exit /clear /output <path> /help'
 
     else:
-        print(f'{_RED}Unknown command: /{action}{_RESET}', file=sys.stderr)
-        print(f'{_DIM}Type /help for available commands{_RESET}', file=sys.stderr)
+        state.status = f'Unknown command: /{action} (type /help)'
 
-    return False
-
-
-# ============================================================================
-# Key Bindings
-# ============================================================================
+    return False, None
 
 
-def _build_key_bindings(state: EditorState) -> KeyBindings:
-    """Create key bindings with Esc → command-mode support."""
+# ==========================================================================
+# Full-screen TUI
+# ==========================================================================
+
+
+def _build_status_bar(state: EditorState) -> AnyFormattedText:
+    """Build a safe status bar.
+
+    IMPORTANT: Do not use HTML() here.
+    Status text may contain characters like `<path>` which would be interpreted
+    as markup and crash the renderer.
+    """
+
+    def sep() -> list[tuple[str, str]]:
+        return [('', ' │ ')]
+
+    fragments: list[tuple[str, str]] = []
+
+    fragments += [('bold', 'Esc'), ('', ' cmd')]
+    fragments += sep() + [('bold', 'Esc+Enter'), ('', ' submit')]
+    fragments += sep() + [('bold', '@'), ('', ' files')]
+    fragments += sep() + [('bold', '/help'), ('', ' cmds')]
+
+    if state.output_path:
+        fragments += sep() + [('', 'Output: '), ('bold', str(state.output_path))]
+
+    if state.status:
+        fragments += sep() + [('bold', state.status)]
+
+    return cast(AnyFormattedText, fragments)
+
+
+def _run_fullscreen_editor(
+    root_dir: Path, *, state: EditorState, initial_text: str
+) -> tuple[str, Path | None]:
+    """Run a clean full-screen editor with a fixed bottom command line."""
+
+    completer = FilePathCompleter(root_dir)
+
+    editor = TextArea(
+        text=initial_text,
+        multiline=True,
+        wrap_lines=False,
+        completer=completer,
+        complete_while_typing=True,
+        scrollbar=True,
+    )
+
+    command_line = TextArea(
+        text='', multiline=False, height=1, prompt=':', wrap_lines=False
+    )
+
+    @Condition
+    def _is_command_mode() -> bool:
+        return state.in_command_mode
+
+    editor_focused = has_focus(editor)
+
+    status_window = Window(
+        content=FormattedTextControl(lambda: _build_status_bar(state)),
+        height=1,
+        style='class:status',
+    )
+
+    # A custom Application+Layout does NOT auto-include a completions
+    # popup (unlike PromptSession which adds one by default).
+    # Without this Float, the completer generates results but there is
+    # no widget to render the dropdown — Tab falls back to inline-
+    # completing the first match with no visible list to choose from.
+    editor_with_completions = FloatContainer(
+        content=Frame(editor, title='prompt'),
+        floats=[
+            Float(
+                xcursor=True,
+                ycursor=True,
+                content=CompletionsMenu(max_height=12, scroll_offset=1),
+            ),
+        ],
+    )
+
+    root_container = HSplit(
+        [
+            editor_with_completions,
+            ConditionalContainer(
+                content=Frame(command_line, title='command'), filter=_is_command_mode
+            ),
+            status_window,
+        ]
+    )
+
     kb = KeyBindings()
 
     @kb.add('escape')
     def _enter_command_mode(event):
-        """Esc (alone, after timeout) → enter command mode.
+        """Esc (alone, after timeout) enters command mode (like Vim ':')."""
+        state.in_command_mode = True
+        state.status = ''
+        command_line.text = ''
+        event.app.layout.focus(command_line)
 
-        Esc+Enter (Meta+Enter) is handled separately by prompt_toolkit's
-        default multiline bindings and is NOT affected.
+    @kb.add('enter', filter=editor_focused & ~_is_command_mode)
+    def _insert_newline_no_indent(event):
+        """Insert a literal newline without auto-indentation.
+
+        This keeps pasted multi-line text stable (no cumulative indentation).
         """
-        state.enter_command_mode = True
-        state.pending_text = event.app.current_buffer.text
-        event.app.exit(result=None)
+        event.app.current_buffer.insert_text('\n')
 
-    return kb
+    @kb.add('escape', 'enter')
+    def _submit(event):
+        """Esc+Enter submits the editor content."""
+        if state.in_command_mode:
+            return
+        event.app.exit(result=editor.text)
 
+    @kb.add('c-c')
+    def _cancel(event):
+        raise KeyboardInterrupt
 
-def _build_toolbar(state: EditorState):
-    """Bottom toolbar showing hints and current output path."""
-    parts = [
-        '<b>Esc</b> /cmd',
-        '<b>Esc+Enter</b> submit',
-        '<b>@</b> files',
-    ]
-    if state.output_path:
-        parts.append(f'Output: <b>{state.output_path}</b>')
-    return HTML(' │ '.join(parts))
+    @kb.add('enter', filter=_is_command_mode)
+    def _run_command(event):
+        raw = command_line.text
+        should_exit, editor_op = _process_command(raw, state)
+        if editor_op == 'clear':
+            editor.text = ''
+        if should_exit:
+            event.app.exit(result=editor.text)
+            return
+
+        state.in_command_mode = False
+        event.app.layout.focus(editor)
+
+    @kb.add('escape', filter=_is_command_mode)
+    def _cancel_command_mode(event):
+        state.in_command_mode = False
+        state.status = ''
+        event.app.layout.focus(editor)
+
+    app = Application(
+        layout=Layout(root_container, focused_element=editor),
+        key_bindings=kb,
+        full_screen=True,
+        mouse_support=True,
+    )
+
+    app.timeoutlen = 0.1
+
+    result_text = app.run()
+    return result_text, state.output_path
 
 
 # ============================================================================
@@ -240,9 +357,7 @@ def _build_toolbar(state: EditorState):
 
 
 def run_interactive_editor(
-    root_dir: Path,
-    single_line: bool = False,
-    initial_output: Path | None = None,
+    root_dir: Path, single_line: bool = False, initial_output: Path | None = None
 ) -> tuple[str, Path | None]:
     """Run the interactive editor and return ``(text, output_path)``.
 
@@ -251,67 +366,14 @@ def run_interactive_editor(
     """
     if single_line:
         session: PromptSession = PromptSession()
-        text = session.prompt('> ')
+        text = session.prompt('')
         return text, initial_output
 
     state = EditorState(output_path=initial_output)
-    completer = FilePathCompleter(root_dir)
-    buffer_text = ''
-
-    # Show banner once
-    print(f'{_YELLOW}=== Interactive Editor ==={_RESET}', file=sys.stderr)
-    print(f'  @       file path completion', file=sys.stderr)
-    print(f'  Esc     command mode (/exit, /clear, /output, /help)', file=sys.stderr)
-    print(f'  Esc+Enter  finish editing', file=sys.stderr)
-    print(file=sys.stderr)
-
-    while True:
-        state.enter_command_mode = False
-        kb = _build_key_bindings(state)
-
-        session = PromptSession(
-            completer=completer,
-            multiline=True,
-            complete_while_typing=True,
-            key_bindings=kb,
-            bottom_toolbar=lambda: _build_toolbar(state),
-        )
-
-        try:
-            result = session.prompt('> ', default=buffer_text, multiline=True)
-        except KeyboardInterrupt:
-            raise
-        except EOFError:
-            # Ctrl+D on empty buffer → finish with current text
-            return buffer_text, state.output_path
-
-        # -- Esc was pressed (result is None) → command mode ----------------
-        if result is None and state.enter_command_mode:
-            buffer_text = state.pending_text
-
-            # Show command prompt (regular input, outside prompt_toolkit)
-            try:
-                print(file=sys.stderr)
-                raw = input(f'{_YELLOW}/ {_RESET}')
-            except (EOFError, KeyboardInterrupt):
-                # Cancel command mode → resume editing
-                continue
-
-            should_exit = _process_command(raw, state)
-            if should_exit:
-                return buffer_text, state.output_path
-
-            # /clear may have reset pending_text
-            buffer_text = state.pending_text
-            print(file=sys.stderr)
-            continue
-
-        # -- Normal submit (Esc+Enter or Ctrl+D on non-empty) ---------------
-        if result is not None:
-            return result, state.output_path
-
-        # Defensive fallback
-        return buffer_text, state.output_path
+    try:
+        return _run_fullscreen_editor(root_dir, state=state, initial_text='')
+    except KeyboardInterrupt:
+        raise
 
 
 # ============================================================================
@@ -341,7 +403,8 @@ Type `@` to trigger file path completion:
 - Use arrow keys to navigate, Tab/Enter to confirm
 
 ### Command Mode
-Press **Esc** (alone) to enter command mode, then type a command:
+Press **Esc** (alone) to open the bottom command line (Vim-like),
+then type a command and press Enter:
 
 | Command | Description |
 |---------|-------------|
@@ -351,10 +414,10 @@ Press **Esc** (alone) to enter command mode, then type a command:
 | `/help` | Show available commands |
 
 ### Keybindings
-- **Esc + Enter**: Finish editing and output (submit)
-- **Esc** (alone): Enter command mode
+- **Esc + Enter**: Submit editor content
+- **Esc** (alone): Open command line
+- **Enter** (in command line): Run command
 - **Ctrl+C**: Cancel
-- **Ctrl+D**: EOF (finish on empty buffer)
 
 ### Options
 ```bash
@@ -386,7 +449,7 @@ sspec tool prompt
 - File paths are relative to project root
 - Completion skips .git, __pycache__, node_modules, .sspec
 - Works best in terminals with UTF-8 support
-- The Esc key has a brief delay (terminal escape sequence timeout)
+- The Esc key may have a brief delay (terminal escape sequence timeout)
 """
 
 
@@ -406,7 +469,8 @@ def register_command(group):
 
     @group.command(name=TOOL_NAME, help=TOOL_DESCRIPTION)
     @click.option(
-        '-o', '--output',
+        '-o',
+        '--output',
         type=click.Path(path_type=Path),
         help='Save to file (default: stdout)',
     )
@@ -420,17 +484,9 @@ def register_command(group):
         is_flag=True,
         help='Single-line mode (no file completion, no commands)',
     )
-    @click.option(
-        '--prompt',
-        'show_prompt',
-        is_flag=True,
-        help='Show tool usage guide',
-    )
+    @click.option('--prompt', 'show_prompt', is_flag=True, help='Show tool usage guide')
     def prompt_command(
-        output: Path | None,
-        root: Path | None,
-        single_line: bool,
-        show_prompt: bool,
+        output: Path | None, root: Path | None, single_line: bool, show_prompt: bool
     ):
         """Interactive command editor with file path completion."""
 
@@ -449,13 +505,11 @@ def register_command(group):
         # Run editor
         try:
             text, dynamic_output = run_interactive_editor(
-                root_dir=root,
-                single_line=single_line,
-                initial_output=output,
+                root_dir=root, single_line=single_line, initial_output=output
             )
         except KeyboardInterrupt:
             console.print('[yellow]\nCancelled.[/yellow]')
-            raise click.Abort()
+            raise click.Abort() from None
 
         # Dynamic /output command overrides -o flag
         final_output = dynamic_output or output

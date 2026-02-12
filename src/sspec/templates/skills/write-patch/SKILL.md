@@ -217,11 +217,13 @@ def foo():
 ## Tool Options
 
 ```bash
-sspec tool patch <file> [OPTIONS]
+sspec tool patch [PATCH_FILE] [OPTIONS]
 
 --dry-run              # Preview without applying
 --yes                  # Skip confirmation
 --output-failed DIR    # Custom dir for failed patches
+--file, -f PATH        # Read patch text from file (alternative to positional PATCH_FILE)
+--input, -i            # Enter patch text interactively (default when no file is provided)
 --prompt               # Show format specification
 ```
 

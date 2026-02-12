@@ -1,158 +1,155 @@
-"""Tests for md_yaml module."""
+"""Tests for sspec.libs.md_yaml — YAML frontmatter parse/update utilities."""
+
+from __future__ import annotations
 
 import pytest
 
 from sspec.libs.md_yaml import parse_frontmatter, update_frontmatter
 
 
+# ---------------------------------------------------------------------------
+# parse_frontmatter
+# ---------------------------------------------------------------------------
+
+
 class TestParseFrontmatter:
-    """Tests for parse_frontmatter function."""
-
-    def test_valid_frontmatter(self):
-        """Parse valid YAML frontmatter."""
-        content = "---\nkey: value\nstatus: OPEN\n---\nBody content"
+    def test_standard_frontmatter(self):
+        content = '---\nstatus: OPEN\nname: demo\n---\nBody text'
         meta, body = parse_frontmatter(content)
+        assert meta == {'status': 'OPEN', 'name': 'demo'}
+        assert body == 'Body text'
 
-        assert meta == {'key': 'value', 'status': 'OPEN'}
-        assert body == 'Body content'
-
-    def test_no_frontmatter(self):
-        """Handle content without frontmatter."""
-        content = "Just plain content"
+    def test_no_frontmatter_returns_original(self):
+        content = 'Just plain markdown'
         meta, body = parse_frontmatter(content)
-
-        assert meta == {}
-        assert body == "Just plain content"
-
-    def test_empty_frontmatter(self):
-        """Handle empty YAML frontmatter."""
-        content = "---\n---\nBody"
-        meta, body = parse_frontmatter(content)
-
-        assert meta == {}
-        assert body == 'Body'
-
-    def test_incomplete_frontmatter(self):
-        """Handle incomplete frontmatter (only one separator)."""
-        content = "---\nkey: value"
-        meta, body = parse_frontmatter(content)
-
         assert meta == {}
         assert body == content
 
-    def test_invalid_yaml(self):
-        """Handle invalid YAML syntax."""
-        content = "---\ninvalid: yaml: syntax:\n---\nBody"
-        meta, body = parse_frontmatter(content)
-
+    def test_empty_frontmatter(self):
+        meta, body = parse_frontmatter('---\n---\nBody')
         assert meta == {}
         assert body == 'Body'
 
-    def test_complex_yaml(self):
-        """Parse complex YAML structures."""
-        content = """---
-reference:
-  - source: "path/to/file"
-    type: "request"
-    note: "Some note"
-status: DOING
----
-Content here"""
+    def test_incomplete_frontmatter_one_separator(self):
+        """Only opening --- without closing --- is not valid frontmatter."""
+        content = '---\nkey: value'
         meta, body = parse_frontmatter(content)
+        assert meta == {}
+        assert body == content
 
-        assert 'reference' in meta
+    def test_invalid_yaml_returns_empty_meta(self):
+        content = '---\n: invalid: yaml: :\n---\nBody'
+        meta, body = parse_frontmatter(content)
+        assert meta == {}
+        assert body == 'Body'
+
+    def test_non_dict_yaml_treated_as_empty(self):
+        """If YAML parses to a non-dict (e.g. list), treat as empty meta."""
+        content = '---\n- item1\n- item2\n---\nBody'
+        meta, body = parse_frontmatter(content)
+        assert meta == {}
+
+    def test_complex_yaml_structures(self):
+        content = (
+            '---\n'
+            'reference:\n'
+            '  - source: path/to/file\n'
+            '    type: request\n'
+            'status: DOING\n'
+            '---\n'
+            'Content'
+        )
+        meta, body = parse_frontmatter(content)
         assert isinstance(meta['reference'], list)
         assert meta['reference'][0]['source'] == 'path/to/file'
         assert meta['status'] == 'DOING'
-        assert body == 'Content here'
+        assert body == 'Content'
 
-    def test_multiline_body(self):
-        """Preserve multiline body content."""
-        content = "---\nkey: value\n---\nLine 1\nLine 2\nLine 3"
+    def test_leading_newlines_stripped_from_body(self):
+        meta, body = parse_frontmatter('---\nk: v\n---\n\n\nBody')
+        assert body == 'Body'
+
+    def test_unicode_in_frontmatter(self):
+        content = '---\nname: 测试\n---\n内容'
         meta, body = parse_frontmatter(content)
+        assert meta['name'] == '测试'
+        assert body == '内容'
 
-        assert meta == {'key': 'value'}
-        assert body == "Line 1\nLine 2\nLine 3"
+    def test_multiline_body_preserved(self):
+        content = '---\nk: v\n---\nLine 1\nLine 2\nLine 3'
+        _, body = parse_frontmatter(content)
+        assert body == 'Line 1\nLine 2\nLine 3'
 
-    def test_body_with_leading_newlines(self):
-        """Strip leading newlines from body."""
-        content = "---\nkey: value\n---\n\n\nBody"
+    def test_body_containing_triple_dashes(self):
+        """Triple dashes in body should not confuse the parser (only first two matter)."""
+        content = '---\nk: v\n---\nSome text\n---\nNot frontmatter'
         meta, body = parse_frontmatter(content)
+        assert meta == {'k': 'v'}
+        # Body is everything after the second ---
+        assert 'Some text' in body
 
-        assert body == "Body"
+
+# ---------------------------------------------------------------------------
+# update_frontmatter
+# ---------------------------------------------------------------------------
 
 
 class TestUpdateFrontmatter:
-    """Tests for update_frontmatter function."""
-
     def test_update_existing_field(self):
-        """Update existing frontmatter field."""
-        content = "---\nstatus: OPEN\n---\nBody"
+        content = '---\nstatus: OPEN\n---\nBody'
         updated = update_frontmatter(content, {'status': 'DONE'})
-
         meta, body = parse_frontmatter(updated)
         assert meta['status'] == 'DONE'
         assert body == 'Body'
 
     def test_add_new_field(self):
-        """Add new field to existing frontmatter."""
-        content = "---\nstatus: OPEN\n---\nBody"
+        content = '---\nstatus: OPEN\n---\nBody'
         updated = update_frontmatter(content, {'archived': '2026-02-05'})
-
-        meta, body = parse_frontmatter(updated)
+        meta, _ = parse_frontmatter(updated)
         assert meta['status'] == 'OPEN'
         assert meta['archived'] == '2026-02-05'
 
-    def test_create_frontmatter_when_none(self):
-        """Create frontmatter when none exists."""
-        content = "Original body"
-        updated = update_frontmatter(content, {'status': 'DONE'})
-
+    def test_create_frontmatter_when_none_exists(self):
+        updated = update_frontmatter('Plain body', {'status': 'NEW'})
         meta, body = parse_frontmatter(updated)
-        assert meta['status'] == 'DONE'
-        assert body == 'Original body'
+        assert meta['status'] == 'NEW'
+        assert body == 'Plain body'
 
     def test_update_multiple_fields(self):
-        """Update multiple fields at once."""
-        content = "---\nstatus: OPEN\ntype: feature\n---\nBody"
-        updated = update_frontmatter(content, {
-            'status': 'DONE',
-            'archived': '2026-02-05',
-            'type': 'bugfix'
-        })
-
-        meta, body = parse_frontmatter(updated)
+        content = '---\nstatus: OPEN\ntype: feature\n---\nBody'
+        updated = update_frontmatter(content, {'status': 'DONE', 'type': 'bugfix', 'note': 'x'})
+        meta, _ = parse_frontmatter(updated)
         assert meta['status'] == 'DONE'
-        assert meta['archived'] == '2026-02-05'
         assert meta['type'] == 'bugfix'
+        assert meta['note'] == 'x'
 
-    def test_update_complex_structure(self):
-        """Update complex YAML structures."""
-        content = "---\nstatus: OPEN\n---\nBody"
-        updated = update_frontmatter(content, {
-            'reference': [
-                {'source': 'requests/test.md', 'type': 'request'}
-            ]
-        })
-
-        meta, body = parse_frontmatter(updated)
-        assert 'reference' in meta
+    def test_complex_value(self):
+        content = '---\nstatus: OPEN\n---\nBody'
+        updated = update_frontmatter(
+            content,
+            {'reference': [{'source': 'requests/test.md', 'type': 'request'}]},
+        )
+        meta, _ = parse_frontmatter(updated)
         assert isinstance(meta['reference'], list)
         assert meta['reference'][0]['source'] == 'requests/test.md'
 
-    def test_preserve_body_content(self):
-        """Ensure body content is preserved."""
-        content = "---\nkey: value\n---\nImportant\nBody\nContent"
-        updated = update_frontmatter(content, {'new_key': 'new_value'})
+    def test_body_preserved_after_update(self):
+        content = '---\nk: v\n---\nImportant\nMulti-line\nContent'
+        updated = update_frontmatter(content, {'new': 'val'})
+        _, body = parse_frontmatter(updated)
+        assert body == 'Important\nMulti-line\nContent'
 
-        meta, body = parse_frontmatter(updated)
-        assert body == "Important\nBody\nContent"
-
-    def test_unicode_handling(self):
-        """Handle Unicode characters correctly."""
-        content = "---\nname: test\n---\nBody with 中文"
+    def test_unicode_values(self):
+        content = '---\nname: test\n---\n中文内容'
         updated = update_frontmatter(content, {'description': '描述'})
-
         meta, body = parse_frontmatter(updated)
         assert meta['description'] == '描述'
-        assert '中文' in body
+        assert '中文内容' in body
+
+    def test_roundtrip_idempotent_for_same_data(self):
+        """Updating with same values should produce parseable result."""
+        content = '---\nstatus: OPEN\n---\nBody'
+        updated = update_frontmatter(content, {'status': 'OPEN'})
+        meta, body = parse_frontmatter(updated)
+        assert meta['status'] == 'OPEN'
+        assert body == 'Body'

@@ -1,0 +1,219 @@
+"""Tests for sspec.services.ask_service — ask creation, name normalization, conversion."""
+
+from __future__ import annotations
+
+import importlib.util
+from pathlib import Path
+
+import pytest
+
+from sspec.services.ask_service import (
+    archive_ask,
+    convert_ask_to_md,
+    create_ask_template,
+    execute_ask_prompt,
+    extract_ask_name_from_filename,
+    find_ask_matches,
+    normalize_ask_name,
+    save_ask_answer,
+)
+
+
+# ---------------------------------------------------------------------------
+# normalize_ask_name
+# ---------------------------------------------------------------------------
+
+
+class TestNormalizeAskName:
+    def test_hyphens_to_underscores(self):
+        name, _ = normalize_ask_name('my-question')
+        assert name == 'my_question'
+
+    def test_special_chars_removed(self):
+        name, _ = normalize_ask_name('what@about#this?')
+        assert name == 'what_about_this'
+
+    def test_returns_warning_when_changed(self):
+        _, warning = normalize_ask_name('my-question')
+        assert warning is not None
+        assert 'converted' in warning.lower()
+
+    def test_no_warning_when_unchanged(self):
+        _, warning = normalize_ask_name('already_ok')
+        assert warning is None
+
+    def test_empty_name_raises(self):
+        with pytest.raises(ValueError):
+            normalize_ask_name('!!!')
+
+    def test_collapses_underscores(self):
+        name, _ = normalize_ask_name('a---b___c')
+        assert '__' not in name
+        assert name == 'a_b_c'
+
+
+# ---------------------------------------------------------------------------
+# extract_ask_name_from_filename
+# ---------------------------------------------------------------------------
+
+
+class TestExtractAskName:
+    def test_timestamped_format(self):
+        assert extract_ask_name_from_filename('260101120000_my_question') == 'my_question'
+
+    def test_plain_name(self):
+        assert extract_ask_name_from_filename('plain') == 'plain'
+
+
+# ---------------------------------------------------------------------------
+# create_ask_template
+# ---------------------------------------------------------------------------
+
+
+class TestCreateAskTemplate:
+    def test_creates_py_file(self, sspec_root: Path):
+        path, _ = create_ask_template(sspec_root, 'token-storage')
+        assert path.exists()
+        assert path.suffix == '.py'
+
+    def test_template_content_structure(self, sspec_root: Path):
+        path, _ = create_ask_template(sspec_root, 'design-choice')
+        content = path.read_text(encoding='utf-8')
+        assert 'CREATED' in content
+        assert 'REASON' in content
+        assert 'QUESTION' in content
+        assert 'USER_ANSWER' in content
+
+    def test_name_conversion_warning(self, sspec_root: Path):
+        _, warning = create_ask_template(sspec_root, 'my-question')
+        assert warning is not None
+
+    def test_conflict_handling(self, sspec_root: Path):
+        p1, _ = create_ask_template(sspec_root, 'same-name')
+        p2, _ = create_ask_template(sspec_root, 'same-name')
+        assert p1 != p2
+        assert p2.exists()
+
+
+# ---------------------------------------------------------------------------
+# execute_ask_prompt with pre-filled answer
+# ---------------------------------------------------------------------------
+
+
+class TestExecuteAskPrompt:
+    def test_prefilled_answer_returned(self, sspec_root: Path):
+        path, _ = create_ask_template(sspec_root, 'prefilled')
+        # Modify the template to have a pre-filled answer
+        content = path.read_text(encoding='utf-8')
+        content = content.replace('USER_ANSWER = r""""""', 'USER_ANSWER = r"""Use Redis"""')
+        path.write_text(content, encoding='utf-8')
+
+        answer = execute_ask_prompt(path)
+        assert answer == 'Use Redis'
+
+    def test_missing_file_with_md_fallback(self, sspec_root: Path):
+        """If .py is missing but .md exists, return a warning message."""
+        asks_dir = sspec_root / 'asks'
+        py_path = asks_dir / 'completed.py'
+        md_path = asks_dir / 'completed.md'
+        md_path.write_text('---\nname: completed\n---\n', encoding='utf-8')
+
+        result = execute_ask_prompt(py_path)
+        assert 'already completed' in result.lower() or 'Warning' in result
+
+    def test_truly_missing_file_raises(self, sspec_root: Path):
+        with pytest.raises(FileNotFoundError):
+            execute_ask_prompt(sspec_root / 'asks' / 'nonexistent.py')
+
+
+# ---------------------------------------------------------------------------
+# save_ask_answer + convert_ask_to_md
+# ---------------------------------------------------------------------------
+
+
+class TestSaveAndConvert:
+    def test_save_appends_answer(self, sspec_root: Path):
+        path, _ = create_ask_template(sspec_root, 'save-test')
+        # Fill in QUESTION for the template to be valid
+        content = path.read_text(encoding='utf-8')
+        content = content.replace('<YOUR_QUESTION_HERE>', 'What DB to use?')
+        path.write_text(content, encoding='utf-8')
+
+        save_ask_answer(path, 'PostgreSQL')
+        updated = path.read_text(encoding='utf-8')
+        assert 'ANSWER' in updated
+        assert 'PostgreSQL' in updated
+
+    def test_convert_to_md(self, sspec_root: Path):
+        path, _ = create_ask_template(sspec_root, 'convert-test')
+        content = path.read_text(encoding='utf-8')
+        content = content.replace('<YOUR_QUESTION_HERE>', 'Which framework?')
+        content = content.replace('<brief_reason>', 'Need to decide')
+        path.write_text(content, encoding='utf-8')
+        save_ask_answer(path, 'FastAPI')
+
+        md_path = convert_ask_to_md(path)
+        assert md_path.exists()
+        assert md_path.suffix == '.md'
+        assert not path.exists()  # .py should be deleted
+
+        md_content = md_path.read_text(encoding='utf-8')
+        assert 'FastAPI' in md_content
+        assert 'Which framework?' in md_content
+
+
+# ---------------------------------------------------------------------------
+# find_ask_matches
+# ---------------------------------------------------------------------------
+
+
+class TestFindAskMatches:
+    def test_exact_match(self, sspec_root: Path):
+        asks_dir = sspec_root / 'asks'
+        f = asks_dir / 'my_question.md'
+        f.write_text('---\n---\n', encoding='utf-8')
+        assert f in find_ask_matches(asks_dir, 'my_question')
+
+    def test_suffix_match(self, sspec_root: Path):
+        asks_dir = sspec_root / 'asks'
+        f = asks_dir / '260101120000_topic.md'
+        f.write_text('', encoding='utf-8')
+        assert f in find_ask_matches(asks_dir, 'topic')
+
+    def test_strips_md_extension(self, sspec_root: Path):
+        asks_dir = sspec_root / 'asks'
+        f = asks_dir / 'q.md'
+        f.write_text('', encoding='utf-8')
+        assert f in find_ask_matches(asks_dir, 'q.md')
+
+    def test_no_match(self, sspec_root: Path):
+        assert find_ask_matches(sspec_root / 'asks', 'nonexistent') == []
+
+
+# ---------------------------------------------------------------------------
+# archive_ask
+# ---------------------------------------------------------------------------
+
+
+class TestArchiveAsk:
+    def test_moves_to_archive(self, sspec_root: Path):
+        asks_dir = sspec_root / 'asks'
+        f = asks_dir / 'done.md'
+        f.write_text('completed ask', encoding='utf-8')
+
+        dest = archive_ask(asks_dir, f)
+        assert dest.exists()
+        assert not f.exists()
+        assert 'archive' in str(dest)
+
+    def test_conflict_resolution(self, sspec_root: Path):
+        asks_dir = sspec_root / 'asks'
+        archive_dir = asks_dir / 'archive'
+        archive_dir.mkdir(parents=True, exist_ok=True)
+        (archive_dir / 'dup.md').write_text('old', encoding='utf-8')
+
+        f = asks_dir / 'dup.md'
+        f.write_text('new', encoding='utf-8')
+        dest = archive_ask(asks_dir, f)
+        assert dest.exists()
+        assert dest.name != 'dup.md'  # counter appended

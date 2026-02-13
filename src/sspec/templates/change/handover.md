@@ -6,7 +6,8 @@
 
 ## Background
 <!-- @RULE: Write once on first session, update only if scope changes.
-One sentence: what this change does and why. Details are in spec.md. -->
+One sentence: what this change does and why. Details are in spec.md.
+📚 Standards: sspec-memory SKILL → handover-standards.md -->
 
 ## Accomplished This Session
 <!-- Specific list of what got done -->
@@ -21,13 +22,14 @@ One sentence: what this change does and why. Details are in spec.md. -->
 -->
 
 ## References & Memory
-<!-- @RULE: Agent's external working memory. Serves two purposes:
+<!-- @RULE: Agent's external working memory. Two purposes:
 1. INTRA-SESSION: Survive context window compression in long conversations
 2. CROSS-SESSION: Let next Agent resume with full context
 
 Update PROACTIVELY as you work — don't wait until session end.
 Trigger: important decision made, key file found, non-obvious insight gained.
-Test: "Would I struggle to reconstruct this after context compression?" → Write it NOW. -->
+Test: "Would I struggle to reconstruct this after context compression?" → Write it NOW.
+📚 Full quality standards: sspec-memory SKILL → handover-standards.md -->
 
 ### Key Files
 <!-- Files critical to understanding/continuing this change.

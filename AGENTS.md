@@ -143,7 +143,7 @@ This saves cost in Copilot (tool calls don't consume turns).
 <!-- SSPEC:START -->
 # .sspec Agent Protocol
 
-SSPEC_SCHEMA::6.2
+SSPEC_SCHEMA::7.0
 
 ## 0. Protocol Overview
 
@@ -159,9 +159,9 @@ SSPEC is a document-driven AI collaboration framework. All planning, tracking, a
 ├── changes/<n>/            # Active change proposals
 │   ├── spec.md | tasks.md | handover.md  # Required
 │   └── reference/ | script/              # Optional
-├── requests/               # Lightweight proposals
-├── tmp/                    #  Informal proposals, plans, scripts, etc., for user review.
-└── asks/                   # Human-in-the-loop Q&A records
+├── requests/               # Lightweight proposals (user intent record)
+├── tmp/                    # Informal proposals, plans, scripts, etc., for user review.
+└── asks/                   # Human-in-the-loop Q&A records (decision evidence)
 ```
 
 ---
@@ -221,7 +221,8 @@ Track in request file (`## Plan` / `## Done`) or just do it. No change needed.
 
 **Memory**: In long sessions, proactively update handover.md "References & Memory" — context compression is silent and lossy.
 
-📚 Consult `sspec` SKILL for scale assessment, document standards, multi-change patterns
+📚 Consult `sspec-change` SKILL for scale assessment, document standards, multi-change patterns
+📚 Consult `sspec-memory` SKILL for handover quality and memory management
 
 ### 2.1 Status Transitions
 
@@ -243,7 +244,7 @@ Track in request file (`## Plan` / `## Done`) or just do it. No change needed.
 
 Existing change: Locate the change -> Read handover.md (especially References & Memory) → tasks.md → spec.md → check reference field → output status + progress + next 3 actions.
 
-New change: `sspec change new <n>` or `--from <request>`. Complex: `--root`. Follow 2.0 workflow. Fill docs per `@RULE` markers. Ask approval.
+New change: `sspec change new <n>` or `--from <request>`. Complex: `--root`. Follow 2.0 workflow. Fill docs per standards in `sspec-change` SKILL. Ask approval.
 
 #### `@resume`
 
@@ -270,6 +271,8 @@ Mid-session update: append to "References & Memory" only. Quick, targeted, no ce
 
 **Principle**: If you'd struggle to reconstruct info after context compression, write it to handover NOW.
 
+📚 Consult `sspec-memory` SKILL for handover quality standards and memory checklists
+
 #### `@sync`
 
 After autonomous coding without tracking: identify changes → update tasks.md → all done? suggest REVIEW.
@@ -278,16 +281,18 @@ After autonomous coding without tracking: identify changes → update tasks.md �
 
 User disagrees. **STOP immediately**. Follow rejection protocol.
 
-📚 Consult `sspec` SKILL for rejection scope assessment and edge cases
+📚 Consult `sspec-change` SKILL for rejection scope assessment and edge cases
 
-### 2.3 Template Marker
+### 2.3 Template Markers
 
-Markers within blank change template files like these:
+Markers within blank change template files:
 
-- RULE Marker: `<!-- @RULE: ... -->`, read them and Follow when filling, DO NOT delete it.
-- REPLADE Marker: `<!-- @REPLACE -->`, use as the anchor of Edit/Replace Tools for first editing.
-- Task markers: `[ ]` todo, `[x]` done
-- DO NOT DELETE RULE Marker.
+- **@RULE Marker**: `<!-- @RULE: ... -->` — inline reminders of standards defined in SKILLs. Read and follow when filling. DO NOT delete.
+- **@REPLACE Marker**: `<!-- @REPLACE -->` — use as the anchor of Edit/Replace Tools for first editing.
+- **Task markers**: `[ ]` todo, `[x]` done
+- DO NOT DELETE @RULE Markers.
+
+**Authority**: SKILL documents are the authoritative source for standards. `@RULE` markers serve as quick reminders that echo SKILL content. When in doubt, consult the SKILL.
 
 ---
 
@@ -321,17 +326,17 @@ Update: Read existing → apply changes → update `updated` field.
 **USE ACTIVELY** — Don't hesitate to ask. Better to confirm than guess wrong.
 
 ```
-sspec ask create <topic>     # Create ask template
-sspec ask prompt <file>      # Execute and collect answer
+sspec ask create <topic>     # Create ask template (.py)
+sspec ask prompt <file>      # Execute and collect answer → auto-converts to .md record
 ```
 
-**NOTE**: Long resuable doc should be fill directly in ASK file -> write them in `.sspec/tmp` and ref it in QUESTION.
+**NOTE**: Long reusable doc should not go in ASK file → write in `.sspec/tmp` and ref it in QUESTION.
 
 #### `@ask`
 
-**MUST** trigger when: confused, before session end, tool call rejected.
+**MUST** trigger when: confused, before session end, tool call rejected, plan needs approval.
 
-📚 Consult `sspec-ask` SKILL for triggers, workflow, syntax
+📚 Consult `sspec-ask` SKILL for triggers, workflow, patterns
 
 ---
 
@@ -344,18 +349,24 @@ ON user_message:
     IF active change DOING     → Continue tasks, update tasks.md
     ELSE                       → Request → Change Workflow (2.0)
 
-ON request_attached
+ON request_attached:
     DO Request → Change Workflow
 
 ON need_user_input:
     USE @ask                   → Persists record, saves cost
+
+ON important_discovery:
+    Route knowledge            → Consult sspec-memory SKILL
+
+ON session_getting_long:
+    Proactive memory save      → Update handover.md References & Memory
 
 ON session_end:
     MUST @handover             → No exceptions
     IF project-level learning  → Append to project.md Notes
 
 ON uncertainty:
-    Consult SKILL              → sspec, sspec-ask, write-spec-doc
+    Consult SKILL              → sspec-change, sspec-memory, sspec-ask, write-spec-doc
     OR @ask
 ```
 <!-- SSPEC:END -->

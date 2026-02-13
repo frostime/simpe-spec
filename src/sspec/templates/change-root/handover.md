@@ -5,7 +5,8 @@
 ---
 
 ## Background
-<!-- @RULE: Write once on first session. 1-3 sentences: what this root change coordinates. -->
+<!-- @RULE: Write once on first session. 1-3 sentences: what this root change coordinates.
+📚 Standards: sspec-memory SKILL → handover-standards.md -->
 
 ## Sub-Change Status
 <!-- @RULE: Update each session. Track which sub-changes are active/done.
@@ -30,7 +31,8 @@
 <!-- @RULE: Root-level working memory. Especially important for multi-change
 coordination where cross-phase context is easily lost.
 Update PROACTIVELY — don't wait until session end.
-Test: "Would I struggle to reconstruct this after context compression?" → Write it NOW. -->
+Test: "Would I struggle to reconstruct this after context compression?" → Write it NOW.
+📚 Full quality standards: sspec-memory SKILL → handover-standards.md -->
 
 ### Key Files & Sub-Changes
 <!-- Critical files and sub-change locations.

@@ -143,7 +143,7 @@ This saves cost in Copilot (tool calls don't consume turns).
 <!-- SSPEC:START -->
 # .sspec Agent Protocol
 
-SSPEC_SCHEMA::6.1
+SSPEC_SCHEMA::6.2
 
 ## 0. Protocol Overview
 
@@ -160,7 +160,7 @@ SSPEC is a document-driven AI collaboration framework. All planning, tracking, a
 │   ├── spec.md | tasks.md | handover.md  # Required
 │   └── reference/ | script/              # Optional
 ├── requests/               # Lightweight proposals
-├── tmp/                        #  Informal proposals, plans, scripts, etc., for user review.
+├── tmp/                    #  Informal proposals, plans, scripts, etc., for user review.
 └── asks/                   # Human-in-the-loop Q&A records
 ```
 
@@ -180,7 +180,7 @@ When entering project in new session:
 | Vague request (idea/bug/feature) | Request → Change Workflow (Section 2.0) |
 | Simple task, no directive | Do directly |
 
-If touching unfamiliar subsystem → check `spec-docs/`
+If touching unfamiliar subsystem → check `spec-docs/` | `project.md` | `<change>/handover.md`
 
 ---
 
@@ -193,9 +193,10 @@ Changes live in `.sspec/changes/<n>/`.
 | spec.md | Problem (A), Solution (B), Implementation (C), Blockers (D) | Yes |
 | tasks.md | Task list with `[ ]`/`[x]` markers + progress | Yes |
 | handover.md | Session context + agent working memory | Yes |
-| reference/ | Design drafts, research, diagrams | No |
-| script/ | Migration scripts, test data, one-off tools | No |
+| reference/ | Design/Research/Auxiliary documents | No |
 
+**Locate a change**: user offer path | `sspec change find <n>` | `sspec change list` | read .sspec/changes/ or .sspec/changes/archive
+**Change Dir Name**: `<time>_<change-name>` (e.g. `.sspec/changes/26-02-11T21-25_command-patch`)
 
 ### 2.0 Request → Change Workflow
 
@@ -206,7 +207,7 @@ Track in request file (`## Plan` / `## Done`) or just do it. No change needed.
 
 **Normal+** (anything bigger):
 
-1. **Link**: `sspec change new --from <request>` or create then `sspec request link`
+1. **Link**: `sspec change new --from <request>` | create then `sspec request link`
 2. **Understand**: First-principles — find the real problem, not the surface ask
 3. **Research**: Read project.md + relevant code. If unclear, **use `@ask`** (sspec ask)
 4. **Design**:
@@ -236,11 +237,11 @@ Track in request file (`## Plan` / `## Done`) or just do it. No change needed.
 
 **FORBIDDEN**: PLANNING→DONE, DOING→DONE, BLOCKED→DONE
 
-### 2.2 Directives
+### 2.2 User Directives
 
 #### `@change <n>`
 
-Existing change: Read handover.md (especially References & Memory) → tasks.md → spec.md → check reference field → output status + progress + next 3 actions.
+Existing change: Locate the change -> Read handover.md (especially References & Memory) → tasks.md → spec.md → check reference field → output status + progress + next 3 actions.
 
 New change: `sspec change new <n>` or `--from <request>`. Complex: `--root`. Follow 2.0 workflow. Fill docs per `@RULE` markers. Ask approval.
 
@@ -279,32 +280,20 @@ User disagrees. **STOP immediately**. Follow rejection protocol.
 
 📚 Consult `sspec` SKILL for rejection scope assessment and edge cases
 
-### 2.3 Edit Rules
+### 2.3 Template Marker
 
-| Marker | Meaning | Action |
-|--------|---------|--------|
-| `<!-- @RULE: ... -->` | Section constraint | Follow when filling, DO NOT delete it |
-| `<!-- @REPLACE -->` | Replace entirely | Use as the anchor of Edit/Replace Tools |
+Markers within blank change template files like these:
 
-Task markers: `[ ]` todo, `[x]` done
-
-### 2.4 CLI Command
-
-`sspec change new [<name> | --from <request>]`
-`sspec change list`
-`sspec change find <n>`
+- RULE Marker: `<!-- @RULE: ... -->`, read them and Follow when filling, DO NOT delete it.
+- REPLADE Marker: `<!-- @REPLACE -->`, use as the anchor of Edit/Replace Tools for first editing.
+- Task markers: `[ ]` todo, `[x]` done
+- DO NOT DELETE RULE Marker.
 
 ---
 
 ## 3. SCOPE: Requests
 
-Lightweight proposals. Location: `.sspec/requests/`
-
-```
-Create:  sspec request new <n>
-Link:    sspec request link <request> <change>
-Archive: sspec request archive <n>
-```
+Lightweight proposals created by user. Location: `.sspec/requests/`
 
 Request = "I want X" → Change = "Here's how we do X"
 
@@ -334,7 +323,6 @@ Update: Read existing → apply changes → update `updated` field.
 ```
 sspec ask create <topic>     # Create ask template
 sspec ask prompt <file>      # Execute and collect answer
-sspec ask list
 ```
 
 **NOTE**: Long resuable doc should be fill directly in ASK file -> write them in `.sspec/tmp` and ref it in QUESTION.
@@ -356,6 +344,9 @@ ON user_message:
     IF active change DOING     → Continue tasks, update tasks.md
     ELSE                       → Request → Change Workflow (2.0)
 
+ON request_attached
+    DO Request → Change Workflow
+
 ON need_user_input:
     USE @ask                   → Persists record, saves cost
 
@@ -367,18 +358,4 @@ ON uncertainty:
     Consult SKILL              → sspec, sspec-ask, write-spec-doc
     OR @ask
 ```
-
-### Directive Quick Reference
-
-| Directive | Scope | Action |
-|-----------|-------|--------|
-| `@change <n>` | Changes | Load or create change |
-| `@resume` | Changes | Continue active change |
-| `@handover` | Changes | Save context for next session |
-| `@sync` | Changes | Reconcile untracked work |
-| `@argue` | Changes | Stop, clarify, re-plan |
-| `@status` | Project | Overview of all work |
-| `@doc <n>` | Spec-Docs | Create or update spec |
-| `@ask` | Ask | Consult user, by using `sspec ask` |
-
 <!-- SSPEC:END -->

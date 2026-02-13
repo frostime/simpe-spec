@@ -185,14 +185,14 @@ class ElevationManager:
                 f'-ArgumentList "-NoProfile","-File","{ps_path}" -Wait',
             ]
             subprocess.run(
-                cmd,
-                check=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
             )
 
             # 验证每个符号链接是否创建成功
-            return [check_path_link(target, expected_target=source) for source, target in pairs]
+            return [
+                check_path_link(target, expected_target=source)
+                for source, target in pairs
+            ]
         except Exception:
             self.mark_disabled()
             return [False] * len(pairs)
@@ -303,10 +303,7 @@ class SkillInstaller:
         ]
         try:
             subprocess.run(
-                cmd,
-                check=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
             )
             return check_path_link(target, expected_target=source)
         except Exception:
@@ -316,6 +313,8 @@ class SkillInstaller:
         self,
         items: list[tuple[Path, Path]],
         prefer_symlink: bool = True,
+        allow_elevation: bool = True,
+        prefer_junction_on_windows: bool = False,
     ) -> list[SkillInstallResult]:
         """批量安装 skills
 
@@ -343,6 +342,21 @@ class SkillInstaller:
                 results.append(SkillInstallResult(target, source, 'copy'))
             return results
 
+        if prefer_junction_on_windows and sys.platform == 'win32':
+            still_failed_pairs: list[tuple[Path, Path]] = []
+            for source, target in items:
+                if self._try_create_junction(source, target):
+                    self._add_to_gitignore(target)
+                    results.append(SkillInstallResult(target, source, 'junction'))
+                else:
+                    still_failed_pairs.append((source, target))
+
+            for source, target in still_failed_pairs:
+                shutil.copytree(source, target)
+                self._add_to_gitignore(target)
+                results.append(SkillInstallResult(target, source, 'copy'))
+            return results
+
         # 优先 symlink：第一轮尝试不提权
         failed_pairs: list[tuple[Path, Path]] = []
         for source, target in items:
@@ -354,10 +368,12 @@ class SkillInstaller:
 
         # 第二轮：Windows 提权尝试
         remaining_pairs = failed_pairs
-        if failed_pairs:
+        if failed_pairs and allow_elevation:
             elevated_success = self._elevation.try_elevated_symlinks(failed_pairs)
             remaining_pairs = []
-            for (source, target), success in zip(failed_pairs, elevated_success, strict=True):
+            for (source, target), success in zip(
+                failed_pairs, elevated_success, strict=True
+            ):
                 if success:
                     self._add_to_gitignore(target)
                     results.append(SkillInstallResult(target, source, 'symlink'))
@@ -428,7 +444,10 @@ class SkillInstaller:
 
     @staticmethod
     def install_skills_batch(
-        installs: list[tuple[Path, Path]], prefer_symlink: bool = True
+        installs: list[tuple[Path, Path]],
+        prefer_symlink: bool = True,
+        allow_elevation: bool = True,
+        prefer_junction_on_windows: bool = False,
     ) -> list[tuple[Path, Path, SkillStrategy]]:
         """兼容旧 API：批量安装
 
@@ -440,13 +459,14 @@ class SkillInstaller:
             (target, source, strategy) 三元组列表
         """
         installer = SkillInstaller._get_installer()
-        results = installer.install_batch(installs, prefer_symlink)
+        results = installer.install_batch(
+            installs, prefer_symlink, allow_elevation, prefer_junction_on_windows
+        )
         return [(r.target, r.source, r.strategy) for r in results]
 
     @staticmethod
     def install_hub_and_links_batch(
-        installs: list[tuple[Path, Path, list[Path]]],
-        prefer_symlink: bool = True,
+        installs: list[tuple[Path, Path, list[Path]]], prefer_symlink: bool = True
     ) -> dict[Path, SkillStrategy]:
         """兼容旧 API：批量 hub-spoke 安装
 
@@ -474,7 +494,9 @@ class SkillInstaller:
         Returns:
             使用的安装策略
         """
-        results = SkillInstaller.install_skills_batch([(source_dir, target_dir)], prefer_symlink)
+        results = SkillInstaller.install_skills_batch(
+            [(source_dir, target_dir)], prefer_symlink
+        )
         if results:
             return results[0][2]
         raise OSError('Failed to install skill')
@@ -487,10 +509,9 @@ class SkillInstaller:
             target_dir: skill 目录路径
         """
         SkillInstaller._add_to_gitignore(target_dir)
+
     def install_hub_and_spokes_batch(
-        self,
-        items: list[tuple[Path, Path, list[Path]]],
-        prefer_symlink: bool = True,
+        self, items: list[tuple[Path, Path, list[Path]]], prefer_symlink: bool = True
     ) -> dict[Path, SkillStrategy]:
         """批量 hub-spoke 安装（返回字典格式以兼容旧代码）
 
@@ -522,4 +543,3 @@ class SkillInstaller:
                 result_dict[result.target] = result.strategy
 
         return result_dict
-

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import shutil
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
 
@@ -35,6 +36,118 @@ class OrphanedSkill:
 
     skill_name: str
     paths: list[Path]  # All locations where this orphan exists
+
+
+@dataclass(frozen=True, slots=True)
+class LegacySkillMigration:
+    """Result for migrating old per-skill spoke layout to directory-level spoke."""
+
+    location: str
+    location_path: Path
+    backup_path: Path
+    strategy: str
+    merged_custom_skills: list[str]
+
+
+def migrate_legacy_skill_layouts(
+    *,
+    project_root: Path,
+    sspec_root: Path,
+    meta: dict[str, Any],
+    dry_run: bool = False,
+) -> list[LegacySkillMigration]:
+    """Migrate old per-skill spoke layout to directory-level hub->spoke layout.
+
+    Legacy layout example:
+    - `.claude/skills/<skill-a>` (symlink)
+    - `.claude/skills/<skill-b>` (symlink)
+
+    Target layout:
+    - `.claude/skills` -> `.sspec/skills` (symlink/junction/copy fallback)
+    """
+    skill_locations: list[str] = meta.get('skill_locations', []) or []
+    hub_skills_dir = sspec_root / 'skills'
+    if not hub_skills_dir.exists():
+        return []
+
+    template_skill_names = {d.name for d in list_template_skills()}
+    migrations: list[LegacySkillMigration] = []
+
+    for location in skill_locations:
+        if location == '.sspec/skills':
+            continue
+
+        location_path = project_root / location
+        if (
+            not location_path.exists()
+            or not location_path.is_dir()
+            or check_path_link(location_path)
+        ):
+            continue
+
+        children = [
+            child
+            for child in location_path.iterdir()
+            if child.is_dir() or check_path_link(child)
+        ]
+        if not children:
+            continue
+
+        linked_children = [child for child in children if check_path_link(child)]
+        if not linked_children:
+            continue
+
+        if not all(child.name in template_skill_names for child in linked_children):
+            continue
+
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        safe_location = location.replace('/', '_').replace('\\', '_')
+        backup_path = sspec_root / 'tmp' / 'skills-backup' / timestamp / safe_location
+
+        merged_custom_skills: list[str] = []
+
+        if not dry_run:
+            backup_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(location_path, backup_path, symlinks=True)
+
+            for child in children:
+                if child.name in template_skill_names:
+                    continue
+                if check_path_link(child) or not child.is_dir():
+                    continue
+
+                hub_dest = hub_skills_dir / child.name
+                if not hub_dest.exists():
+                    shutil.copytree(child, hub_dest)
+                    merged_custom_skills.append(child.name)
+
+            from sspec.skill_installer import SkillInstaller
+
+            install_results = SkillInstaller.install_skills_batch(
+                [(hub_skills_dir, location_path)],
+                prefer_symlink=True,
+                allow_elevation=False,
+                prefer_junction_on_windows=True,
+            )
+            strategy = install_results[0][2] if install_results else 'copy'
+
+            existing_strategies = dict(meta.get('skill_install_strategies', {}) or {})
+            existing_strategies[location] = strategy
+            meta['skill_install_strategies'] = existing_strategies
+        else:
+            strategy = 'symlink/junction/copy'
+
+        migrations.append(
+            LegacySkillMigration(
+                location=location,
+                location_path=location_path,
+                backup_path=backup_path,
+                strategy=strategy,
+                merged_custom_skills=merged_custom_skills,
+            )
+        )
+
+    return migrations
 
 
 def collect_orphaned_skills(

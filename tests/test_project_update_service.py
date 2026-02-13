@@ -11,6 +11,7 @@ from sspec.services.project_update_service import (
     OrphanedSkill,
     collect_orphaned_skills,
     collect_update_candidates,
+    migrate_legacy_skill_layouts,
     remove_orphaned_skill,
 )
 
@@ -143,3 +144,40 @@ class TestOrphanedSkills:
         removed = remove_orphaned_skill(orphan)
         assert removed == 1
         assert not orphan_dir.exists()
+
+
+def test_migrate_legacy_skill_layouts_detects_legacy_in_dry_run(monkeypatch, tmp_path: Path):
+    sspec_root = _init_project(tmp_path)
+
+    legacy_root = tmp_path / '.github' / 'skills'
+    legacy_root.mkdir(parents=True, exist_ok=True)
+
+    template_skills = list_template_skills()
+    assert template_skills
+    skill_name = template_skills[0].name
+    (legacy_root / skill_name).mkdir(parents=True, exist_ok=True)
+
+    meta = json.loads((sspec_root / '.meta.json').read_text(encoding='utf-8'))
+    meta['skill_locations'] = ['.sspec/skills', '.github/skills']
+
+    import sspec.services.project_update_service as update_module
+    original_check = update_module.check_path_link
+
+    def fake_check(path: Path, expected_target: Path | None = None) -> bool:
+        if path == legacy_root:
+            return False
+        if path == legacy_root / skill_name:
+            return True
+        return original_check(path, expected_target)
+
+    monkeypatch.setattr(update_module, 'check_path_link', fake_check)
+
+    migrations = migrate_legacy_skill_layouts(
+        project_root=tmp_path,
+        sspec_root=sspec_root,
+        meta=meta,
+        dry_run=True,
+    )
+
+    assert len(migrations) == 1
+    assert migrations[0].location == '.github/skills'

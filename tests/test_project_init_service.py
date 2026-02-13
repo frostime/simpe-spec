@@ -15,7 +15,6 @@ from sspec.services.project_init_service import (
     initialize_project,
 )
 
-
 # ---------------------------------------------------------------------------
 # get_skill_targets_from_locations
 # ---------------------------------------------------------------------------
@@ -54,11 +53,10 @@ class TestGetSkillTargets:
 
 class TestInitializeProject:
     def test_creates_full_directory_structure(self, tmp_path: Path):
-        result = initialize_project(
+        initialize_project(
             project_root=tmp_path,
             force=False,
             skill_locations=[],
-            default_gitignore='# sspec\n',
             prefer_symlink=False,
         )
         sspec = tmp_path / SSPEC_DIR
@@ -75,7 +73,6 @@ class TestInitializeProject:
             project_root=tmp_path,
             force=False,
             skill_locations=[],
-            default_gitignore='',
             prefer_symlink=False,
         )
         meta_path = tmp_path / SSPEC_DIR / '.meta.json'
@@ -91,7 +88,6 @@ class TestInitializeProject:
             project_root=tmp_path,
             force=False,
             skill_locations=[],
-            default_gitignore='',
             prefer_symlink=False,
         )
         assert (tmp_path / SSPEC_DIR / 'project.md').exists()
@@ -101,18 +97,16 @@ class TestInitializeProject:
             project_root=tmp_path,
             force=False,
             skill_locations=[],
-            default_gitignore='',
             prefer_symlink=False,
         )
         assert (tmp_path / 'AGENTS.md').exists()
         assert result.created_or_updated_agents is True
 
     def test_installs_skills(self, tmp_path: Path):
-        result = initialize_project(
+        initialize_project(
             project_root=tmp_path,
             force=False,
             skill_locations=[],
-            default_gitignore='',
             prefer_symlink=False,
         )
         skills_dir = tmp_path / SSPEC_DIR / 'skills'
@@ -124,12 +118,11 @@ class TestInitializeProject:
             project_root=tmp_path,
             force=False,
             skill_locations=[],
-            default_gitignore='# sspec gitignore\n',
             prefer_symlink=False,
         )
         gi = tmp_path / SSPEC_DIR / '.gitignore'
         assert gi.exists()
-        assert '# sspec gitignore' in gi.read_text(encoding='utf-8')
+        assert 'skills/**' in gi.read_text(encoding='utf-8')
 
     def test_raises_when_exists_without_force(self, tmp_path: Path):
         (tmp_path / SSPEC_DIR).mkdir()
@@ -138,7 +131,6 @@ class TestInitializeProject:
                 project_root=tmp_path,
                 force=False,
                 skill_locations=[],
-                default_gitignore='',
                 prefer_symlink=False,
             )
 
@@ -147,7 +139,6 @@ class TestInitializeProject:
             project_root=tmp_path,
             force=False,
             skill_locations=[],
-            default_gitignore='',
             prefer_symlink=False,
         )
         # Should not raise with force=True
@@ -155,7 +146,6 @@ class TestInitializeProject:
             project_root=tmp_path,
             force=True,
             skill_locations=[],
-            default_gitignore='',
             prefer_symlink=False,
         )
         assert result.sspec_path.exists()
@@ -166,7 +156,6 @@ class TestInitializeProject:
             project_root=tmp_path,
             force=False,
             skill_locations=['.claude'],
-            default_gitignore='',
             prefer_symlink=False,
         )
         meta = json.loads((tmp_path / SSPEC_DIR / '.meta.json').read_text(encoding='utf-8'))
@@ -178,7 +167,6 @@ class TestInitializeProject:
             project_root=tmp_path,
             force=False,
             skill_locations=[],
-            default_gitignore='',
             prefer_symlink=False,
         )
         assert isinstance(result, InitResult)

@@ -235,6 +235,8 @@ def sync_skill_locations(
     project_root: Path,
     locations: list[str],
     prefer_symlink: bool = True,
+    allow_elevation: bool = True,
+    prefer_junction_on_windows: bool = False,
     sspec_dir: str = SSPEC_DIR,
 ) -> SkillSyncResult:
     """Sync installed hub skills to external skill locations.
@@ -260,7 +262,12 @@ def sync_skill_locations(
 
     from sspec.skill_installer import SkillInstaller
 
-    results = SkillInstaller.install_skills_batch(install_pairs, prefer_symlink=prefer_symlink)
+    results = SkillInstaller.install_skills_batch(
+        install_pairs,
+        prefer_symlink=prefer_symlink,
+        allow_elevation=allow_elevation,
+        prefer_junction_on_windows=prefer_junction_on_windows,
+    )
 
     skill_install_strategies: dict[str, str] = {}
     for target_dir, _source_dir, strategy in results:

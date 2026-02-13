@@ -1,5 +1,6 @@
 """sspec project command - project-level operations."""
 
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -28,6 +29,7 @@ from sspec.services.project_init_service import (
 from sspec.services.project_update_service import (
     collect_orphaned_skills,
     collect_update_candidates,
+    migrate_legacy_skill_layouts,
     remove_orphaned_skill,
 )
 
@@ -63,12 +65,18 @@ def _interactive_skill_selection(project_root: Path) -> list[str]:
     ).ask()
 
     if selected is None:  # User cancelled
-        console.print('[yellow]Selection cancelled, skip external skill sync[/yellow]')
-        return []
+        forced = project_root / '.agent'
+        forced.mkdir(parents=True, exist_ok=True)
+        console.print('[yellow]Selection cancelled, force fallback to .agent[/yellow]')
+        console.print('[dim]You can switch to .claude/.github later by re-sync/update.[/dim]')
+        return ['.agent']
 
     if not selected:
-        console.print('[yellow]No locations selected, skip external skill sync[/yellow]')
-        return []
+        forced = project_root / '.agent'
+        forced.mkdir(parents=True, exist_ok=True)
+        console.print('[yellow]No locations selected, force fallback to .agent[/yellow]')
+        console.print('[dim]You can switch to .claude/.github later by re-sync/update.[/dim]')
+        return ['.agent']
 
     return selected
 
@@ -114,11 +122,25 @@ def init(force: bool, skill_loc: tuple[str, ...]) -> None:
 
     # Resolve requested external locations after core init
     skill_locations = list(skill_loc) if skill_loc else _interactive_skill_selection(project_root)
+    allow_elevation = True
+    prefer_junction_on_windows = False
+
+    if skill_locations and sys.platform == 'win32':
+        elevated_choice = questionary.confirm(
+            'Try admin elevation to create symbolic links on Windows?',
+            default=False,
+        ).ask()
+        if not elevated_choice:
+            allow_elevation = False
+            prefer_junction_on_windows = True
+
     if skill_locations:
         sync_result = sync_skill_locations(
             project_root=project_root,
             locations=skill_locations,
             prefer_symlink=True,
+            allow_elevation=allow_elevation,
+            prefer_junction_on_windows=prefer_junction_on_windows,
         )
 
         for target_dir in sync_result.skill_targets:
@@ -229,6 +251,30 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
     common_replacements = {'SCHEMA_VERSION': SCHEMA_VERSION, 'SCHEMA': SCHEMA_VERSION}
 
     # -----------------------------------------------------------------
+    # Phase 0: Migrate legacy per-skill spoke layout to directory-level
+    # -----------------------------------------------------------------
+    migrations = migrate_legacy_skill_layouts(
+        project_root=project_root,
+        sspec_root=sspec_root,
+        meta=meta,
+        dry_run=dry_run,
+    )
+
+    if migrations:
+        console.print()
+        migration_table = Table(title='Legacy Skill Layout Migration')
+        migration_table.add_column('Location', style='cyan')
+        migration_table.add_column('Strategy', style='yellow')
+        migration_table.add_column('Backup', style='dim')
+        for migration in migrations:
+            migration_table.add_row(
+                migration.location,
+                migration.strategy,
+                str(migration.backup_path.relative_to(project_root)),
+            )
+        console.print(migration_table)
+
+    # -----------------------------------------------------------------
     # Phase 1: Detect orphaned skills (renamed/removed from templates)
     # -----------------------------------------------------------------
     orphans = collect_orphaned_skills(project_root=project_root, meta=meta)
@@ -319,12 +365,14 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
         dry_run=True,
     )
 
-    if not actions and not agents_needs_update and not orphans:
+    if not actions and not agents_needs_update and not orphans and not migrations:
         console.print('[green]+[/green] All files are up to date')
         return
 
     if dry_run:
         console.print(f'[cyan]Would update {len(actions)} file(s)[/cyan]')
+        if migrations:
+            console.print(f'[cyan]Would migrate {len(migrations)} legacy skill location(s)[/cyan]')
         if agents_needs_update:
             console.print('[cyan]Would update root AGENTS.md block[/cyan]')
         return
@@ -346,7 +394,7 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
                 continue
 
         # 区分 skill 和普通文件的更新
-        if upd.strategy in ('symlink', 'copy'):
+        if upd.strategy in ('symlink', 'junction', 'copy'):
             # Skill 更新
             SkillInstaller._get_installer().update_skill(
                 source=upd.template_path,
@@ -358,7 +406,7 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
             # 输出信息
             if upd.status == 'missing':
                 action = 'Created'
-            elif upd.strategy == 'symlink':
+            elif upd.strategy in ('symlink', 'junction'):
                 action = 'Updated symlink'
             else:
                 action = 'Updated'
@@ -377,7 +425,7 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
             new_hashes[upd.hash_key] = upd.new_hash
 
     # Update metadata
-    if updated_count or skill_updated_count or orphans:
+    if updated_count or skill_updated_count or orphans or migrations:
         meta['file_hashes'] = new_hashes
         meta['managed_skills'] = sorted(d.name for d in list_template_skills())
         meta['updated_at'] = datetime.now().isoformat()
@@ -398,6 +446,10 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
     total_updated = updated_count + skill_updated_count
     if agents_needs_update:
         total_updated += 1
+    if migrations:
+        total_updated += len(migrations)
     if orphans:
         console.print(f'[red]-[/red] Removed {len(orphans)} orphaned skill(s)')
+    if migrations:
+        console.print(f'[green]+[/green] Migrated {len(migrations)} legacy skill location(s)')
     console.print(f'[green]+[/green] Updated {total_updated} item(s)')

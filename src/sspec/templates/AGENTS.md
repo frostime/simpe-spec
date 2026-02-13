@@ -34,16 +34,11 @@ When entering project in new session:
 | User Message | Action |
 |--------------|--------|
 | `@resume` or `@change` | Load that change's context |
-| `@status` | Project overview (see below) |
 | Micro task (≤3 files, ≤30min, obvious) | Do directly, no change ceremony |
 | Vague request (idea/bug/feature) | Request → Change Workflow (Section 2.0) |
 | Simple task, no directive | Do directly |
 
-3. If touching unfamiliar subsystem → check `spec-docs/`
-
-#### `@status`
-
-Project-wide overview. Output: active changes (name, status, progress%), pending requests, blockers, recent project.md Notes.
+If touching unfamiliar subsystem → check `spec-docs/`
 
 ---
 
@@ -58,6 +53,7 @@ Changes live in `.sspec/changes/<n>/`.
 | handover.md | Session context + agent working memory | Yes |
 | reference/ | Design drafts, research, diagrams | No |
 | script/ | Migration scripts, test data, one-off tools | No |
+
 
 ### 2.0 Request → Change Workflow
 
@@ -149,6 +145,12 @@ User disagrees. **STOP immediately**. Follow rejection protocol.
 | `<!-- @REPLACE -->` | Replace entirely | Use as the anchor of Edit/Replace Tools |
 
 Task markers: `[ ]` todo, `[x]` done
+
+### 2.4 CLI Command
+
+`sspec change new [<name> | --from <request>]`
+`sspec change list`
+`sspec change find <n>`
 
 ---
 

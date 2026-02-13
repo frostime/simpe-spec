@@ -80,10 +80,13 @@ def extract_request_name_from_filename(filename: str) -> str:
 
 def _extract_summary(body: str) -> str:
     """Extract a short summary from the body as a fallback."""
-    for line in body.split('\n'):
+    # Strip all HTML comments (including multi-line ones)
+    clean_body = re.sub(r'<!--.*?-->', '', body, flags=re.DOTALL)
+
+    for line in clean_body.split('\n'):
         stripped = line.strip()
-        if stripped and not stripped.startswith('#') and not stripped.startswith('<!--'):
-            return stripped[:50] + ('...' if len(stripped) > 50 else '')
+        if stripped and not stripped.startswith('#'):
+            return stripped[:70] + ('...' if len(stripped) > 70 else '')
     return ''
 
 
@@ -92,7 +95,7 @@ def _extract_summary(body: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def find_request_matches(requests_dir: Path, name: str) -> list[Path]:
+def find_request_matches(requests_dir: Path, name: str, include_archived: bool = False) -> list[Path]:
     """Find request file candidates by exact or fuzzy match.
 
     Tries exact → suffix (*_<name>.md) → old format (*-<name>.md) → contains.
@@ -100,26 +103,32 @@ def find_request_matches(requests_dir: Path, name: str) -> list[Path]:
     if not requests_dir.exists():
         return []
 
-    exact_path = requests_dir / f'{name}.md'
-    if exact_path.exists():
-        return [exact_path]
+    def _collect_from(dir_path: Path) -> list[Path]:
+        exact_path = dir_path / f'{name}.md'
+        if exact_path.exists():
+            return [exact_path]
 
-    # New format: *_<name>.md
-    matches = list(requests_dir.glob(f'*_{name}.md'))
-    if matches:
-        return sorted(matches)
+        # New format: *_<name>.md
+        matches = list(dir_path.glob(f'*_{name}.md'))
+        if matches:
+            return matches
 
-    # Old format: *-<name>.md (backward compatibility)
-    matches = list(requests_dir.glob(f'*-{name}.md'))
-    if matches:
-        return sorted(matches)
+        # Old format: *-<name>.md (backward compatibility)
+        matches = list(dir_path.glob(f'*-{name}.md'))
+        if matches:
+            return matches
 
-    # Fallback: contains match
-    contains = [p for p in requests_dir.glob('*.md') if name in p.stem]
-    if contains:
-        return sorted(contains)
+        # Fallback: contains match
+        return [p for p in dir_path.glob('*.md') if name in p.stem]
 
-    return []
+    results = _collect_from(requests_dir)
+
+    if include_archived:
+        archive_dir = requests_dir / ARCHIVE_DIR
+        if archive_dir.exists():
+            results.extend(_collect_from(archive_dir))
+
+    return sorted(list(set(results)))
 
 
 def parse_request_file(path: Path, archived: bool = False) -> RequestInfo | None:

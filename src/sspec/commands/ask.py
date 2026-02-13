@@ -6,8 +6,11 @@ from pathlib import Path
 
 import click
 import questionary
+from rich.console import Console
 
-from sspec.core import SspecNotFoundError, get_sspec_root
+from sspec.core import ARCHIVE_DIR, SspecNotFoundError, get_sspec_root
+
+console = Console()
 from sspec.services.ask_service import (
     archive_ask,
     convert_ask_to_md,
@@ -132,7 +135,8 @@ def ask_prompt(ask_file: Path) -> None:
 
 
 @ask_group.command(name='list')
-def ask_list() -> None:
+@click.option('--all', '-a', 'include_all', is_flag=True, help='Include archived asks')
+def ask_list(include_all: bool) -> None:
     """List all asks (pending and completed)."""
 
     try:
@@ -142,28 +146,63 @@ def ask_list() -> None:
 
     asks_dir = sspec_root / 'asks'
     if not asks_dir.exists():
-        click.echo('No asks found.')
+        console.print('[dim]No asks found.[/dim]')
         return
 
-    pending = sorted(asks_dir.glob('*.py'))
-    completed = sorted(asks_dir.glob('*.md'))
+    pending_files = sorted(asks_dir.glob('*.py'))
+    completed_files = sorted(asks_dir.glob('*.md'))
 
-    if not pending and not completed:
-        click.echo('No asks found.')
+    archive_dir = asks_dir / ARCHIVE_DIR
+    archived_files = []
+    if archive_dir.exists():
+        archived_files = sorted(archive_dir.glob('*.md'))
+
+    if not pending_files and not completed_files and not archived_files:
+        console.print('[dim]No asks found.[/dim]')
         return
 
-    if pending:
-        click.echo('📝 Pending (unanswered):')
-        for f in pending:
-            click.echo(f'  {f.name}')
+    console.print()
 
-    if completed:
-        click.echo('✅ Completed:')
-        for f in completed:
-            click.echo(f'  {f.name}')
+    if pending_files:
+        console.print('[bold]Pending Questions (unanswered)[/bold]')
+        for f in pending_files:
+            _display_ask(f, icon='?', color='yellow')
+        console.print()
 
-    click.echo()
-    click.echo(f'Total: {len(pending)} pending, {len(completed)} completed')
+    if completed_files:
+        console.print('[bold]Completed[/bold]')
+        for f in completed_files:
+            _display_ask(f, icon='✓', color='green')
+        console.print()
+
+    if archived_files and include_all:
+        console.print('[bold dim]Archived[/bold dim]')
+        for f in archived_files:
+            _display_ask(f, icon='📁', color='dim', dim=True)
+        # console.print()
+    elif archived_files:
+        console.print(f'[dim]Archived: {len(archived_files)} (use --all to show)[/dim]')
+
+    console.print()
+    console.print(
+        f'[dim]Pending: {len(pending_files)} | '
+        f'Completed: {len(completed_files)} | '
+        f'Archived: {len(archived_files)}[/dim]'
+    )
+
+
+def _display_ask(path: Path, icon: str, color: str, dim: bool = False) -> None:
+    """Display a single ask in list format."""
+    name = extract_ask_name_from_filename(path.stem)
+    if dim:
+        name = f"[dim]{name}[/dim]"
+
+    # Line 1: Icon Name
+    console.print(f"[{color}]{icon}[/{color}] [bold]{name}[/bold]")
+
+    # Indented Metadata
+    path_rel = path.relative_to(Path.cwd())
+    console.print(f"  [dim]Path:[/dim] [dim]{path_rel}[/dim]")
 
 
 @ask_group.command(name='archive')

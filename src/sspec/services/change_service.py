@@ -23,7 +23,7 @@ from sspec.core import (
 from sspec.libs.md_yaml import parse_frontmatter, update_frontmatter
 
 
-def find_change_matches(changes_dir: Path, name: str) -> list[Path]:
+def find_change_matches(changes_dir: Path, name: str, include_archived: bool = False) -> list[Path]:
     """Find change directory candidates by exact or fuzzy match.
 
     Supports timestamped format: <yy-MM-ddTHH-mm>_<name>
@@ -32,25 +32,34 @@ def find_change_matches(changes_dir: Path, name: str) -> list[Path]:
     if not changes_dir.exists():
         return []
 
-    # Exact directory match
-    exact = changes_dir / name
-    if exact.is_dir() and exact.name != ARCHIVE_DIR:
-        return [exact]
+    def _collect_from(dir_path: Path) -> list[Path]:
+        # Exact directory match
+        exact = dir_path / name
+        if exact.is_dir() and exact.name != ARCHIVE_DIR:
+            return [exact]
 
-    # Pattern: *_<name> (suffix match)
-    matches = [
-        d
-        for d in changes_dir.iterdir()
-        if d.is_dir() and d.name != ARCHIVE_DIR and d.name.endswith(f'_{name}')
-    ]
-    if matches:
-        return sorted(matches)
+        # Pattern: *_<name> (suffix match)
+        matches = [
+            d
+            for d in dir_path.iterdir()
+            if d.is_dir() and d.name != ARCHIVE_DIR and d.name.endswith(f'_{name}')
+        ]
+        if matches:
+            return matches
 
-    # Contains match (fallback)
-    contains = [
-        d for d in changes_dir.iterdir() if d.is_dir() and d.name != ARCHIVE_DIR and name in d.name
-    ]
-    return sorted(contains)
+        # Contains match (fallback)
+        return [
+            d for d in dir_path.iterdir() if d.is_dir() and d.name != ARCHIVE_DIR and name in d.name
+        ]
+
+    results = _collect_from(changes_dir)
+
+    if include_archived:
+        archive_dir = changes_dir / ARCHIVE_DIR
+        if archive_dir.exists():
+            results.extend(_collect_from(archive_dir))
+
+    return sorted(list(set(results)))
 
 
 def extract_change_name_from_dirname(dirname: str) -> str:
@@ -71,6 +80,7 @@ def parse_change(change_path: Path, archived: bool = False) -> ChangeInfo:
     spec_file = change_path / 'spec.md'
     tasks_file = change_path / 'tasks.md'
 
+    meta = {}
     status = ChangeStatus.PLANNING.value
     change_name = change_path.name
     change_type = ''
@@ -113,6 +123,7 @@ def parse_change(change_path: Path, archived: bool = False) -> ChangeInfo:
         has_pivot=has_pivot,
         has_blockers=has_blockers,
         archived=archived,
+        frontmatter=meta
     )
 
 

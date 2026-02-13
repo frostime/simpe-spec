@@ -5,9 +5,10 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import TypedDict
+from typing import Optional, TypedDict
 
 import yaml
+from click import Option
 
 SSPEC_DIR = '.sspec'
 SKILLS_DIR = 'skills'
@@ -17,7 +18,7 @@ CHANGES_DIR = 'changes'
 ARCHIVE_DIR = 'archive'
 
 # Schema version - increment when template structure changes
-SCHEMA_VERSION = '6.1'
+SCHEMA_VERSION = '6.2'
 
 # Files tracked for updates (relative to .sspec/)
 # NOTE: Empty by design. The .sspec/ directory contains user-managed files that should
@@ -148,6 +149,7 @@ class ChangeInfo:
     has_pivot: bool
     has_blockers: bool
     archived: bool
+    frontmatter: dict[str, str | list | dict]
 
 
 class SkillInfo(TypedDict):

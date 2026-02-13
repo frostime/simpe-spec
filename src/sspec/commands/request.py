@@ -10,6 +10,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from sspec.core import (
+    ARCHIVE_DIR,
     RequestStatus,
     SspecNotFoundError,
     get_sspec_root,
@@ -160,7 +161,7 @@ def list_requests_cmd(show_all: bool) -> None:
 
 def _list_requests(sspec_root: Path, show_all: bool) -> None:
     """List all requests grouped by status."""
-    items = list_requests(sspec_root)
+    items = list_requests(sspec_root, include_archived=show_all)
 
     if not items:
         console.print('[dim]No requests found.[/dim]')
@@ -168,55 +169,88 @@ def _list_requests(sspec_root: Path, show_all: bool) -> None:
         console.print('Create one with: sspec request new <name>')
         return
 
-    open_reqs = [r for r in items if r.status == RequestStatus.OPEN.value]
-    in_progress = [r for r in items if r.status == RequestStatus.DOING.value]
-    done = [r for r in items if r.status == RequestStatus.DONE.value]
+    open_reqs = [r for r in items if r.status == RequestStatus.OPEN.value and not r.archived]
+    in_progress = [r for r in items if r.status == RequestStatus.DOING.value and not r.archived]
+    done = [r for r in items if r.status == RequestStatus.DONE.value and not r.archived]
+    archived = [r for r in items if r.archived]
 
     console.print()
 
     if open_reqs:
         console.print('[bold]Open Requests[/bold]')
-        _print_request_table(open_reqs)
+        _print_request_list(open_reqs)
 
     if in_progress:
         console.print('[bold]In Progress[/bold]')
-        _print_request_table(in_progress, show_changes=True)
+        _print_request_list(in_progress, show_changes=True)
 
-    if done and show_all:
-        console.print('[bold dim]Done[/bold dim]')
-        _print_request_table(done, dim=True)
-    elif done:
-        console.print(f'[dim]Done: {len(done)} (use --all to show)[/dim]')
+    hidden_done = []
+    hidden_archived = []
+
+    if show_all:
+        if done:
+            console.print('[bold]Done[/bold]')
+            _print_request_list(done)
+        if archived:
+            console.print('[bold dim]Archived[/bold dim]')
+            _print_request_list(archived, dim=True)
+    else:
+        hidden_done = done
+        hidden_archived = archived
+
+    if not show_all:
+        total_hidden = len(hidden_done) + len(hidden_archived)
+        if total_hidden > 0:
+            console.print(f'[dim]Done/Archived: {total_hidden} (use --all to show)[/dim]')
+
+    console.print()
+    active_count = len(open_reqs) + len(in_progress)
+    total_count = len(items)
+
+    console.print(f'[dim]Active: {active_count} | Total: {total_count}[/dim]')
 
 
-def _print_request_table(
+def _display_request(
+    request: RequestInfo,
+    show_changes: bool = False,
+    dim: bool = False,
+) -> None:
+    """Display a single request in list format."""
+    name = request.name
+    if dim:
+        name = f"[dim]{name}[/dim]"
+
+    created = request.created[:10] if request.created else 'unknown'
+
+    # Line 1: Name
+    console.print(f"• [bold]{name}[/bold]")
+
+    # Indented Metadata
+    console.print(f"  [dim]Created:[/dim] [dim]{created}[/dim]")
+
+    path_rel = request.path.relative_to(Path.cwd())
+    console.print(f"  [dim]Path:[/dim] [dim]{path_rel}[/dim]")
+
+    if request.attach_change:
+        console.print(f"  [dim]Linked:[/dim] [cyan]→ {request.attach_change}[/cyan]")
+
+    # Summary
+    if request.tldr:
+        summary = request.tldr
+        if dim:
+            summary = f"[dim]{summary}[/dim]"
+        console.print(f"  [dim]Summary:[/dim] {summary}")
+
+
+def _print_request_list(
     requests: list[RequestInfo],
     show_changes: bool = False,
     dim: bool = False,
 ) -> None:
-    """Print requests as table."""
-    table = Table(show_header=True, header_style='bold' if not dim else 'dim')
-    table.add_column('Name')
-    table.add_column('Created')
-    if show_changes:
-        table.add_column('Changes')
-    table.add_column('Path')
-    table.add_column('Summary')
-
+    """Print requests as a list."""
     for r in sorted(requests, key=lambda x: x.created, reverse=True):
-        created = r.created[:10] if r.created else ''
-        name = f'[dim]{r.name}[/dim]' if dim else r.name
-
-        row = [name, created]
-        if show_changes:
-            changes = r.attach_change or '-'
-            row.append(changes)
-        row.append(str(r.path.relative_to(Path.cwd())))
-        row.append(r.tldr)
-
-        table.add_row(*row)
-
-    console.print(table)
+        _display_request(r, show_changes=show_changes, dim=dim)
+        console.print()
 
 
 # ============================================================================
@@ -246,6 +280,51 @@ def show_request(name: str) -> None:
         )
     )
     console.print()
+
+
+@request.command(name='find')
+@click.argument('query')
+def find_request(query: str) -> None:
+    """Find requests by name (fuzzy matching)."""
+    try:
+        sspec_root = get_sspec_root()
+    except SspecNotFoundError:
+        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
+
+    requests_dir = sspec_root / 'requests'
+    matches = find_request_matches(requests_dir, query, include_archived=True)
+
+    if not matches:
+        console.print(f"[yellow]No requests found matching '{query}'[/yellow]")
+        return
+
+    # Exact match check
+    exact_match = next((m for m in matches if m.stem.lower() == query.lower()), None)
+
+    if exact_match and len(matches) == 1:
+        # Reuse show logic
+        content = exact_match.read_text(encoding='utf-8')
+        console.print()
+        console.print(
+            Panel(
+                Markdown(content),
+                title=f'Request: {exact_match.stem}',
+                border_style='cyan',
+            )
+        )
+        console.print()
+    else:
+        if len(matches) > 1:
+            console.print(f'[cyan]Found {len(matches)} matches for "{query}":[/cyan]\n')
+        else:
+            console.print(f'[cyan]Fuzzy match for "{query}":[/cyan]\n')
+
+        for match_path in matches:
+            is_archived = match_path.parent.name == ARCHIVE_DIR
+            request_info = parse_request_file(match_path, archived=is_archived)
+            if request_info:
+                _display_request(request_info, show_changes=True, dim=is_archived)
+                console.print()
 
 
 # ============================================================================

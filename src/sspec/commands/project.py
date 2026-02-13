@@ -27,6 +27,7 @@ from sspec.services.project_init_service import (
     sync_skill_locations,
 )
 from sspec.services.project_update_service import (
+    apply_skill_update,
     collect_orphaned_skills,
     collect_update_candidates,
     migrate_legacy_skill_layouts,
@@ -382,8 +383,6 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
     skill_updated_count = 0
     new_hashes = old_hashes.copy()
 
-    from sspec.skill_installer import SkillInstaller
-
     for upd in actions:
         path = upd.display_path
         dest_path = upd.dest_path
@@ -394,12 +393,12 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
                 continue
 
         # 区分 skill 和普通文件的更新
-        if upd.strategy in ('symlink', 'junction', 'copy'):
+        if upd.is_skill:
             # Skill 更新
-            SkillInstaller._get_installer().update_skill(
+            apply_skill_update(
                 source=upd.template_path,
                 target=upd.dest_path,
-                strategy=upd.strategy,
+                strategy=upd.strategy or 'copy',
             )
             skill_updated_count += 1
 

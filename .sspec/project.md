@@ -40,3 +40,7 @@
 Agent appends here during @handover when a discovery is project-wide (not change-specific).
 Format each entry as: `- YYYY-MM-DD: <learning>`
 Prune entries that become outdated or graduate to Conventions/spec-docs. -->
+- 2026-02-13: SKILL 安装体系已收敛为 hub-spoke（`.sspec/skills` 为 hub，外部为目录级 spoke），避免逐 skill 链接造成的状态分叉。
+- 2026-02-13: Windows 链路策略固定为 `symlink -> elevated symlink -> junction -> copy`，且支持“用户拒绝提权时直接 junction”。
+- 2026-02-13: Legacy 迁移备份禁止重建 symlink（避免 WinError 1314），只备份真实目录并跳过指向 hub 的链接节点。
+- 2026-02-13: Skill update 候选已引入 `modified` 保护语义（默认不覆盖用户改动，需 `--force`）。

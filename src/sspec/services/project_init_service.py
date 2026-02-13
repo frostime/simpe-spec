@@ -132,6 +132,7 @@ def initialize_project(
 
     hub_skills_dir = sspec_path / 'skills'
     spoke_dirs = [t for t in skill_targets if t != hub_skills_dir]
+    installer = SkillInstaller._get_installer()
 
     # 批量安装所有 skills：hub 复制，spokes 链接
     installs = [
@@ -139,10 +140,7 @@ def initialize_project(
         for skill_dir in template_skills
     ]
 
-    results = SkillInstaller.install_hub_and_links_batch(
-        installs=installs,
-        prefer_symlink=prefer_symlink,
-    )
+    results = installer.install_hub_and_spokes_batch(installs, prefer_symlink)
 
     # 记录每个位置的安装策略
     skill_install_strategies: dict[str, str] = {}
@@ -261,13 +259,15 @@ def sync_skill_locations(
     install_pairs = [(hub_skills_dir, spoke_target) for spoke_target in spoke_targets]
 
     from sspec.skill_installer import SkillInstaller
+    installer = SkillInstaller._get_installer()
 
-    results = SkillInstaller.install_skills_batch(
+    batch_results = installer.install_batch(
         install_pairs,
         prefer_symlink=prefer_symlink,
         allow_elevation=allow_elevation,
         prefer_junction_on_windows=prefer_junction_on_windows,
     )
+    results = [(r.target, r.source, r.strategy) for r in batch_results]
 
     skill_install_strategies: dict[str, str] = {}
     for target_dir, _source_dir, strategy in results:

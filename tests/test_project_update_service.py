@@ -81,9 +81,9 @@ class TestCollectUpdateCandidates:
                     meta=meta,
                     common_replacements=COMMON_REPLACEMENTS,
                 )
-                # At least one should be updatable (template changed relative to installed)
+                # User-edited copied skill should now be treated as modified
                 statuses = {c.status for c in candidates}
-                assert 'updatable' in statuses or 'current' in statuses
+                assert 'modified' in statuses or 'current' in statuses
 
     def test_empty_meta_still_works(self, tmp_path: Path):
         sspec_root = tmp_path / SSPEC_DIR
@@ -156,6 +156,7 @@ def test_migrate_legacy_skill_layouts_detects_legacy_in_dry_run(monkeypatch, tmp
     assert template_skills
     skill_name = template_skills[0].name
     (legacy_root / skill_name).mkdir(parents=True, exist_ok=True)
+    (legacy_root / 'sspec').mkdir(parents=True, exist_ok=True)
 
     meta = json.loads((sspec_root / '.meta.json').read_text(encoding='utf-8'))
     meta['skill_locations'] = ['.sspec/skills', '.github/skills']
@@ -167,6 +168,8 @@ def test_migrate_legacy_skill_layouts_detects_legacy_in_dry_run(monkeypatch, tmp
         if path == legacy_root:
             return False
         if path == legacy_root / skill_name:
+            return True
+        if path == legacy_root / 'sspec':
             return True
         return original_check(path, expected_target)
 

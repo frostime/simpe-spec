@@ -26,6 +26,7 @@ class UpdateCandidate:
     current_hash: str | None
     hash_key: str
 
+    is_skill: bool = False
     is_symlink: bool = False
     strategy: str | None = None
 
@@ -47,6 +48,14 @@ class LegacySkillMigration:
     backup_path: Path
     strategy: str
     merged_custom_skills: list[str]
+
+
+def apply_skill_update(*, source: Path, target: Path, strategy: str) -> None:
+    """Apply skill update through service boundary."""
+    from sspec.skill_installer import SkillInstaller
+
+    installer = SkillInstaller._get_installer()
+    installer.update_skill(source=source, target=target, strategy=strategy)
 
 
 def migrate_legacy_skill_layouts(
@@ -97,7 +106,12 @@ def migrate_legacy_skill_layouts(
         if not linked_children:
             continue
 
-        if not all(child.name in template_skill_names for child in linked_children):
+        hub_linked_children = [
+            child
+            for child in linked_children
+            if check_path_link(child, expected_target=hub_skills_dir / child.name)
+        ]
+        if not hub_linked_children:
             continue
 
         timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
@@ -108,7 +122,18 @@ def migrate_legacy_skill_layouts(
 
         if not dry_run:
             backup_path.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copytree(location_path, backup_path, symlinks=True)
+            backup_path.mkdir(parents=True, exist_ok=True)
+
+            for child in children:
+                expected_hub_target = hub_skills_dir / child.name
+                if check_path_link(child, expected_target=expected_hub_target):
+                    continue
+
+                backup_child = backup_path / child.name
+                if child.is_dir():
+                    shutil.copytree(child, backup_child, symlinks=False)
+                elif child.exists():
+                    shutil.copy2(child, backup_child)
 
             for child in children:
                 if child.name in template_skill_names:
@@ -123,13 +148,14 @@ def migrate_legacy_skill_layouts(
 
             from sspec.skill_installer import SkillInstaller
 
-            install_results = SkillInstaller.install_skills_batch(
+            installer = SkillInstaller._get_installer()
+            install_results = installer.install_batch(
                 [(hub_skills_dir, location_path)],
                 prefer_symlink=True,
                 allow_elevation=False,
                 prefer_junction_on_windows=True,
             )
-            strategy = install_results[0][2] if install_results else 'copy'
+            strategy = install_results[0].strategy if install_results else 'copy'
 
             existing_strategies = dict(meta.get('skill_install_strategies', {}) or {})
             existing_strategies[location] = strategy
@@ -251,6 +277,7 @@ def collect_update_candidates(
                 new_hash=new_hash,
                 current_hash=current_hash,
                 hash_key=file_path,
+                is_skill=False,
             )
         )
 
@@ -303,12 +330,13 @@ def collect_update_candidates(
                 )
 
                 if old_hash is None:
-                    # No recorded hash — compare directly
-                    status = 'current' if current_hash == new_hash else 'updatable'
+                    status = 'current' if current_hash == new_hash else 'unknown'
                 elif current_hash == new_hash:
                     status = 'current'
-                else:
+                elif current_hash == old_hash:
                     status = 'updatable'
+                else:
+                    status = 'modified'
 
             try:
                 display_path = str(skill_dest_file.relative_to(project_root))
@@ -325,6 +353,7 @@ def collect_update_candidates(
                     new_hash=new_hash,
                     current_hash=current_hash,
                     hash_key=hash_key,
+                    is_skill=True,
                     is_symlink=False,
                     strategy='copy',
                 )

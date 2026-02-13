@@ -30,6 +30,16 @@ the problem has been resolved and meets the user's intention -->
 ## Relational Context
 <!-- Constraints, preferences, related filelinks -->
 
+
+---
+
+## @AGENT
+<!-- What should Agent do to implement this request -->
+Please initiate the "request → change" workflow for this request.
+(You need to consult `sspec-change` SKILL)
+
+---
+
 <!-- ============================================================
      MICRO-CHANGE ZONE (optional)
      For tiny changes (≤3 files, ≤30min) that don't need a full change.

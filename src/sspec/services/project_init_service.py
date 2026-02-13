@@ -23,7 +23,7 @@ from sspec.core import (
 )
 from sspec.libs.hashing import compute_dir_hash, compute_hash
 from sspec.services.agents_service import update_root_agents_block
-from sspec.services.meta_service import save_meta
+from sspec.services.meta_service import load_meta, save_meta
 
 
 class ProjectAlreadyInitializedError(RuntimeError):
@@ -36,6 +36,21 @@ class InitResult:
     skill_install_strategies: dict[str, str]
     skill_targets: list[Path]
     created_or_updated_agents: bool
+
+
+@dataclass(frozen=True, slots=True)
+class SkillSyncResult:
+    """Skill sync result for external locations after init."""
+
+    skill_install_strategies: dict[str, str]
+    skill_targets: list[Path]
+
+
+def _location_key_for_target(project_root: Path, target_dir: Path) -> str:
+    """Build stable location key for metadata and output mapping."""
+    if target_dir.name == 'skills':
+        return target_dir.relative_to(project_root).as_posix()
+    return target_dir.parent.relative_to(project_root).as_posix()
 
 
 def get_skill_targets_from_locations(
@@ -133,7 +148,7 @@ def initialize_project(
     skill_install_strategies: dict[str, str] = {}
     for target_dir, strategy in results.items():
         try:
-            location_key = str(target_dir.parent.relative_to(project_root))
+            location_key = _location_key_for_target(project_root, target_dir)
             existing = skill_install_strategies.get(location_key)
             if existing is None:
                 skill_install_strategies[location_key] = strategy
@@ -212,4 +227,71 @@ def initialize_project(
         skill_install_strategies=skill_install_strategies,
         skill_targets=skill_targets,
         created_or_updated_agents=created_or_updated_agents,
+    )
+
+
+def sync_skill_locations(
+    *,
+    project_root: Path,
+    locations: list[str],
+    prefer_symlink: bool = True,
+    sspec_dir: str = SSPEC_DIR,
+) -> SkillSyncResult:
+    """Sync installed hub skills to external skill locations.
+
+    This is used by ``project init`` deferred flow: initialize core first, then
+    sync spokes after user selection.
+    """
+    if not locations:
+        return SkillSyncResult(skill_install_strategies={}, skill_targets=[])
+
+    hub_skills_dir = project_root / sspec_dir / 'skills'
+    if not hub_skills_dir.exists():
+        raise RuntimeError('Hub skills directory not found. Initialize project first.')
+
+    all_targets = get_skill_targets_from_locations(
+        project_root=project_root,
+        locations=locations,
+        sspec_dir=sspec_dir,
+    )
+    spoke_targets = [target for target in all_targets if target != hub_skills_dir]
+
+    install_pairs = [(hub_skills_dir, spoke_target) for spoke_target in spoke_targets]
+
+    from sspec.skill_installer import SkillInstaller
+
+    results = SkillInstaller.install_skills_batch(install_pairs, prefer_symlink=prefer_symlink)
+
+    skill_install_strategies: dict[str, str] = {}
+    for target_dir, _source_dir, strategy in results:
+        try:
+            location_key = _location_key_for_target(project_root, target_dir)
+        except ValueError:
+            continue
+
+        existing = skill_install_strategies.get(location_key)
+        if existing is None:
+            skill_install_strategies[location_key] = strategy
+        elif existing == 'symlink' and strategy == 'copy':
+            skill_install_strategies[location_key] = 'copy'
+
+    sspec_path = project_root / sspec_dir
+    meta = load_meta(sspec_path)
+    stored_locations = set(meta.get('skill_locations', []) or [])
+    for target in spoke_targets:
+        try:
+            stored_locations.add(target.relative_to(project_root).as_posix())
+        except ValueError:
+            continue
+
+    stored_strategies = dict(meta.get('skill_install_strategies', {}) or {})
+    stored_strategies.update(skill_install_strategies)
+
+    meta['skill_locations'] = sorted(stored_locations)
+    meta['skill_install_strategies'] = stored_strategies
+    save_meta(sspec_path, meta)
+
+    return SkillSyncResult(
+        skill_install_strategies=skill_install_strategies,
+        skill_targets=spoke_targets,
     )

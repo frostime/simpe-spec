@@ -5,10 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
-
 from sspec.core import SCHEMA_VERSION, SSPEC_DIR, get_template_dir, list_template_skills
-from sspec.libs.hashing import compute_dir_hash
 from sspec.services.project_init_service import initialize_project
 from sspec.services.project_update_service import (
     OrphanedSkill,
@@ -16,7 +13,6 @@ from sspec.services.project_update_service import (
     collect_update_candidates,
     remove_orphaned_skill,
 )
-
 
 COMMON_REPLACEMENTS = {'SCHEMA_VERSION': SCHEMA_VERSION, 'SCHEMA': SCHEMA_VERSION}
 
@@ -27,7 +23,6 @@ def _init_project(tmp_path: Path) -> Path:
         project_root=tmp_path,
         force=False,
         skill_locations=[],
-        default_gitignore='',
         prefer_symlink=False,
     )
     return tmp_path / SSPEC_DIR

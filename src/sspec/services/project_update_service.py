@@ -9,6 +9,7 @@ from typing import Any, Literal
 
 from sspec.core import UPDATABLE_FILES, list_template_skills
 from sspec.libs.hashing import compute_dir_hash, compute_file_hash, compute_hash
+from sspec.skill_installer import check_path_link, remove_path_link
 
 UpdateStatus = Literal['missing', 'current', 'updatable', 'modified', 'unknown']
 
@@ -55,6 +56,9 @@ def collect_orphaned_skills(
     for name in sorted(orphan_names):
         paths: list[Path] = []
         for loc_str in skill_locations:
+            location_root = project_root / loc_str
+            if check_path_link(location_root):
+                continue
             skill_dir = project_root / loc_str / name
             if skill_dir.exists():
                 paths.append(skill_dir)
@@ -68,8 +72,8 @@ def remove_orphaned_skill(orphan: OrphanedSkill) -> int:
     """Remove an orphaned skill from all locations. Returns count of dirs removed."""
     removed = 0
     for path in orphan.paths:
-        if path.is_symlink():
-            path.unlink()
+        if check_path_link(path):
+            remove_path_link(path)
             removed += 1
         elif path.exists():
             shutil.rmtree(path)
@@ -159,12 +163,16 @@ def collect_update_candidates(
         legacy_hash_key = f'skills/{skill_name}/SKILL.md'
 
         for loc_str in skill_locations:
+            location_root = project_root / loc_str
+            if check_path_link(location_root):
+                continue
+
             skill_dest_dir = project_root / loc_str / skill_name
             skill_dest_file = skill_dest_dir / 'SKILL.md'
 
-            # Skip symlinked skills entirely during update.
-            # They should always point to the hub (.sspec/skills) and are not managed here.
-            if skill_dest_dir.is_symlink():
+            # Skip link-like skills (symlink/junction) during update.
+            # They should point to hub (.sspec/skills) and are not updated here.
+            if check_path_link(skill_dest_dir):
                 continue
 
             # Copy: compare directory hash (catches reference file changes)

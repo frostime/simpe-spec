@@ -15,3 +15,7 @@ commands:
     invoke: pwsh -File {script}
     script_file: scripts\build_install.ps1
     script_strategy: ref
+  venv:
+    description: 激活虚拟环境
+    type: cmd-line
+    invoke: .venv/Scripts/activate

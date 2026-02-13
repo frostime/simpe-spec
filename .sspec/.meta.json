@@ -1,8 +1,8 @@
 {
   "schema_version": "6.0",
-  "sspec_version": "0.19.4.dev2+g708fa21d6.d20260213",
+  "sspec_version": "0.19.4.dev5+gc75bc98fb.d20260213",
   "created_at": "2026-02-07T18:42:39.297150",
-  "updated_at": "2026-02-13T19:29:49.679130",
+  "updated_at": "2026-02-14T00:42:03.058384",
   "file_hashes": {
     "skills/use-powershell": "0dfd12866da11377",
     "skills/write-patch": "53a7cb880be7ee69",
@@ -26,7 +26,7 @@
   ],
   "skill_install_strategies": {
     ".sspec\\skills": "copy",
-    ".claude\\skills": "symlink",
-    ".github\\skills": "symlink"
+    ".claude\\skills": "junction",
+    ".github\\skills": "junction"
   }
 }

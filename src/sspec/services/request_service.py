@@ -14,10 +14,12 @@ from pathlib import Path
 
 from sspec.core import (
     ARCHIVE_DIR,
+    CHANGES_DIR,
     RequestStatus,
     normalize_status,
 )
 from sspec.libs.md_yaml import parse_frontmatter, update_frontmatter
+from sspec.libs.path_refs import update_references_in_dirs
 
 
 @dataclass(frozen=True, slots=True)
@@ -95,7 +97,9 @@ def _extract_summary(body: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def find_request_matches(requests_dir: Path, name: str, include_archived: bool = False) -> list[Path]:
+def find_request_matches(
+    requests_dir: Path, name: str, include_archived: bool = False
+) -> list[Path]:
     """Find request file candidates by exact or fuzzy match.
 
     Tries exact → suffix (*_<name>.md) → old format (*-<name>.md) → contains.
@@ -344,51 +348,35 @@ def archive_request(sspec_root: Path, request_info: RequestInfo) -> Path:
     shutil.move(str(request_file), str(dest_path))
 
     # Update cross-references in linked change
-    _update_change_after_request_archive(
+    _rewrite_references_after_request_archive(
         sspec_root,
         request_file.relative_to(sspec_root.parent).as_posix(),
         dest_path.relative_to(sspec_root.parent).as_posix(),
-        attach_change,
     )
 
     return dest_path
 
 
-def _update_change_after_request_archive(
+def _rewrite_references_after_request_archive(
     sspec_root: Path,
     old_request_relative: str,
     new_request_relative: str,
-    attach_change: str | None,
 ) -> None:
-    """Update change spec.md reference after archiving a request."""
-    if not attach_change:
-        return
+    """Update references after archiving a request.
 
-    change_path = Path(attach_change)
-
-    # Resolve change spec path (supports new and old format)
-    if 'spec.md' in attach_change:
-        spec_path = change_path
-    else:
-        spec_path = change_path / 'spec.md'
-
-    # Also check archive directory
-    if not spec_path.exists():
-        return
-
-    content = spec_path.read_text(encoding='utf-8')
-    meta, _body = parse_frontmatter(content)
-    reference = meta.get('reference') or []
-    if not isinstance(reference, list):
-        return
-
-    updated = False
-    for ref in reference:
-        if ref.get('source') == old_request_relative:
-            ref['source'] = new_request_relative
-            ref['note'] = 'Archived request'
-            updated = True
-
-    if updated:
-        content = update_frontmatter(content, {'reference': reference})
-        spec_path.write_text(content, encoding='utf-8')
+    When request is moved to archive/, all references to it need updated paths.
+    Searches in: requests/, changes/, asks/, tmp/ (including archive subdirs).
+    """
+    # Update all relevant markdown files via exact path replacement.
+    old_pattern = old_request_relative
+    dirs_to_update = [
+        sspec_root / 'requests',
+        sspec_root / CHANGES_DIR,
+        sspec_root / 'asks',
+        sspec_root / 'tmp',
+    ]
+    update_references_in_dirs(
+        dirs=dirs_to_update,
+        replacements={old_pattern: new_request_relative},
+        file_pattern='*.md',
+    )

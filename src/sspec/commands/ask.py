@@ -84,7 +84,7 @@ def ask_create(name: str) -> None:
     click.echo('Next steps:')
     click.echo(f'  1. Edit REASON and QUESTION in {rel_str}')
     click.echo(f'  2. Run: sspec ask prompt {rel_str}')
-    click.echo('  3. Agent will get user\'s answer from `sspec ask prompt`.')
+    click.echo("  3. Agent will get user's answer from `sspec ask prompt`.")
     click.echo('Note:')
     click.echo('  - Simple/Complex question -> write in QUESTION fields.')
     click.echo(
@@ -195,14 +195,14 @@ def _display_ask(path: Path, icon: str, color: str, dim: bool = False) -> None:
     """Display a single ask in list format."""
     name = extract_ask_name_from_filename(path.stem)
     if dim:
-        name = f"[dim]{name}[/dim]"
+        name = f'[dim]{name}[/dim]'
 
     # Line 1: Icon Name
-    console.print(f"[{color}]{icon}[/{color}] [bold]{name}[/bold]")
+    console.print(f'[{color}]{icon}[/{color}] [bold]{name}[/bold]')
 
     # Indented Metadata
     path_rel = path.relative_to(Path.cwd())
-    console.print(f"  [dim]Path:[/dim] [dim]{path_rel}[/dim]")
+    console.print(f'  [dim]Path:[/dim] [dim]{path_rel}[/dim]')
 
 
 @ask_group.command(name='archive')
@@ -291,6 +291,6 @@ def _archive_single_ask(sspec_root: Path, ask_path: Path, auto_yes: bool) -> Non
             click.echo('Cancelled')
             return
 
-    dest_path = archive_ask(sspec_root / 'asks', ask_path)
+    dest_path = archive_ask(sspec_root, sspec_root / 'asks', ask_path)
     rel_path = dest_path.relative_to(sspec_root.parent)
     click.echo(f'Archived to: {rel_path}')

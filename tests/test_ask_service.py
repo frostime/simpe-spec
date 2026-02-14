@@ -18,7 +18,6 @@ from sspec.services.ask_service import (
     save_ask_answer,
 )
 
-
 # ---------------------------------------------------------------------------
 # normalize_ask_name
 # ---------------------------------------------------------------------------
@@ -201,7 +200,7 @@ class TestArchiveAsk:
         f = asks_dir / 'done.md'
         f.write_text('completed ask', encoding='utf-8')
 
-        dest = archive_ask(asks_dir, f)
+        dest = archive_ask(sspec_root, asks_dir, f)
         assert dest.exists()
         assert not f.exists()
         assert 'archive' in str(dest)
@@ -214,6 +213,28 @@ class TestArchiveAsk:
 
         f = asks_dir / 'dup.md'
         f.write_text('new', encoding='utf-8')
-        dest = archive_ask(asks_dir, f)
+        dest = archive_ask(sspec_root, asks_dir, f)
         assert dest.exists()
         assert dest.name != 'dup.md'  # counter appended
+
+    def test_updates_references_inside_archive_dirs(self, sspec_root: Path):
+        asks_dir = sspec_root / 'asks'
+        request_archive = sspec_root / 'requests' / 'archive'
+        change_archive = sspec_root / 'changes' / 'archive' / '26-02-15T00-00_demo'
+        request_archive.mkdir(parents=True, exist_ok=True)
+        change_archive.mkdir(parents=True, exist_ok=True)
+
+        ask_file = asks_dir / 'topic.md'
+        ask_file.write_text('ask content', encoding='utf-8')
+
+        old_path = '.sspec/asks/topic.md'
+        req_file = request_archive / 'r.md'
+        change_spec = change_archive / 'spec.md'
+        req_file.write_text(f'link: {old_path}\n', encoding='utf-8')
+        change_spec.write_text(f'link: {old_path}\n', encoding='utf-8')
+
+        dest = archive_ask(sspec_root, asks_dir, ask_file)
+        new_path = dest.relative_to(sspec_root.parent).as_posix()
+
+        assert new_path in req_file.read_text(encoding='utf-8')
+        assert new_path in change_spec.read_text(encoding='utf-8')

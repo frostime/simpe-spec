@@ -12,6 +12,8 @@ SKILLS_DIR = 'skills'
 WORKSPACE_DIRS = ['.github', '.claude', '.agent']
 SKILL_SUBDIR = 'skills'
 CHANGES_DIR = 'changes'
+REQUEST_DIR = 'requests'
+SPEC_DOCS_DIR = 'spec-docs'
 ARCHIVE_DIR = 'archive'
 
 # Schema version - increment when template structure changes

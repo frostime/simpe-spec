@@ -20,7 +20,6 @@ from sspec.services.request_service import (
     parse_request_file,
 )
 
-
 # ---------------------------------------------------------------------------
 # normalize_request_name
 # ---------------------------------------------------------------------------
@@ -321,3 +320,22 @@ class TestArchiveRequest:
         assert dest.exists()
         # Should have a counter suffix
         assert dest.stem != path.stem
+
+    def test_updates_references_inside_archive_dirs(self, sspec_root: Path):
+        path = create_request(sspec_root=sspec_root, name='archive-links', template_path=None)
+        info = parse_request_file(path)
+        assert info is not None
+
+        old_request_rel = path.relative_to(sspec_root.parent).as_posix()
+
+        ask_archive_dir = sspec_root / 'asks' / 'archive'
+        ask_archive_dir.mkdir(parents=True, exist_ok=True)
+        ask_archive_file = ask_archive_dir / 'ask.md'
+        ask_archive_file.write_text(f'request: {old_request_rel}\n', encoding='utf-8')
+
+        dest = archive_request(sspec_root, info)
+        new_request_rel = dest.relative_to(sspec_root.parent).as_posix()
+
+        updated = ask_archive_file.read_text(encoding='utf-8')
+        assert new_request_rel in updated
+        assert old_request_rel not in updated

@@ -12,6 +12,7 @@ from sspec.core import (
     CHANGE_ROOT_TEMPLATE_FILES,
     CHANGE_TEMPLATE_FILES,
     CHANGES_DIR,
+    REQUEST_DIR,
     ChangeExistsError,
     ChangeInfo,
     ChangeStatus,
@@ -21,6 +22,7 @@ from sspec.core import (
     normalize_status,
 )
 from sspec.libs.md_yaml import parse_frontmatter, update_frontmatter
+from sspec.libs.path_refs import update_references_in_dirs
 
 
 def find_change_matches(changes_dir: Path, name: str, include_archived: bool = False) -> list[Path]:
@@ -123,7 +125,7 @@ def parse_change(change_path: Path, archived: bool = False) -> ChangeInfo:
         has_pivot=has_pivot,
         has_blockers=has_blockers,
         archived=archived,
-        frontmatter=meta
+        frontmatter=meta,
     )
 
 
@@ -225,45 +227,35 @@ def archive_change(sspec_root: Path, change_info: ChangeInfo) -> Path:
     shutil.move(str(change_path), str(archive_path))
 
     # Update cross-references: any request pointing to this change should point to archive
-    _update_requests_after_change_archive(sspec_root, name, archive_path)
+    _rewrite_references_after_change_archive(sspec_root, name, archive_path)
 
     return archive_path
 
 
-def _update_requests_after_change_archive(
+def _rewrite_references_after_change_archive(
     sspec_root: Path, old_change_dir_name: str, new_archive_path: Path
 ) -> None:
-    """Update request.attach-change after archiving a change.
+    """Update references after archiving a change.
 
-    When change is moved to archive/, requests pointing to it need updated paths.
-    Supports both old format (dir name) and new format (spec.md path).
+    When change is moved to archive/, all references to it need updated paths.
+    Searches in: requests/, changes/, asks/, tmp/ (including archive subdirs).
     """
-    requests_dir = sspec_root / 'requests'
-    if not requests_dir.exists():
-        return
-
     # New archive path relative to sspec_root
-    new_spec_relative = (new_archive_path / 'spec.md').relative_to(sspec_root.parent).as_posix()
-    # e.g. "changes/archive/26-02-05T19-28_refactor-clean-code/spec.md"
+    new_spec_relative = new_archive_path.relative_to(sspec_root.parent).as_posix()
 
-    for md_file in requests_dir.glob('*.md'):
-        content = md_file.read_text(encoding='utf-8')
-        meta, body = parse_frontmatter(content)
-        attach = meta.get('attach-change', '')
-
-        if not attach:
-            continue
-
-        # Match conditions: old format (dir name) or new format (spec.md path)
-        should_update = (
-            attach == old_change_dir_name
-            or attach == f'changes/{old_change_dir_name}/spec.md'
-            or old_change_dir_name in str(attach)
-        )
-
-        if should_update:
-            updated = update_frontmatter(content, {'attach-change': new_spec_relative})
-            md_file.write_text(updated, encoding='utf-8')
+    # Update all relevant markdown files via exact path replacement.
+    old_pattern = f'.sspec/changes/{old_change_dir_name}'
+    dirs_to_update = [
+        sspec_root / CHANGES_DIR,
+        sspec_root / REQUEST_DIR,
+        sspec_root / 'asks',
+        sspec_root / 'tmp',
+    ]
+    update_references_in_dirs(
+        dirs=dirs_to_update,
+        replacements={old_pattern: new_spec_relative},
+        file_pattern='*.md',
+    )
 
 
 def validate_change(change_path: Path) -> list[str]:

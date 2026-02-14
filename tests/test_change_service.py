@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from sspec.core import ChangeExistsError, ChangeStatus, InvalidChangeNameError
+from sspec.libs.md_yaml import update_frontmatter
 from sspec.services.change_service import (
     archive_change,
     create_change,
@@ -16,8 +17,6 @@ from sspec.services.change_service import (
     parse_change,
     validate_change,
 )
-from sspec.libs.md_yaml import update_frontmatter
-
 
 # ---------------------------------------------------------------------------
 # Helper
@@ -270,6 +269,30 @@ class TestArchiveChange:
         info2 = parse_change(c2)
         p2 = archive_change(sspec_root, info2)
         assert p2.exists()
+
+    def test_updates_references_inside_archive_dirs(self, sspec_root: Path):
+        change_path = create_change(sspec_root, 'archive-refs')
+        _set_spec_status(change_path, 'DONE')
+        old_change_rel = f'.sspec/changes/{change_path.name}'
+
+        request_archive_dir = sspec_root / 'requests' / 'archive'
+        ask_archive_dir = sspec_root / 'asks' / 'archive'
+        request_archive_dir.mkdir(parents=True, exist_ok=True)
+        ask_archive_dir.mkdir(parents=True, exist_ok=True)
+
+        archived_req = request_archive_dir / 'req.md'
+        archived_ask = ask_archive_dir / 'ask.md'
+        archived_req.write_text(f'attach-change: {old_change_rel}/spec.md\n', encoding='utf-8')
+        archived_ask.write_text(f'change: {old_change_rel}/spec.md\n', encoding='utf-8')
+
+        info = parse_change(change_path)
+        archive_path = archive_change(sspec_root, info)
+        new_change_rel = archive_path.relative_to(sspec_root.parent).as_posix()
+
+        req_content = archived_req.read_text(encoding='utf-8')
+        ask_content = archived_ask.read_text(encoding='utf-8')
+        assert f'{new_change_rel}/spec.md' in req_content
+        assert f'{new_change_rel}/spec.md' in ask_content
 
 
 # ---------------------------------------------------------------------------

@@ -11,6 +11,7 @@ from pathlib import Path
 import yaml
 
 from sspec.core import ARCHIVE_DIR
+from sspec.libs.path_refs import update_references_in_dirs
 
 
 @dataclass
@@ -53,8 +54,15 @@ def find_ask_matches(asks_dir: Path, name: str) -> list[Path]:
     return []
 
 
-def archive_ask(asks_dir: Path, ask_path: Path) -> Path:
-    """Archive a completed ask (.md) by moving it into asks/archive/."""
+def archive_ask(sspec_root: Path, asks_dir: Path, ask_path: Path) -> Path:
+    """Archive a completed ask (.md) by moving it into asks/archive/.
+
+    Also updates references in requests/, changes/, asks/, tmp/ directories,
+    including archive subdirectories.
+    """
+    # Capture old path before moving
+    old_ask_relative = ask_path.relative_to(sspec_root.parent).as_posix()
+
     archive_dir = asks_dir / ARCHIVE_DIR
     archive_dir.mkdir(parents=True, exist_ok=True)
 
@@ -65,11 +73,28 @@ def archive_ask(asks_dir: Path, ask_path: Path) -> Path:
         counter += 1
 
     shutil.move(str(ask_path), str(dest_path))
+
+    # Update references after moving
+    new_ask_relative = dest_path.relative_to(sspec_root.parent).as_posix()
+    old_pattern = old_ask_relative
+
+    dirs_to_update = [
+        sspec_root / 'requests',
+        sspec_root / 'asks',
+        sspec_root / 'tmp',
+        sspec_root / 'changes',
+    ]
+    update_references_in_dirs(
+        dirs=dirs_to_update,
+        replacements={old_pattern: new_ask_relative},
+        file_pattern='*.md',
+    )
+
     return dest_path
 
 
 def ask_prompt(q: str, tldr: str | None = None) -> str:
-    print(f"\n{'='*60}\n  🤖 Agent needs your input\n{'='*60}\n\n{q}\n", file=sys.stderr)
+    print(f'\n{"=" * 60}\n  🤖 Agent needs your input\n{"=" * 60}\n\n{q}\n', file=sys.stderr)
     print('💡 Enter response (type END on new line to finish):', file=sys.stderr)
     lines = []
     try:
@@ -78,7 +103,7 @@ def ask_prompt(q: str, tldr: str | None = None) -> str:
     except (EOFError, KeyboardInterrupt):
         pass
     result = '\n'.join(lines)
-    print(f"\n✓ Received ({len(result)} chars)\n{'='*60}\n", file=sys.stderr)
+    print(f'\n✓ Received ({len(result)} chars)\n{"=" * 60}\n', file=sys.stderr)
     return result
 
 
@@ -99,9 +124,7 @@ def normalize_ask_name(name: str) -> tuple[str, str | None]:
     normalized = re.sub(r'_+', '_', normalized).strip('_')
 
     if not normalized:
-        raise ValueError(
-            f'Invalid ask name: "{name}". ' 'Must contain at least one letter or number.'
-        )
+        raise ValueError(f'Invalid ask name: "{name}". Must contain at least one letter or number.')
 
     # Check if conversion happened
     warning = None
@@ -121,7 +144,7 @@ def collect_multiline_input(
     """Collect multi-line input until end_token is entered on a new line."""
 
     print(
-        f"\n{'='*60}\n  🤖 sspec ask\n{'='*60}\n\n{prompt}\n",
+        f'\n{"=" * 60}\n  🤖 sspec ask\n{"=" * 60}\n\n{prompt}\n',
         file=output_stream,
     )
     print(
@@ -135,7 +158,7 @@ def collect_multiline_input(
     except (EOFError, KeyboardInterrupt):
         pass
     result = '\n'.join(lines)
-    print(f"\n✓ Received ({len(result)} chars)\n{'='*60}\n", file=output_stream)
+    print(f'\n✓ Received ({len(result)} chars)\n{"=" * 60}\n', file=output_stream)
     return result
 
 

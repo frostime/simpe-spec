@@ -7,11 +7,12 @@ created: {{TIME}}
 reference: null
 ---
 
-<!-- @RULE: Frontmatter Type
+<!-- @RULE: Frontmatter Schema
 status: PLANNING | DOING | REVIEW | DONE | BLOCKED;
 change-type: single | sub (sub if part of a root change);
 reference?: Array<{source: str; type: RefType; note?}>;
 type RefType: 'request' | 'root-change' | 'sub-change' | 'doc';
+📚 Full schema details: sspec-change SKILL → doc-standards.md
  -->
 
 # {{CHANGE_NAME}}
@@ -20,8 +21,8 @@ type RefType: 'request' | 'root-change' | 'sub-change' | 'doc';
 <!-- @REPLACE -->
 
 <!-- @RULE: Quantify pain. Format: "[metric] causing [impact]".
-For simple changes, a single paragraph is fine — no need to split into sub-sections.
-For complex changes, use "Current Situation" + "User Requirement" sub-headings. -->
+Simple changes: single paragraph. Complex: split "Current Situation" + "User Requirement".
+📚 Standards: sspec-change SKILL → doc-standards.md -->
 
 ## B. Proposed Solution
 <!-- @REPLACE -->
@@ -41,7 +42,7 @@ For complex changes, use "Current Situation" + "User Requirement" sub-headings. 
 
 ### Risks & Dependencies
 - <external deps, risks, mitigation>
--->
+📚 Standards: sspec-change SKILL → doc-standards.md -->
 
 ## D. Blockers & Feedback
 <!-- @REPLACE -->

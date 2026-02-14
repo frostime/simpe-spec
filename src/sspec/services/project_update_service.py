@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import shutil
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
 
 from sspec.core import UPDATABLE_FILES, list_template_skills
 from sspec.libs.hashing import compute_dir_hash, compute_file_hash, compute_hash
+from sspec.skill_installer import check_path_link, remove_path_link
 
 UpdateStatus = Literal['missing', 'current', 'updatable', 'modified', 'unknown']
 
@@ -24,6 +26,7 @@ class UpdateCandidate:
     current_hash: str | None
     hash_key: str
 
+    is_skill: bool = False
     is_symlink: bool = False
     strategy: str | None = None
 
@@ -34,6 +37,143 @@ class OrphanedSkill:
 
     skill_name: str
     paths: list[Path]  # All locations where this orphan exists
+
+
+@dataclass(frozen=True, slots=True)
+class LegacySkillMigration:
+    """Result for migrating old per-skill spoke layout to directory-level spoke."""
+
+    location: str
+    location_path: Path
+    backup_path: Path
+    strategy: str
+    merged_custom_skills: list[str]
+
+
+def apply_skill_update(*, source: Path, target: Path, strategy: str) -> None:
+    """Apply skill update through service boundary."""
+    from sspec.skill_installer import SkillInstaller
+
+    installer = SkillInstaller._get_installer()
+    installer.update_skill(source=source, target=target, strategy=strategy)
+
+
+def migrate_legacy_skill_layouts(
+    *,
+    project_root: Path,
+    sspec_root: Path,
+    meta: dict[str, Any],
+    dry_run: bool = False,
+) -> list[LegacySkillMigration]:
+    """Migrate old per-skill spoke layout to directory-level hub->spoke layout.
+
+    Legacy layout example:
+    - `.claude/skills/<skill-a>` (symlink)
+    - `.claude/skills/<skill-b>` (symlink)
+
+    Target layout:
+    - `.claude/skills` -> `.sspec/skills` (symlink/junction/copy fallback)
+    """
+    skill_locations: list[str] = meta.get('skill_locations', []) or []
+    hub_skills_dir = sspec_root / 'skills'
+    if not hub_skills_dir.exists():
+        return []
+
+    template_skill_names = {d.name for d in list_template_skills()}
+    migrations: list[LegacySkillMigration] = []
+
+    for location in skill_locations:
+        if location == '.sspec/skills':
+            continue
+
+        location_path = project_root / location
+        if (
+            not location_path.exists()
+            or not location_path.is_dir()
+            or check_path_link(location_path)
+        ):
+            continue
+
+        children = [
+            child
+            for child in location_path.iterdir()
+            if child.is_dir() or check_path_link(child)
+        ]
+        if not children:
+            continue
+
+        linked_children = [child for child in children if check_path_link(child)]
+        if not linked_children:
+            continue
+
+        hub_linked_children = [
+            child
+            for child in linked_children
+            if check_path_link(child, expected_target=hub_skills_dir / child.name)
+        ]
+        if not hub_linked_children:
+            continue
+
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        safe_location = location.replace('/', '_').replace('\\', '_')
+        backup_path = sspec_root / 'tmp' / 'skills-backup' / timestamp / safe_location
+
+        merged_custom_skills: list[str] = []
+
+        if not dry_run:
+            backup_path.parent.mkdir(parents=True, exist_ok=True)
+            backup_path.mkdir(parents=True, exist_ok=True)
+
+            for child in children:
+                expected_hub_target = hub_skills_dir / child.name
+                if check_path_link(child, expected_target=expected_hub_target):
+                    continue
+
+                backup_child = backup_path / child.name
+                if child.is_dir():
+                    shutil.copytree(child, backup_child, symlinks=False)
+                elif child.exists():
+                    shutil.copy2(child, backup_child)
+
+            for child in children:
+                if child.name in template_skill_names:
+                    continue
+                if check_path_link(child) or not child.is_dir():
+                    continue
+
+                hub_dest = hub_skills_dir / child.name
+                if not hub_dest.exists():
+                    shutil.copytree(child, hub_dest)
+                    merged_custom_skills.append(child.name)
+
+            from sspec.skill_installer import SkillInstaller
+
+            installer = SkillInstaller._get_installer()
+            install_results = installer.install_batch(
+                [(hub_skills_dir, location_path)],
+                prefer_symlink=True,
+                allow_elevation=False,
+                prefer_junction_on_windows=True,
+            )
+            strategy = install_results[0].strategy if install_results else 'copy'
+
+            existing_strategies = dict(meta.get('skill_install_strategies', {}) or {})
+            existing_strategies[location] = strategy
+            meta['skill_install_strategies'] = existing_strategies
+        else:
+            strategy = 'symlink/junction/copy'
+
+        migrations.append(
+            LegacySkillMigration(
+                location=location,
+                location_path=location_path,
+                backup_path=backup_path,
+                strategy=strategy,
+                merged_custom_skills=merged_custom_skills,
+            )
+        )
+
+    return migrations
 
 
 def collect_orphaned_skills(
@@ -55,6 +195,9 @@ def collect_orphaned_skills(
     for name in sorted(orphan_names):
         paths: list[Path] = []
         for loc_str in skill_locations:
+            location_root = project_root / loc_str
+            if check_path_link(location_root):
+                continue
             skill_dir = project_root / loc_str / name
             if skill_dir.exists():
                 paths.append(skill_dir)
@@ -68,8 +211,8 @@ def remove_orphaned_skill(orphan: OrphanedSkill) -> int:
     """Remove an orphaned skill from all locations. Returns count of dirs removed."""
     removed = 0
     for path in orphan.paths:
-        if path.is_symlink():
-            path.unlink()
+        if check_path_link(path):
+            remove_path_link(path)
             removed += 1
         elif path.exists():
             shutil.rmtree(path)
@@ -134,6 +277,7 @@ def collect_update_candidates(
                 new_hash=new_hash,
                 current_hash=current_hash,
                 hash_key=file_path,
+                is_skill=False,
             )
         )
 
@@ -159,12 +303,16 @@ def collect_update_candidates(
         legacy_hash_key = f'skills/{skill_name}/SKILL.md'
 
         for loc_str in skill_locations:
+            location_root = project_root / loc_str
+            if check_path_link(location_root):
+                continue
+
             skill_dest_dir = project_root / loc_str / skill_name
             skill_dest_file = skill_dest_dir / 'SKILL.md'
 
-            # Skip symlinked skills entirely during update.
-            # They should always point to the hub (.sspec/skills) and are not managed here.
-            if skill_dest_dir.is_symlink():
+            # Skip link-like skills (symlink/junction) during update.
+            # They should point to hub (.sspec/skills) and are not updated here.
+            if check_path_link(skill_dest_dir):
                 continue
 
             # Copy: compare directory hash (catches reference file changes)
@@ -182,12 +330,13 @@ def collect_update_candidates(
                 )
 
                 if old_hash is None:
-                    # No recorded hash — compare directly
-                    status = 'current' if current_hash == new_hash else 'updatable'
+                    status = 'current' if current_hash == new_hash else 'unknown'
                 elif current_hash == new_hash:
                     status = 'current'
-                else:
+                elif current_hash == old_hash:
                     status = 'updatable'
+                else:
+                    status = 'modified'
 
             try:
                 display_path = str(skill_dest_file.relative_to(project_root))
@@ -204,6 +353,7 @@ def collect_update_candidates(
                     new_hash=new_hash,
                     current_hash=current_hash,
                     hash_key=hash_key,
+                    is_skill=True,
                     is_symlink=False,
                     strategy='copy',
                 )

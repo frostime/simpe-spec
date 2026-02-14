@@ -1,5 +1,6 @@
 """sspec project command - project-level operations."""
 
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -11,7 +12,6 @@ from rich.table import Table
 from sspec import __version__
 from sspec.core import (
     SCHEMA_VERSION,
-    SSPEC_DIR,
     ChangeStatus,
     SspecNotFoundError,
     get_sspec_root,
@@ -23,12 +23,14 @@ from sspec.services.change_service import list_changes
 from sspec.services.meta_service import load_meta, save_meta
 from sspec.services.project_init_service import (
     ProjectAlreadyInitializedError,
-    get_skill_targets_from_locations,
     initialize_project,
+    sync_skill_locations,
 )
 from sspec.services.project_update_service import (
+    apply_skill_update,
     collect_orphaned_skills,
     collect_update_candidates,
+    migrate_legacy_skill_layouts,
     remove_orphaned_skill,
 )
 
@@ -64,15 +66,18 @@ def _interactive_skill_selection(project_root: Path) -> list[str]:
     ).ask()
 
     if selected is None:  # User cancelled
-        console.print('[yellow]Selection cancelled, using default (.claude)[/yellow]')
-        return ['.claude']
+        forced = project_root / '.agent'
+        forced.mkdir(parents=True, exist_ok=True)
+        console.print('[yellow]Selection cancelled, force fallback to .agent[/yellow]')
+        console.print('[dim]You can switch to .claude/.github later by re-sync/update.[/dim]')
+        return ['.agent']
 
     if not selected:
-        # If nothing selected, fallback to detected existing or .claude
-        fallback = existing_dirs if existing_dirs else ['.claude']
-        fallback_str = ', '.join(fallback)
-        console.print(f'[yellow]No locations selected, using fallback: {fallback_str}[/yellow]')
-        return fallback
+        forced = project_root / '.agent'
+        forced.mkdir(parents=True, exist_ok=True)
+        console.print('[yellow]No locations selected, force fallback to .agent[/yellow]')
+        console.print('[dim]You can switch to .claude/.github later by re-sync/update.[/dim]')
+        return ['.agent']
 
     return selected
 
@@ -94,14 +99,12 @@ def project() -> None:
 def init(force: bool, skill_loc: tuple[str, ...]) -> None:
     """Initialize .sspec directory in current project."""
     project_root = Path.cwd()
-    # Interactive skill location selection if not specified via CLI
-    skill_locations = list(skill_loc) if skill_loc else _interactive_skill_selection(project_root)
 
     try:
         result = initialize_project(
             project_root=project_root,
             force=force,
-            skill_locations=skill_locations,
+            skill_locations=[],
             prefer_symlink=True,
         )
     except ProjectAlreadyInitializedError as e:
@@ -109,30 +112,46 @@ def init(force: bool, skill_loc: tuple[str, ...]) -> None:
             f"{e} Or run 'sspec project update' to update templates."
         ) from None
 
-    # Print skill installation locations
-    template_skills = list_template_skills()
-    skill_targets = get_skill_targets_from_locations(
-        project_root=project_root,
-        locations=skill_locations,
-        sspec_dir=SSPEC_DIR,
-    )
-
-    if template_skills:
-        for target_dir in skill_targets:
-            if not target_dir.exists():
-                continue
-            rel_target = target_dir.relative_to(project_root)
-            location_key = str(rel_target)
-            strategy = result.skill_install_strategies.get(location_key, 'copy')
-            console.print(f'  [green]+[/green] Installed skills to {rel_target}/ ({strategy})')
-
-    if result.created_or_updated_agents:
-        console.print('  [green]+[/green] Created/Updated root AGENTS.md')
-
     rel_path = result.sspec_path.relative_to(Path.cwd())
 
     console.print()
     console.print(f'[green]+[/green] Initialized sspec project in {rel_path}/')
+    console.print('  [green]+[/green] Installed core skills to .sspec/skills/ (copy)')
+
+    if result.created_or_updated_agents:
+        console.print('  [green]+[/green] Created/Updated root AGENTS.md')
+
+    # Resolve requested external locations after core init
+    skill_locations = list(skill_loc) if skill_loc else _interactive_skill_selection(project_root)
+    allow_elevation = True
+    prefer_junction_on_windows = False
+
+    if skill_locations and sys.platform == 'win32':
+        elevated_choice = questionary.confirm(
+            'Try admin elevation to create symbolic links on Windows?',
+            default=False,
+        ).ask()
+        if not elevated_choice:
+            allow_elevation = False
+            prefer_junction_on_windows = True
+
+    if skill_locations:
+        sync_result = sync_skill_locations(
+            project_root=project_root,
+            locations=skill_locations,
+            prefer_symlink=True,
+            allow_elevation=allow_elevation,
+            prefer_junction_on_windows=prefer_junction_on_windows,
+        )
+
+        for target_dir in sync_result.skill_targets:
+            if not target_dir.exists():
+                continue
+            rel_target = target_dir.relative_to(project_root)
+            location_key = rel_target.as_posix()
+            strategy = sync_result.skill_install_strategies.get(location_key, 'copy')
+            console.print(f'  [green]+[/green] Synced skills to {rel_target}/ ({strategy})')
+
     console.print()
     console.print('[cyan]Structure:[/cyan]')
     console.print('  .sspec/')
@@ -233,6 +252,30 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
     common_replacements = {'SCHEMA_VERSION': SCHEMA_VERSION, 'SCHEMA': SCHEMA_VERSION}
 
     # -----------------------------------------------------------------
+    # Phase 0: Migrate legacy per-skill spoke layout to directory-level
+    # -----------------------------------------------------------------
+    migrations = migrate_legacy_skill_layouts(
+        project_root=project_root,
+        sspec_root=sspec_root,
+        meta=meta,
+        dry_run=dry_run,
+    )
+
+    if migrations:
+        console.print()
+        migration_table = Table(title='Legacy Skill Layout Migration')
+        migration_table.add_column('Location', style='cyan')
+        migration_table.add_column('Strategy', style='yellow')
+        migration_table.add_column('Backup', style='dim')
+        for migration in migrations:
+            migration_table.add_row(
+                migration.location,
+                migration.strategy,
+                str(migration.backup_path.relative_to(project_root)),
+            )
+        console.print(migration_table)
+
+    # -----------------------------------------------------------------
     # Phase 1: Detect orphaned skills (renamed/removed from templates)
     # -----------------------------------------------------------------
     orphans = collect_orphaned_skills(project_root=project_root, meta=meta)
@@ -323,12 +366,14 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
         dry_run=True,
     )
 
-    if not actions and not agents_needs_update and not orphans:
+    if not actions and not agents_needs_update and not orphans and not migrations:
         console.print('[green]+[/green] All files are up to date')
         return
 
     if dry_run:
         console.print(f'[cyan]Would update {len(actions)} file(s)[/cyan]')
+        if migrations:
+            console.print(f'[cyan]Would migrate {len(migrations)} legacy skill location(s)[/cyan]')
         if agents_needs_update:
             console.print('[cyan]Would update root AGENTS.md block[/cyan]')
         return
@@ -337,8 +382,6 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
     updated_count = 0
     skill_updated_count = 0
     new_hashes = old_hashes.copy()
-
-    from sspec.skill_installer import SkillInstaller
 
     for upd in actions:
         path = upd.display_path
@@ -350,19 +393,19 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
                 continue
 
         # 区分 skill 和普通文件的更新
-        if upd.strategy in ('symlink', 'copy'):
+        if upd.is_skill:
             # Skill 更新
-            SkillInstaller._get_installer().update_skill(
+            apply_skill_update(
                 source=upd.template_path,
                 target=upd.dest_path,
-                strategy=upd.strategy,
+                strategy=upd.strategy or 'copy',
             )
             skill_updated_count += 1
 
             # 输出信息
             if upd.status == 'missing':
                 action = 'Created'
-            elif upd.strategy == 'symlink':
+            elif upd.strategy in ('symlink', 'junction'):
                 action = 'Updated symlink'
             else:
                 action = 'Updated'
@@ -381,7 +424,7 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
             new_hashes[upd.hash_key] = upd.new_hash
 
     # Update metadata
-    if updated_count or skill_updated_count or orphans:
+    if updated_count or skill_updated_count or orphans or migrations:
         meta['file_hashes'] = new_hashes
         meta['managed_skills'] = sorted(d.name for d in list_template_skills())
         meta['updated_at'] = datetime.now().isoformat()
@@ -402,6 +445,10 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
     total_updated = updated_count + skill_updated_count
     if agents_needs_update:
         total_updated += 1
+    if migrations:
+        total_updated += len(migrations)
     if orphans:
         console.print(f'[red]-[/red] Removed {len(orphans)} orphaned skill(s)')
+    if migrations:
+        console.print(f'[green]+[/green] Migrated {len(migrations)} legacy skill location(s)')
     console.print(f'[green]+[/green] Updated {total_updated} item(s)')

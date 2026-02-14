@@ -55,6 +55,15 @@ reference:
     type: "sub-change"
 ```
 
+## Archiving Root
+
+Before archiving root change:
+
+- [ ] All sub-changes archived?
+- [ ] Root tasks.md: all milestones `[x]`?
+- [ ] Valuable coordination notes preserved in reference/?
+- [ ] Linked spec-docs up to date?
+
 ## Pitfalls
 
 | Mistake | Fix |

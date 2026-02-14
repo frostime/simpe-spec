@@ -13,18 +13,32 @@ tldr: One-sentence summary for list views — fill this!
 
 # Request: {{NAME}}
 
-## Context
-<!-- Current situation, background info -->
+## Background
+<!-- Current situation, background information -->
 
 ## Problem
-<!-- What's not working or missing -->
+<!-- What is not working or missing -->
 
 ## Initial Direction
 <!-- Your rough idea or preferred direction — details are fine but not required.
 This becomes the starting point for the change's spec.md Section A/B. -->
 
-## Additional Context
-<!-- Constraints, preferences, related links -->
+## Success Criteria
+<!-- The conditions or criteria that indicate
+the problem has been resolved and meets the user's intention -->
+
+## Relational Context
+<!-- Constraints, preferences, related filelinks -->
+
+
+---
+
+## @AGENT
+<!-- What should Agent do to implement this request -->
+Please initiate the "request → change" workflow for this request.
+(You need to consult `sspec-change` SKILL)
+
+---
 
 <!-- ============================================================
      MICRO-CHANGE ZONE (optional)

@@ -11,6 +11,9 @@ updated: ""
 ## Tasks
 <!-- @REPLACE -->
 <!-- @RULE: Organize by phases from spec.md Section C. Each phase has verification.
+Phase emoji: 🚧 in progress | ✅ done | ⏳ pending
+Update progress after EACH task — not in batches.
+📚 Standards: sspec-change SKILL → doc-standards.md
 
 ### Phase 1: <n> 🚧
 - [ ] <Demo Task> `path/file.py`
@@ -23,8 +26,7 @@ updated: ""
 <!-- @REPLACE -->
 
 <!-- @RULE: Update percentage and status after EACH task completion.
-Use 🚧 (in progress), ✅ (done), ⏳ (pending).
-CLI `sspec change status` auto-calculates from checkboxes — keep tasks.md as source of truth. -->
+sspec change status auto-calculates from checkboxes — keep tasks.md as source of truth. -->
 
 **Overall**: 0%
 

@@ -174,10 +174,10 @@ def new(
     )
     console.print()
     console.print('[yellow]Next:[/yellow]')
-    console.print('  0. Read SSPEC skill (if not yet) for standards and best practices')
+    console.print('  0. Read sspec-change skill (if not yet) for standards and best practices')
     console.print('  1. Read spec.md / tasks.md, follow templates format and @RULE Hints')
     console.print('  2. Fill spec.md/tasks.md, run `sspec ask create` for validation')
-    console.print('  3. Update handover.md at end of each session')
+    console.print('  3. Update handover.md at end of each session (Consult sspec-memory skill)')
 
 
 # ============================================================================

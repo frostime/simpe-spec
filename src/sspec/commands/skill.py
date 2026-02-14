@@ -6,8 +6,8 @@ import click
 from rich.console import Console
 from rich.table import Table
 
-from sspec.core import SspecNotFoundError, get_sspec_root, list_skills
-from sspec.services.skill_service import create_skill_in_hub
+from sspec.core import SspecNotFoundError, get_sspec_root
+from sspec.services.skill_service import create_skill_in_hub, list_skills
 
 console = Console()
 

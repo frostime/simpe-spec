@@ -7,22 +7,21 @@ from pathlib import Path
 import pytest
 
 from sspec.core import (
-    SCHEMA_VERSION,
     SSPEC_DIR,
     ChangeStatus,
     RequestStatus,
-    SkillInfo,
     copy_template,
     find_sspec_root,
     get_template_dir,
-    get_workspace_skill_targets,
-    list_skills,
     list_template_skills,
     normalize_status,
-    parse_skill_metadata,
     render_template,
 )
-
+from sspec.services.skill_service import (
+    get_workspace_skill_targets,
+    list_skills,
+    parse_skill_metadata,
+)
 
 # ---------------------------------------------------------------------------
 # render_template
@@ -200,7 +199,9 @@ class TestCopyTemplate:
 class TestParseSkillMetadata:
     def test_valid_yaml_frontmatter(self, tmp_path: Path):
         skill = tmp_path / 'SKILL.md'
-        skill.write_text('---\nname: test-skill\ndescription: A test\n---\nBody\n', encoding='utf-8')
+        skill.write_text(
+            '---\nname: test-skill\ndescription: A test\n---\nBody\n', encoding='utf-8'
+        )
         meta = parse_skill_metadata(skill)
         assert meta['name'] == 'test-skill'
         assert meta['description'] == 'A test'
@@ -268,9 +269,7 @@ class TestListSkills:
 
     def test_skills_from_flat_file(self, sspec_root: Path):
         skill_file = sspec_root / 'skills' / 'flat.md'
-        skill_file.write_text(
-            '---\nname: flat-skill\ndescription: flat\n---\n', encoding='utf-8'
-        )
+        skill_file.write_text('---\nname: flat-skill\ndescription: flat\n---\n', encoding='utf-8')
         skills = list_skills(sspec_root)
         assert any(s['skill'] == 'flat-skill' for s in skills)
 

@@ -3,7 +3,7 @@
 import click
 from rich.console import Console
 
-from sspec.commands import ask, change, cmd, doc, project, request, skill, tool
+from sspec.commands import ask, change, cmd, doc, project, request, skill, tmp, tool
 
 console = Console()
 
@@ -31,6 +31,7 @@ main.add_command(doc.doc)
 main.add_command(ask.ask_group)
 main.add_command(cmd.cmd)
 main.add_command(tool.tool)
+main.add_command(tmp.tmp)
 
 
 if __name__ == '__main__':

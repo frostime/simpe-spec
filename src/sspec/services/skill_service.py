@@ -6,16 +6,22 @@ This module contains non-CLI business logic used by `sspec skill` commands.
 from __future__ import annotations
 
 import re
+import shutil
+import subprocess
+import sys
 from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import Any, Literal, TypedDict
 
 import yaml
 
 from sspec import __version__
 from sspec.core import SKILL_SUBDIR, SKILLS_DIR, SSPEC_DIR, WORKSPACE_DIRS
+from sspec.libs.hashing import compute_dir_hash
 from sspec.services.meta_service import load_meta, save_meta
+from sspec.skill_installer import check_path_link, detect_path_link, remove_path_link
 
 
 class SkillInfo(TypedDict):
@@ -131,6 +137,217 @@ def list_skills(sspec_root: Path) -> list[SkillInfo]:
 class CreateSkillResult:
     hub_dir: Path
     skill_name: str
+
+
+DominateStatus = Literal['linked', 'relinked', 'skipped', 'needs_relink', 'merged']
+
+
+@dataclass(frozen=True, slots=True)
+class DominateSkillsResult:
+    """Result for `sspec skill dominate` operation."""
+
+    status: DominateStatus
+    dominate_dir: Path
+    target_dir: Path
+    source_dir: Path
+    link_kind: str
+    current_target: Path | None = None
+    backup_path: Path | None = None
+    merged_skills: list[str] | None = None
+    conflict_skills: list[str] | None = None
+
+
+def _create_skills_link(*, source_dir: Path, target_dir: Path) -> str:
+    """Create a platform-specific link from target_dir to source_dir."""
+
+    # ---------------------------------------------------------------------
+    # Section 1: Ensure parent exists and clear pre-existing target node.
+    # ---------------------------------------------------------------------
+
+    target_dir.parent.mkdir(parents=True, exist_ok=True)
+
+    if target_dir.exists() or detect_path_link(target_dir) != 'none':
+        if check_path_link(target_dir):
+            remove_path_link(target_dir)
+        elif target_dir.is_dir():
+            shutil.rmtree(target_dir)
+        else:
+            target_dir.unlink()
+
+    # ---------------------------------------------------------------------
+    # Section 2: Create platform-specific link.
+    # - Windows: junction link
+    # - Others: symlink
+    # ---------------------------------------------------------------------
+    if sys.platform == 'win32':
+        cmd = [
+            'powershell',
+            '-NoProfile',
+            '-Command',
+            (
+                '$ErrorActionPreference="Stop"; '
+                f'New-Item -ItemType Junction -Path "{target_dir}" '
+                f'-Target "{source_dir}" | Out-Null'
+            ),
+        ]
+        subprocess.run(
+            cmd,
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        if check_path_link(target_dir, expected_target=source_dir):
+            return 'junction'
+        raise OSError(f'Failed to create junction link: {target_dir}')
+
+    target_dir.symlink_to(source_dir, target_is_directory=True)
+    if check_path_link(target_dir, expected_target=source_dir):
+        return 'symlink'
+    raise OSError(f'Failed to create symlink: {target_dir}')
+
+
+def _backup_and_merge_skills(
+    *,
+    sspec_root: Path,
+    external_skills_dir: Path,
+) -> tuple[Path, list[str], list[str]]:
+    """Backup external skills dir and merge changed skills into hub."""
+
+    # ---------------------------------------------------------------------
+    # Section 1: Full backup first (safety net for all follow-up decisions).
+    # ---------------------------------------------------------------------
+    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+    safe_name = external_skills_dir.parent.as_posix().replace('/', '_').replace(':', '')
+    backup_path = sspec_root / 'tmp' / 'skill-dominate' / f'{timestamp}_{safe_name}' / 'skills'
+
+    backup_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(external_skills_dir, backup_path)
+
+    # ---------------------------------------------------------------------
+    # Section 2: Merge non-conflicting skills into hub.
+    # Rule:
+    # - Missing in hub: copy in
+    # - Same content: skip
+    # - Different content: mark as conflict, keep hub version unchanged
+    # ---------------------------------------------------------------------
+    hub_skills_dir = sspec_root / 'skills'
+    hub_skills_dir.mkdir(parents=True, exist_ok=True)
+
+    merged_skills: list[str] = []
+    conflict_skills: list[str] = []
+    for child in external_skills_dir.iterdir():
+        if not child.is_dir() or not (child / 'SKILL.md').exists():
+            continue
+
+        hub_child = hub_skills_dir / child.name
+        if not hub_child.exists():
+            shutil.copytree(child, hub_child)
+            merged_skills.append(child.name)
+            continue
+
+        src_hash = compute_dir_hash(child, {})
+        dst_hash = compute_dir_hash(hub_child, {})
+        if src_hash == dst_hash:
+            continue
+
+        conflict_skills.append(child.name)
+
+    return backup_path, merged_skills, conflict_skills
+
+
+def dominate_skills_location(
+    *,
+    sspec_root: Path,
+    dominate_dir: Path,
+    force_relink: bool = False,
+) -> DominateSkillsResult:
+    """Dominate an external dir's `skills` by linking it to `.sspec/skills`."""
+
+    # ---------------------------------------------------------------------
+    # Section 1: Resolve canonical source/target directories.
+    # ---------------------------------------------------------------------
+    source_dir = sspec_root / 'skills'
+    if not source_dir.exists():
+        source_dir.mkdir(parents=True, exist_ok=True)
+
+    dominate_dir.mkdir(parents=True, exist_ok=True)
+    target_dir = dominate_dir / 'skills'
+
+    # ---------------------------------------------------------------------
+    # Section 2: Missing target -> create link directly.
+    # ---------------------------------------------------------------------
+    if not target_dir.exists() and detect_path_link(target_dir) == 'none':
+        link_kind = _create_skills_link(source_dir=source_dir, target_dir=target_dir)
+        return DominateSkillsResult(
+            status='linked',
+            dominate_dir=dominate_dir,
+            target_dir=target_dir,
+            source_dir=source_dir,
+            link_kind=link_kind,
+        )
+
+    # ---------------------------------------------------------------------
+    # Section 3: Existing link target.
+    # - Correct link: skip
+    # - Wrong link: ask caller for relink decision
+    # ---------------------------------------------------------------------
+    kind = detect_path_link(target_dir)
+    if kind != 'none':
+        current_target = target_dir.resolve(strict=False)
+        if check_path_link(target_dir, expected_target=source_dir):
+            return DominateSkillsResult(
+                status='skipped',
+                dominate_dir=dominate_dir,
+                target_dir=target_dir,
+                source_dir=source_dir,
+                link_kind=kind,
+                current_target=current_target,
+            )
+
+        if not force_relink:
+            return DominateSkillsResult(
+                status='needs_relink',
+                dominate_dir=dominate_dir,
+                target_dir=target_dir,
+                source_dir=source_dir,
+                link_kind=kind,
+                current_target=current_target,
+            )
+
+        remove_path_link(target_dir)
+        new_kind = _create_skills_link(source_dir=source_dir, target_dir=target_dir)
+        return DominateSkillsResult(
+            status='relinked',
+            dominate_dir=dominate_dir,
+            target_dir=target_dir,
+            source_dir=source_dir,
+            link_kind=new_kind,
+            current_target=current_target,
+        )
+
+    # ---------------------------------------------------------------------
+    # Section 4: Existing real directory.
+    # Backup + safe merge + rebuild link.
+    # ---------------------------------------------------------------------
+    if target_dir.is_dir():
+        backup_path, merged_skills, conflict_skills = _backup_and_merge_skills(
+            sspec_root=sspec_root,
+            external_skills_dir=target_dir,
+        )
+        shutil.rmtree(target_dir)
+        link_kind = _create_skills_link(source_dir=source_dir, target_dir=target_dir)
+        return DominateSkillsResult(
+            status='merged',
+            dominate_dir=dominate_dir,
+            target_dir=target_dir,
+            source_dir=source_dir,
+            link_kind=link_kind,
+            backup_path=backup_path,
+            merged_skills=merged_skills,
+            conflict_skills=conflict_skills,
+        )
+
+    raise ValueError(f'Cannot dominate non-directory target: {target_dir}')
 
 
 def create_skill_in_hub(

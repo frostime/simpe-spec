@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sspec.config import SspecConfig, get_config
+from sspec.config import GlobalSspecConfig, SspecConfig, get_config, get_global_config
 
 
 class TestSspecConfig:
@@ -38,3 +38,25 @@ class TestSspecConfig:
     def test_get_config_convenience(self, tmp_path: Path):
         config = get_config(tmp_path)
         assert isinstance(config, SspecConfig)
+
+
+class TestGlobalSspecConfig:
+    def test_defaults_when_no_global_file(self, tmp_path: Path):
+        config = GlobalSspecConfig.load(tmp_path / 'missing.yaml')
+        assert config.sspec_editor == 'code {file}'
+
+    def test_save_and_reload(self, tmp_path: Path):
+        path = tmp_path / 'sspec.config.yaml'
+        config = GlobalSspecConfig(sspec_editor='zed {file}')
+        config.save(path)
+
+        loaded = GlobalSspecConfig.load(path)
+        assert loaded.sspec_editor == 'zed {file}'
+
+    def test_get_global_config_convenience(self, tmp_path: Path):
+        path = tmp_path / 'sspec.config.yaml'
+        path.write_text('SSPEC_EDITOR: nvim {file}\n', encoding='utf-8')
+
+        config = get_global_config(path)
+        assert isinstance(config, GlobalSspecConfig)
+        assert config.sspec_editor == 'nvim {file}'

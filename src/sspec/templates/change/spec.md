@@ -27,22 +27,53 @@ Simple changes: single paragraph. Complex: split "Current Situation" + "User Req
 ## B. Proposed Solution
 <!-- @REPLACE -->
 
+<!-- @RULE: Design document — What & Why. Include interface design, data models, key logic.
+
+Required:
+- Approach: Core idea (1-3 paragraphs) + why this over alternatives
+- Key Changes: Major modules/subsystems affected
+
+Optional Sub-sections (use when applicable):
+- ### Interface Design: Function signatures, class structures, API contracts
+- ### Data Model: Core data types, state machines, data flow
+- ### Key Logic: Pseudocode, edge cases, critical decision points
+
+Complexity Scaling: Consult sspec-change SKILL
+
+📚 Standards: sspec-change SKILL → doc-standards.md
+-->
+
 ### Approach
-<!-- @RULE: Core idea (1-3 paragraphs) + why this over alternatives -->
+<!-- Core idea + why this way -->
 
 ### Key Changes
-<!-- @RULE: List major changes: modules, interfaces, dependencies -->
+<!-- Major modules, interfaces, dependencies -->
 
 ## C. Implementation Strategy
 <!-- @REPLACE -->
 
-<!-- @RULE: File-level breakdown. Format:
-### Phase N: <n>
-- `path/file.py` — create|modify, <what>
+<!-- @RULE: Execution plan — How to organize phases. Reference Section B's design, don't repeat it.
+
+Content:
+- Phase division: Break work into logical phases
+- File scope per phase: Which files affected + brief what (not detailed how — that's tasks.md)
+- Dependencies: What must complete first (if applicable)
+- Risks & Mitigations: Technical risks + mitigation strategies
+
+Format:
+### Phase N: <name>
+- `path/file.py` — create|modify, brief what
+- Reference Section B design ("implement interface per B")
 
 ### Risks & Dependencies
 - <external deps, risks, mitigation>
-📚 Standards: sspec-change SKILL → doc-standards.md -->
+
+Complexity:
+- single/sub: File-level mentions + brief what
+- root: Milestone-level (one phase per sub-change, goal/scope/deps)
+
+📚 Standards: sspec-change SKILL → doc-standards.md
+-->
 
 ## D. Blockers & Feedback
 <!-- @REPLACE -->

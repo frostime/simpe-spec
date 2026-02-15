@@ -27,7 +27,8 @@ changes/<root>/
 changes/<sub>/
 ├── spec.md          # Focused scope (change-type: sub)
 ├── tasks.md         # File-level tasks
-└── handover.md
+├── handover.md
+└── reference/       # Design docs for complex change task
 ```
 
 ## Workflow

@@ -12,15 +12,18 @@ Change lifecycle management. From scale assessment to archiving.
 
 ## Playbook
 
-| You need to... | Action |
-|----------------|--------|
-| Decide if this needs a change | Assess Scale below |
-| Create and fill spec.md / tasks.md | Read [doc-standards] |
-| Set up multi-change structure | Read [multi-change] |
-| Handle blockers, rejection, design loops | Edge Cases below |
-| Check before PLANNING→DOING | Pre-Execution Checklist below |
-| Check before DOING→REVIEW | Pre-Review Checklist below |
-| Update handover.md during/after work | 📚 Consult `sspec-memory` SKILL |
+```
+IF need to assess scale                → Assess Scale
+IF creating spec.md/tasks.md           → [doc-standard](./references/doc-standards.md) + [doc-examples](./references/doc-examples.md)
+IF setting up multi-change             → [multi-change](./references/multi-change.md)
+
+IF checking before PLANNING→DOING      → Pre-Execution Checklist
+IF checking before DOING→REVIEW        → Pre-Review Checklist
+IF handling blockers/rejection         → Edge Cases
+
+IF updating handover.md                → Read SKILL `sspec-memory`
+IF uncertain about splitting           → @ask
+```
 
 ---
 
@@ -73,20 +76,28 @@ These commands are designed for Agent autonomous execution:
 
 ## Document Standards Summary
 
-Templates use `@RULE` markers as inline reminders. The authoritative standards live in [doc-standards.md](./references/doc-standards.md).
+Templates use `@RULE` markers as inline reminders.
+
+📚 **Standards & rules**: [doc-standards.md](./references/doc-standards.md)
+📚 **Detailed examples**: [doc-examples.md](./references/doc-examples.md)
+
+**Quick Reference**:
 
 ### spec.md Quick Reference
 
-| Section | Key Requirement |
-|---------|----------------|
-| A. Problem | Quantify impact: "[metric] causing [impact]" |
-| B. Solution | Approach + rationale (why this over alternatives) |
-| C. Implementation | File-level tasks with `path/file.py` — create\|modify, what |
-| D. Blockers | Dated entries: "Blocker (YYYY-MM-DD): what \| needed" |
+| Section | Key Requirement | Content |
+|---------|----------------|---------|
+| A. Problem | Quantify impact | "[metric] causing [impact]" — not "need to refactor" |
+| B. Solution | Design doc — What & Why | Approach + rationale + interfaces/data/logic (don't repeat in C) |
+| C. Implementation | Execution plan — How | Reference B, list phases/files, don't repeat B's design |
+| D. Blockers | Dated entries | "Blocker (YYYY-MM-DD): what \| needed" |
 
-**Frontmatter**: `status` (PLANNING\|DOING\|REVIEW\|DONE\|BLOCKED), `change-type` (single\|sub\|root), `reference` (array of links to request/root/doc).
+**Core Distinction**:
+- **B = Design** (interfaces, data models, key logic) — explain WHY and HOW it works
+- **C = Plan** (phases, file scope) — organize execution, reference B not repeat
+- **tasks.md = Checklist** (file-level tasks, verification) — actionable items
 
-**Simple vs Complex**: For simple changes (≤5 files, clear scope), Section A can be a single paragraph, Section C can be a flat list. Don't over-structure small work.
+**Frontmatter**: `status` (PLANNING|DOING|REVIEW|DONE|BLOCKED), `change-type` (single|sub|root), `reference` (array of links).
 
 ### tasks.md Quick Reference
 
@@ -181,5 +192,6 @@ Before transitioning DOING → REVIEW:
 | When | Load |
 |------|------|
 | Filling or reviewing spec.md / tasks.md | [doc-standards.md](./references/doc-standards.md) |
+| Need concrete examples | [doc-examples.md](./references/doc-examples.md) |
 | Setting up multi-change structure | [multi-change.md](./references/multi-change.md) |
 | Filling or reviewing handover.md | 📚 `sspec-memory` SKILL |

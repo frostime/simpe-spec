@@ -4,13 +4,13 @@ Detailed patterns organized by task type. Load this file when the task requires 
 
 ## Table of Contents
 
-1. [Content Reading Patterns](#content-reading-patterns)
-2. [Advanced Search Patterns](#advanced-search-patterns)
-3. [File Discovery Patterns](#file-discovery-patterns)
-4. [Metadata & Inspection](#metadata--inspection)
-5. [Batch Operations](#batch-operations)
-6. [Output Formatting](#output-formatting)
-7. [Performance Patterns](#performance-patterns)
+- [Content Reading Patterns](#content-reading-patterns) (L17-48) — Get-Content, Select-String
+- [Advanced Search Patterns](#advanced-search-patterns) (L51-86) — Regex, context, multi-file
+- [File Discovery Patterns](#file-discovery-patterns) (L89-123) — Get-ChildItem, filtering
+- [Metadata & Inspection](#metadata--inspection) (L126-163) — Properties, hashing, comparing
+- [Batch Operations](#batch-operations) (L166-198) — Renaming, moving, transforming
+- [Output Formatting](#output-formatting) (L201-235) — Tables, custom objects, export
+- [Performance Patterns](#performance-patterns) (L238-END) — Optimization, parallelization
 
 ---
 

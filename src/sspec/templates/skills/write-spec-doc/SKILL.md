@@ -9,18 +9,18 @@ metadata:
 # Write-Spec
 
 This skill covers:
-- [When to Create](#when-to-create) - Decision criteria
-- [Frontmatter](#frontmatter) - Required metadata fields
-- [Body Structure](#body-structure) - Template and organization
-- [Scope Definition](#scope-definition) - File path patterns
-- [Style Guide](#style-guide) - What to include/exclude
-- [Diagramming](#diagramming) - Mermaid examples
-- [Relationship to Changes](#relationship-to-changes) - Keeping specs current
-- [Deprecation](#deprecation) - Archiving obsolete specs
-- [Multi-File Specs](#multi-file-specs) - Complex subsystems
-- [Examples](#examples) - Good vs bad specs
+- [When to Create](#when-to-create) (L25-42) - Decision criteria
+- [Frontmatter](#frontmatter) (L43-69) - Required metadata fields
+- [Body Structure](#body-structure) (L70-107) - Template and organization
+- [Scope Definition](#scope-definition) (L108-123) - File path patterns
+- [Style Guide](#style-guide) (L124-154) - What to include/exclude
+- [Diagramming](#diagramming) (L155-179) - Mermaid examples
+- [Relationship to Changes](#relationship-to-changes) (L180-198) - Keeping specs current
+- [Deprecation](#deprecation) (L199-207) - Archiving obsolete specs
+- [Multi-File Specs](#multi-file-specs) (L208-225) - Complex subsystems
+- [Examples](#examples) (L226-235) - Good vs bad specs
+- [Maintenance Checklist](#maintenance-checklist) (L236-END) - Review triggers
 
----
 
 ## When to Create
 

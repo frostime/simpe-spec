@@ -29,10 +29,10 @@ sspec maintains knowledge at four levels. Each has different scope and lifecycle
 
 | Level | Carrier | Lifecycle | Write Timing | Example |
 |-------|---------|-----------|-------------|---------|
+| **Record-level** | `requests/` + `asks/` | Permanent audit trail | On creation (CLI-managed) | Why we started this work; what user decided |
 | **Change-level** | `handover.md` | Created with change, archived with change | During work + session end | "Redis chosen over Memcached for per-key TTL" |
 | **Project-level** | `project.md` Notes & Conventions | Project lifetime | Promoted from handover at session end | "2026-02-10: ruff format breaks multiline strings in templates" |
 | **Specification-level** | `spec-docs/` | Survives beyond any single change | On architecture changes | Full auth system design document |
-| **Record-level** | `requests/` + `asks/` | Permanent audit trail | On creation (CLI-managed) | Why we started this work; what user decided |
 
 ### Record-Level: requests/ and asks/
 

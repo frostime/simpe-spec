@@ -4,6 +4,9 @@
 **Description**: {{TODO}}
 **Repo**: {{TODO}}
 
+## Project Overview
+<!-- [Describe project's purpose and overview design] -->
+
 ## Tech Stack
 - [List primary technologies, e.g. TypeScript, React, Node.js]
 
@@ -21,6 +24,10 @@ Keep ≤10 entries. Agent uses this to orient in the codebase. -->
 One-liners only. If a convention needs multi-paragraph explanation → write a spec-doc.
 Examples: "snake_case for Python, camelCase for JS", "All API routes: /api/v1/*",
 "Never commit .env files", "Prefer composition over inheritance" -->
+
+**Architecture Patterns**
+**Domain Context**
+**Important Constraints**
 
 ## Notes
 <!-- @RULE: Project-level memory. Append-only log of learnings, gotchas, preferences.

@@ -10,7 +10,7 @@ from typing import Any, Literal
 
 from sspec.core import UPDATABLE_FILES, list_template_skills
 from sspec.libs.hashing import compute_dir_hash, compute_file_hash, compute_hash
-from sspec.skill_installer import check_path_link, remove_path_link
+from sspec.skill_installer import SkillStrategy, check_path_link, remove_path_link
 
 UpdateStatus = Literal['missing', 'current', 'updatable', 'modified', 'unknown']
 
@@ -50,7 +50,7 @@ class LegacySkillMigration:
     merged_custom_skills: list[str]
 
 
-def apply_skill_update(*, source: Path, target: Path, strategy: str) -> None:
+def apply_skill_update(*, source: Path, target: Path, strategy: SkillStrategy) -> None:
     """Apply skill update through service boundary."""
     from sspec.skill_installer import SkillInstaller
 

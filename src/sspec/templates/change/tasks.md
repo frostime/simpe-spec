@@ -26,7 +26,7 @@ Update progress after EACH task — not in batches.
 <!-- @REPLACE -->
 
 <!-- @RULE: Update percentage and status after EACH task completion.
-sspec change status auto-calculates from checkboxes — keep tasks.md as source of truth. -->
+sspec change find <n> auto-calculates from checkboxes — keep tasks.md as source of truth. -->
 
 **Overall**: 0%
 

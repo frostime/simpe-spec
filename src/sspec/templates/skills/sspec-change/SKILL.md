@@ -64,9 +64,8 @@ These commands are designed for Agent autonomous execution:
 | `sspec change new <name>` | Creating a new change | `<name>` is a slug, e.g. `auth-refactor` |
 | `sspec change new --from <request>` | Creating from a request | `<request>` accepts name (fuzzy) or file path |
 | `sspec change new <name> --root` | Multi-change root | Generates root templates (milestones, not file-tasks) |
-| `sspec change find <name>` | Locating a change | Fuzzy match; returns path(s) |
+| `sspec change find <name>` | Locating a change | Fuzzy match; returns details of change |
 | `sspec change list` | When can't locate change | Lists all active changes with status |
-| `sspec change status` | Check progress | Auto-calculates from tasks.md checkboxes |
 
 **Ergonomics**: `--from` is the most common path — Agent typically has a request to start from. The name derivation means Agent doesn't need to invent a name.
 

@@ -7,7 +7,6 @@ import questionary
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
-from rich.table import Table
 
 from sspec.core import (
     ARCHIVE_DIR,
@@ -88,6 +87,28 @@ def _interactive_select_change(matches: list[Path], name: str) -> Path:
     if selected is None:
         raise click.ClickException('Cancelled')
     return selected
+
+
+def _parse_linked_change_info(sspec_root: Path, request_info: RequestInfo):
+    """Parse linked change info from request.attach_change when available.
+
+    Returns parsed ChangeInfo for active changes only; archived/missing targets return None.
+    """
+    attach_change = request_info.attach_change
+    if not attach_change:
+        return None
+
+    spec_path = Path(attach_change)
+    if not spec_path.is_absolute():
+        spec_path = sspec_root.parent / spec_path
+
+    change_path = spec_path.parent if spec_path.suffix == '.md' else spec_path
+    if not change_path.exists() or change_path.parent.name == ARCHIVE_DIR:
+        return None
+
+    from sspec.services.change_service import parse_change
+
+    return parse_change(change_path)
 
 
 # ============================================================================
@@ -374,7 +395,12 @@ def link_request_cmd(request_name: str, change_name: str) -> None:
 @request.command(name='archive')
 @click.argument('name', required=False)
 @click.option('--yes', '-y', 'auto_yes', is_flag=True, help='Skip confirmation prompts')
-def archive_request_cmd(name: str | None, auto_yes: bool) -> None:
+@click.option(
+    '--with-change',
+    is_flag=True,
+    help='Archive linked change(s) together when archiving request(s)',
+)
+def archive_request_cmd(name: str | None, auto_yes: bool, with_change: bool) -> None:
     """Archive requests.
 
     Without arguments, shows interactive multi-select for archivable requests.
@@ -387,7 +413,7 @@ def archive_request_cmd(name: str | None, auto_yes: bool) -> None:
 
     # Multi-select mode
     if not name:
-        _archive_requests_interactive(sspec_root)
+        _archive_requests_interactive(sspec_root, with_change=with_change)
         return
 
     # Single request mode: resolve → parse → archive
@@ -397,10 +423,15 @@ def archive_request_cmd(name: str | None, auto_yes: bool) -> None:
     if not request_info:
         raise click.ClickException(f"Cannot parse request '{name}'")
 
-    _archive_single_request(sspec_root, request_info, auto_yes)
+    _archive_single_request(
+        sspec_root,
+        request_info,
+        auto_yes,
+        with_change=with_change,
+    )
 
 
-def _archive_requests_interactive(sspec_root: Path) -> None:
+def _archive_requests_interactive(sspec_root: Path, with_change: bool = False) -> None:
     """Interactive multi-select for archiving requests."""
     items = list_requests(sspec_root)
     active = [r for r in items if not r.archived]
@@ -412,7 +443,12 @@ def _archive_requests_interactive(sspec_root: Path) -> None:
     if len(active) == 1:
         req = active[0]
         if questionary.confirm(f"Archive '{req.name}'?", default=True).ask():
-            _archive_single_request(sspec_root, req, auto_yes=True)
+            _archive_single_request(
+                sspec_root,
+                req,
+                auto_yes=True,
+                with_change=with_change,
+            )
         else:
             console.print('[yellow]Cancelled[/yellow]')
         return
@@ -446,7 +482,12 @@ def _archive_requests_interactive(sspec_root: Path) -> None:
     archived_count = 0
     for req in selected:
         try:
-            _archive_single_request(sspec_root, req, auto_yes=True)
+            _archive_single_request(
+                sspec_root,
+                req,
+                auto_yes=True,
+                with_change=with_change,
+            )
             archived_count += 1
         except Exception as e:
             console.print(f'[red]Failed to archive {req.name}: {e}[/red]')
@@ -459,9 +500,12 @@ def _archive_single_request(
     sspec_root: Path,
     request_info: RequestInfo,
     auto_yes: bool,
+    with_change: bool = False,
 ) -> None:
     """Archive a single request."""
     name = request_info.name
+
+    linked_change = _parse_linked_change_info(sspec_root, request_info) if with_change else None
 
     if not auto_yes:
         if not questionary.confirm(f"Archive '{name}'?", default=True).ask():
@@ -471,3 +515,18 @@ def _archive_single_request(
     dest_path = archive_request(sspec_root, request_info)
     rel_path = dest_path.relative_to(sspec_root.parent)
     console.print(f'[green]✓[/green] Archived to: {rel_path}')
+
+    if linked_change:
+        from sspec.services.change_service import archive_change
+
+        try:
+            change_archive_path = archive_change(sspec_root, linked_change)
+            change_rel_path = change_archive_path.relative_to(sspec_root.parent)
+            console.print(
+                f'[green]✓[/green] Archived linked change: {linked_change.name} → {change_rel_path}'
+            )
+        except Exception as e:
+            console.print(
+                f'[yellow]Warning:[/yellow] Failed to archive linked change '
+                f'{linked_change.name}: {e}'
+            )

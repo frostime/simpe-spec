@@ -6,7 +6,6 @@ import click
 import questionary
 from rich.console import Console
 from rich.panel import Panel
-from rich.table import Table
 
 from sspec.core import (
     ARCHIVE_DIR,
@@ -46,6 +45,46 @@ def _interactive_select_change(matches: list[Path], name: str) -> Path:
     if selected is None:
         raise click.ClickException('Cancelled')
     return selected
+
+
+def _parse_linked_requests(sspec_root: Path, change_info: ChangeInfo):
+    """Parse linked active requests from change frontmatter references."""
+    from sspec.services.request_service import parse_request_file
+
+    references = change_info.frontmatter.get('reference', [])
+    if not isinstance(references, list):
+        return []
+
+    linked_requests = []
+    seen_paths: set[str] = set()
+
+    for ref in references:
+        if not isinstance(ref, dict):
+            continue
+        if ref.get('type') != 'request':
+            continue
+
+        source = ref.get('source')
+        if not isinstance(source, str) or not source:
+            continue
+
+        request_path = Path(source)
+        if not request_path.is_absolute():
+            request_path = sspec_root.parent / request_path
+
+        if not request_path.exists() or request_path.parent.name == ARCHIVE_DIR:
+            continue
+
+        resolved_str = str(request_path.resolve())
+        if resolved_str in seen_paths:
+            continue
+        seen_paths.add(resolved_str)
+
+        info = parse_request_file(request_path)
+        if info and not info.archived:
+            linked_requests.append(info)
+
+    return linked_requests
 
 
 @click.group()
@@ -304,7 +343,9 @@ def _print_changes_list(changes: list[ChangeInfo], dim: bool = False) -> None:
 #     try:
 #         sspec_root = get_sspec_root()
 #     except SspecNotFoundError:
-#         raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
+#         raise click.ClickException(
+#             "Not a sspec project. Run 'sspec project init' first."
+#         ) from None
 
 #     if not name:
 #         _list_changes(sspec_root, include_all=False)
@@ -416,7 +457,12 @@ def find(query: str) -> None:
 @change.command()
 @click.argument('name', required=False)
 @click.option('--yes', '-y', is_flag=True, help='Skip confirmation')
-def archive(name: str | None, yes: bool) -> None:
+@click.option(
+    '--with-request',
+    is_flag=True,
+    help='Archive linked request(s) together when archiving change(s)',
+)
+def archive(name: str | None, yes: bool, with_request: bool) -> None:
     """Archive a completed change.
 
     Without arguments, shows interactive multi-select for archivable changes.
@@ -431,7 +477,7 @@ def archive(name: str | None, yes: bool) -> None:
 
     # Multi-select mode
     if not name:
-        _archive_changes_interactive(sspec_root)
+        _archive_changes_interactive(sspec_root, with_request=with_request)
         return
 
     # Single change mode: fuzzy lookup → parse → archive
@@ -447,10 +493,15 @@ def archive(name: str | None, yes: bool) -> None:
         change_path = matches[0]
 
     change_info = parse_change(change_path)
-    _archive_single_change(sspec_root, change_info, yes)
+    _archive_single_change(
+        sspec_root,
+        change_info,
+        yes,
+        with_request=with_request,
+    )
 
 
-def _archive_changes_interactive(sspec_root: Path) -> None:
+def _archive_changes_interactive(sspec_root: Path, with_request: bool = False) -> None:
     """Interactive multi-select for archiving changes."""
     changes = list_changes(sspec_root)
     active = [c for c in changes if not c.archived]
@@ -461,7 +512,12 @@ def _archive_changes_interactive(sspec_root: Path) -> None:
     if len(active) == 1:
         change_info = active[0]
         if questionary.confirm(f"Archive '{change_info.name}'?", default=True).ask():
-            _archive_single_change(sspec_root, change_info, yes=True)
+            _archive_single_change(
+                sspec_root,
+                change_info,
+                yes=True,
+                with_request=with_request,
+            )
         else:
             console.print('[yellow]Cancelled[/yellow]')
         return
@@ -494,7 +550,12 @@ def _archive_changes_interactive(sspec_root: Path) -> None:
     archived_count = 0
     for change_info in selected:
         try:
-            _archive_single_change(sspec_root, change_info, yes=True)
+            _archive_single_change(
+                sspec_root,
+                change_info,
+                yes=True,
+                with_request=with_request,
+            )
             archived_count += 1
         except Exception as e:
             console.print(f'[red]Failed to archive {change_info.name}: {e}[/red]')
@@ -503,9 +564,15 @@ def _archive_changes_interactive(sspec_root: Path) -> None:
     console.print(f'[green]✓[/green] Archived {archived_count}/{len(selected)} change(s)')
 
 
-def _archive_single_change(sspec_root: Path, change_info: ChangeInfo, yes: bool) -> None:
+def _archive_single_change(
+    sspec_root: Path,
+    change_info: ChangeInfo,
+    yes: bool,
+    with_request: bool = False,
+) -> None:
     """Archive a single change."""
     name = change_info.path.name
+    linked_requests = _parse_linked_requests(sspec_root, change_info) if with_request else []
 
     if not yes:
         if not questionary.confirm(f"Archive '{name}'?", default=True).ask():
@@ -516,6 +583,23 @@ def _archive_single_change(sspec_root: Path, change_info: ChangeInfo, yes: bool)
         archive_path = archive_change(sspec_root, change_info)
         rel_path = archive_path.relative_to(sspec_root.parent)
         console.print(f'[green]+[/green] Archived to: {rel_path}')
+
+        if linked_requests:
+            from sspec.services.request_service import archive_request
+
+            for request_info in linked_requests:
+                try:
+                    request_archive_path = archive_request(sspec_root, request_info)
+                    request_rel_path = request_archive_path.relative_to(sspec_root.parent)
+                    console.print(
+                        f'[green]+[/green] Archived linked request: '
+                        f'{request_info.name} → {request_rel_path}'
+                    )
+                except Exception as e:
+                    console.print(
+                        f'[yellow]Warning:[/yellow] Failed to archive linked request '
+                        f'{request_info.name}: {e}'
+                    )
     except ChangeNotFoundError as e:
         raise click.ClickException(str(e)) from e
     except ValueError as e:

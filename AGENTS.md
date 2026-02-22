@@ -143,7 +143,7 @@ This saves cost in Copilot (tool calls don't consume turns).
 <!-- SSPEC:START -->
 # .sspec Agent Protocol
 
-SSPEC_SCHEMA::7.1
+SSPEC_SCHEMA::7.2
 
 ## 0. Protocol Overview
 
@@ -355,4 +355,16 @@ ON uncertainty:
     Consult SKILL              → sspec-change, sspec-memory, sspec-ask, write-spec-doc
     OR @ask
 ```
+
+## SKILL of SKILL
+
+An Agent SKILL may include additional referenced files for progressive disclosure to manage context.
+When `SKILL.md` links to other reference files, those specified files must be read.
+
+Example: A skill file located at `<parent>/<name>/SKILL.md`
+```SKILL.md
+If xxx, please read [example](references/code-example.md)
+```
+In this case, read `<parent>/<name>/references/code-example.md` as instructed.
+
 <!-- SSPEC:END -->

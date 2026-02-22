@@ -1,4 +1,4 @@
-<!-- SSPEC:START -->
+﻿<!-- SSPEC:START -->
 # .sspec Agent Protocol
 
 SSPEC_SCHEMA::{{SCHEMA_VERSION}}
@@ -214,15 +214,16 @@ ON uncertainty:
     OR @ask
 ```
 
-## SKILL of SKILL
+## SKILL of SKILLs
 
-An Agent SKILL may include additional referenced files for progressive disclosure to manage context.
-When `SKILL.md` links to other reference files, those specified files must be read.
+SKILLs use **progressive disclosure**: `SKILL.md` is the entry point, details are dispatched to subfiles to manage context size.
 
-Example: A skill file located at `<parent>/<name>/SKILL.md`
-```SKILL.md
-If xxx, please read [example](references/code-example.md)
+```example
+<Root>/<name>/
+├── SKILL.md ← Always existed entry
+└── references.md ← May exists
 ```
-In this case, read `<parent>/<name>/references/code-example.md` as instructed.
 
+**Rule**: When `SKILL.md` links to a reference file and instructs to read it (e.g. `IF xxx read [examples](./references.md)` in SKILL.md), **MUST read that file** (`<Root>/<name>/references.md`).
+**SKILL**: Use list dir and `sspec-mdtoc` SKILL to analyse SKILL folder.
 <!-- SSPEC:END -->

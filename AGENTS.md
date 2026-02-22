@@ -140,7 +140,7 @@ This saves cost in Copilot (tool calls don't consume turns).
 
 
 
-<!-- SSPEC:START -->
+﻿﻿<!-- SSPEC:START -->
 # .sspec Agent Protocol
 
 SSPEC_SCHEMA::7.2
@@ -356,15 +356,22 @@ ON uncertainty:
     OR @ask
 ```
 
-## SKILL of SKILL
+## SKILL of SKILLs
 
-An Agent SKILL may include additional referenced files for progressive disclosure to manage context.
-When `SKILL.md` links to other reference files, those specified files must be read.
+SKILLs use **progressive disclosure**: `SKILL.md` is the entry point, may not complete. Details are dispatched to subfiles to manage context size.
 
-Example: A skill file located at `<parent>/<name>/SKILL.md`
-```SKILL.md
-If xxx, please read [example](references/code-example.md)
+Example
 ```
-In this case, read `<parent>/<name>/references/code-example.md` as instructed.
+.sspec/skills/<name>/
+├── SKILL.md   ← Entry point
+└── references/examples.md
+```
+```SKILL.md
+IF xxx, read  [examples](./references/examples.md)
+```
+
+**Rule**:
+- When `SKILL.md` links to a reference file and instructs to read it, **MUST read that file**.
+- Use list dir and `sspec tool mdtoc <dir>` to analyse SKILL folder.
 
 <!-- SSPEC:END -->

@@ -1,19 +1,21 @@
 {
   "schema_version": "6.0",
-  "sspec_version": "0.20.3.dev4+g6aaf68275.d20260215",
+  "sspec_version": "0.21.2.dev0+g1d28c376f.d20260222",
   "created_at": "2026-02-07T18:42:39.297150",
-  "updated_at": "2026-02-15T23:29:44.184394",
+  "updated_at": "2026-02-22T15:30:37.782644",
   "file_hashes": {
     "skills/use-powershell": "c14a032ce16697b8",
     "skills/write-patch": "53a7cb880be7ee69",
     "skills/write-spec-doc": "e82f5bb62b549e30",
     "skills/sspec-ask": "f30affe23e728e27",
     "skills/sspec-change": "40633c42387b8f42",
-    "skills/sspec-memory": "381420fc6c23b91c"
+    "skills/sspec-memory": "381420fc6c23b91c",
+    "skills/sspec-mdtoc": "b6ebb07406e2501f"
   },
   "managed_skills": [
     "sspec-ask",
     "sspec-change",
+    "sspec-mdtoc",
     "sspec-memory",
     "use-powershell",
     "write-patch",

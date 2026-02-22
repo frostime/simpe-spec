@@ -2,7 +2,7 @@
   "schema_version": "6.0",
   "sspec_version": "0.21.2.dev0+g1d28c376f.d20260222",
   "created_at": "2026-02-07T18:42:39.297150",
-  "updated_at": "2026-02-22T15:30:37.782644",
+  "updated_at": "2026-02-22T15:59:58.409321",
   "file_hashes": {
     "skills/use-powershell": "c14a032ce16697b8",
     "skills/write-patch": "53a7cb880be7ee69",
@@ -10,7 +10,7 @@
     "skills/sspec-ask": "f30affe23e728e27",
     "skills/sspec-change": "40633c42387b8f42",
     "skills/sspec-memory": "381420fc6c23b91c",
-    "skills/sspec-mdtoc": "b6ebb07406e2501f"
+    "skills/sspec-mdtoc": "a9d3dea08e9d0c62"
   },
   "managed_skills": [
     "sspec-ask",

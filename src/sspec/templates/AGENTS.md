@@ -12,14 +12,14 @@ SSPEC is a document-driven AI collaboration framework. All planning, tracking, a
 **Folder Structure**:
 ```
 .sspec/
-├── project.md              # Identity, conventions, accumulated memory notes
-├── spec-docs/              # Formal specifications (architecture, APIs, standards)
-├── changes/<n>/            # Active change proposals
+├── project.md    # Identity, conventions, accumulated memory notes
+├── spec-docs/    # Formal specifications (architecture, APIs, standards)
+├── changes/<n>/    # Active change proposals
 │   ├── spec.md | tasks.md | handover.md  # Required
-│   └── reference/ | script/              # Optional
-├── requests/               # Lightweight proposals (user intent record)
-├── tmp/                    # Informal proposals, plans, scripts, etc., for user review.
-└── asks/                   # Human-in-the-loop Q&A records (decision evidence)
+│   └── reference/    # Optional
+├── requests/    # Lightweight proposals (user intent record)
+├── tmp/    # Informal proposals, plans, scripts, etc., for user review.
+└── asks/    # Human-in-the-loop Q&A records (decision evidence)
 ```
 
 ---
@@ -156,8 +156,6 @@ Formal specifications (architecture, API contracts, standards). Location: `.sspe
 
 For knowledge that is **too complex for project.md** and **surviving beyond any single change**.
 
-#### `@doc <n>`
-
 New: `sspec doc new "<n>" [--dir]` → follow write-spec-doc SKILL.
 Update: Read existing → apply changes → update `updated` field.
 
@@ -167,18 +165,16 @@ Update: Read existing → apply changes → update `updated` field.
 
 ## 5. SCOPE: sspec ask
 
-**USE ACTIVELY** — Don't hesitate to ask. Better to confirm than guess wrong.
+`@ask` indicates:
+1. Use Agent Env built in `question` tool (For mini issue)
+2. Use SSPEC built in `ask` CLI (For complex issue)
+  1. Run `sspec ask create <topic>`
+  2. Fill ASK file
+  3. Run `sspec ask prompt <file>`
 
-```
-sspec ask create <topic>     # Create ask template (.py)
-sspec ask prompt <file>      # Execute and collect answer → auto-converts to .md record
-```
-
-**NOTE**: Long reusable doc should not go in ASK file → write in `.sspec/tmp` and ref it in QUESTION.
-
-#### `@ask`
-
-**MUST** trigger when: confused, before session end, tool call rejected, plan needs approval.
+**RULE**:
+- If user specified `@sspec-ask` → **MUST ASK** user when: plan end and turns execution, tool call rejected(ask reason), all tasks complete and ready to end.
+- Long reusable doc should not go in ASK file → write in `.sspec/tmp` and ref it in QUESTION.
 
 📚 Consult `sspec-ask` SKILL for triggers, workflow, patterns
 

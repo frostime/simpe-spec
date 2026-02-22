@@ -140,7 +140,7 @@ This saves cost in Copilot (tool calls don't consume turns).
 
 
 
-﻿﻿<!-- SSPEC:START -->
+﻿﻿﻿<!-- SSPEC:START -->
 # .sspec Agent Protocol
 
 SSPEC_SCHEMA::7.2
@@ -154,14 +154,14 @@ SSPEC is a document-driven AI collaboration framework. All planning, tracking, a
 **Folder Structure**:
 ```
 .sspec/
-├── project.md              # Identity, conventions, accumulated memory notes
-├── spec-docs/              # Formal specifications (architecture, APIs, standards)
-├── changes/<n>/            # Active change proposals
+├── project.md    # Identity, conventions, accumulated memory notes
+├── spec-docs/    # Formal specifications (architecture, APIs, standards)
+├── changes/<n>/    # Active change proposals
 │   ├── spec.md | tasks.md | handover.md  # Required
-│   └── reference/ | script/              # Optional
-├── requests/               # Lightweight proposals (user intent record)
-├── tmp/                    # Informal proposals, plans, scripts, etc., for user review.
-└── asks/                   # Human-in-the-loop Q&A records (decision evidence)
+│   └── reference/    # Optional
+├── requests/    # Lightweight proposals (user intent record)
+├── tmp/    # Informal proposals, plans, scripts, etc., for user review.
+└── asks/    # Human-in-the-loop Q&A records (decision evidence)
 ```
 
 ---
@@ -298,8 +298,6 @@ Formal specifications (architecture, API contracts, standards). Location: `.sspe
 
 For knowledge that is **too complex for project.md** and **surviving beyond any single change**.
 
-#### `@doc <n>`
-
 New: `sspec doc new "<n>" [--dir]` → follow write-spec-doc SKILL.
 Update: Read existing → apply changes → update `updated` field.
 
@@ -309,18 +307,16 @@ Update: Read existing → apply changes → update `updated` field.
 
 ## 5. SCOPE: sspec ask
 
-**USE ACTIVELY** — Don't hesitate to ask. Better to confirm than guess wrong.
+`@ask` indicates:
+1. Use Agent Env built in `question` tool (For mini issue)
+2. Use SSPEC built in `ask` CLI (For complex issue)
+  1. Run `sspec ask create <topic>`
+  2. Fill ASK file
+  3. Run `sspec ask prompt <file>`
 
-```
-sspec ask create <topic>     # Create ask template (.py)
-sspec ask prompt <file>      # Execute and collect answer → auto-converts to .md record
-```
-
-**NOTE**: Long reusable doc should not go in ASK file → write in `.sspec/tmp` and ref it in QUESTION.
-
-#### `@ask`
-
-**MUST** trigger when: confused, before session end, tool call rejected, plan needs approval.
+**RULE**:
+- If user specified `@sspec-ask` → **MUST ASK** user when: plan end and turns execution, tool call rejected(ask reason), all tasks complete and ready to end.
+- Long reusable doc should not go in ASK file → write in `.sspec/tmp` and ref it in QUESTION.
 
 📚 Consult `sspec-ask` SKILL for triggers, workflow, patterns
 
@@ -358,20 +354,14 @@ ON uncertainty:
 
 ## SKILL of SKILLs
 
-SKILLs use **progressive disclosure**: `SKILL.md` is the entry point, may not complete. Details are dispatched to subfiles to manage context size.
+SKILLs use **progressive disclosure**: `SKILL.md` is the entry point, details are dispatched to subfiles to manage context size.
 
-Example
-```
-.sspec/skills/<name>/
-├── SKILL.md   ← Entry point
-└── references/examples.md
-```
-```SKILL.md
-IF xxx, read  [examples](./references/examples.md)
+```example
+<Root>/<name>/
+├── SKILL.md ← Always existed entry
+└── references.md ← May exists
 ```
 
-**Rule**:
-- When `SKILL.md` links to a reference file and instructs to read it, **MUST read that file**.
-- Use list dir and `sspec tool mdtoc <dir>` to analyse SKILL folder.
-
+**Rule**: When `SKILL.md` links to a reference file and instructs to read it (e.g. `IF xxx read [examples](./references.md)` in SKILL.md), **MUST read that file** (`<Root>/<name>/references.md`).
+**SKILL**: Use list dir and `sspec-mdtoc` SKILL to analyse SKILL folder.
 <!-- SSPEC:END -->

@@ -60,6 +60,8 @@ Request ─→ research ─→ design ──→ plan ──→ implement ──�
 - When switching between major phases
 - Before any context-losing event (compression, interruption)
 
+**IMPORTANT ASK**: All phased taged with `@ask` means Agent MUST invoke an `question` or `sspec-ask` to communicate with user, with no exception!
+
 ### Phase → SKILL → Files
 
 | Phase | SKILL | Reads | Writes | Checkpoint |
@@ -101,10 +103,13 @@ Request ─→ research ─→ design ──→ plan ──→ implement ──�
 | Need persistent record? | Tool | Use when |
 |--------------------------|------|----------|
 | Yes | `sspec ask create` → fill → `sspec ask prompt` | Plan approval, architecture choice, direction decision |
-| No | Agent env question tool | Quick yes/no, session-end check |
+| No | Agent env question tool(like `question` tool in Agent system) | Quick yes/no, session-end check |
 
-Default to `sspec ask` when uncertain — a record beats no record.
+For lightweight question: use `question` tool is Ok.
+If no `question` tool (or similar tool) enabled, use `sspec ask` instead.
+
 Long content → write to `.sspec/tmp/`, reference path in question body.
+At phase gates (Design/Plan/Implement completion), `@ask` is required even when confidence is high.
 
 📚 Full workflow, patterns, and content rules: `sspec-ask` SKILL
 
@@ -146,20 +151,20 @@ Spec-docs capture architecture knowledge that survives beyond any single change.
 
 Common `sspec` commands. Run `sspec <command> --help` for full options.
 
-| Command | Purpose | Example |
-|---------|---------|---------|
-| `sspec change new <name>` | Create single change | `sspec change new fix-auth` |
-| `sspec change new <name> --root` | Create root (multi) change | `sspec change new refactor --root` |
-| `sspec change new --from <req>` | Create from request (auto-link) | `sspec change new --from .sspec/requests/...` |
-| `sspec change find <name>` | Fuzzy-find change dir | `sspec change find auth` |
-| `sspec change list` | List all active changes | |
-| `sspec change archive <path>` | Archive completed change | |
-| `sspec request list` | List requests | |
-| `sspec doc new "<name>"` | Create spec-doc | `sspec doc new "auth-design"` |
-| `sspec ask create <topic>` | Create ask file | `sspec ask create cache_approach` |
-| `sspec ask prompt <path>` | Collect user answer | Combo: create → edit → prompt |
-| `sspec ask list` | List asks | |
-| `sspec tool mdtoc <file>` | Pre-scan Markdown (headings + sizes) | |
+| Command | Purpose |
+|---------|---------|
+| `sspec change new <name>` | Create single change |
+| `sspec change new <name> --root` | Create root (multi) change |
+| `sspec change new --from <req>` | Create from request (auto-link) |
+| `sspec change find <name>` | Fuzzy-find change dir |
+| `sspec change list` | List all active changes |
+| `sspec change archive <path>` | Archive completed change |
+| `sspec request list` | List requests |
+| `sspec doc new "<name>"` | Create spec-doc |
+| `sspec ask create <topic>` | Create ask file |
+| `sspec ask prompt <path>` | Collect answer, combo: create → edit → prompt |
+| `sspec ask list` | List asks |
+| `sspec tool mdtoc <file>` | Pre-scan Markdown (headings + sizes) |
 
 ### Scope Quick Reference
 
@@ -173,7 +178,7 @@ Common `sspec` commands. Run `sspec <command> --help` for full options.
 ### SKILL System
 
 Each SKILL is self-contained — read the one you need for the current phase, no chaining required.
-When a SKILL.md says "read [reference](./references/file.md)" → you **MUST** follow and read it.
+When a SKILL.md says "read [file](./references/file.md)" → **MUST** follow and read it.
 
 | SKILL | When to Read |
 |-------|-------------|

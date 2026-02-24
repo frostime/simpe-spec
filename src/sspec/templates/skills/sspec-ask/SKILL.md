@@ -32,17 +32,17 @@ Two tools, different purposes. Choose correctly:
 ## CLI Workflow
 
 ```bash
-sspec ask create <topic>         # Create .py template
-# → Edit: fill REASON + QUESTION
-sspec ask prompt <path-to-py>    # Collect user answer → auto-converts to .md
+sspec ask create <topic>          # Create .yml template
+# → Edit: fill reason + question
+sspec ask prompt <path-to-yml>    # Collect user answer → auto-converts to .md
 sspec ask list                   # Check pending/completed asks
 ```
 
 ### Steps
 
-1. `sspec ask create <topic>` — creates `.sspec/asks/<timestamp>_<topic>.py`
-2. Edit the `.py`: fill `REASON` (why asking) and `QUESTION` (specific, with options)
-3. `sspec ask prompt <path>` — user answers → file converts to `.md` → `.py` deleted
+1. `sspec ask create <topic>` — creates `.sspec/asks/<timestamp>_<topic>.yml`
+2. Edit the `.yml`: fill `reason` (why asking) and `question` (specific, with options)
+3. `sspec ask prompt <path>` — user answers → file converts to `.md` → pending `.yml` deleted
 4. Read the `.md` for user's answer, continue work
 
 ### Error Handling
@@ -57,7 +57,7 @@ If `prompt` says file not found → check if `.md` already exists (`sspec ask li
 
 | Content type | Where to put it |
 |---|---|
-| The question + brief options | QUESTION field in `.py` |
+| The question + brief options | `question` field in `.yml` |
 | Long analysis, draft plans, design docs | Write to `.sspec/tmp/<topic>.md`, reference path in QUESTION |
 | Code samples or large tables | Write to file, reference path |
 
@@ -70,39 +70,39 @@ If `prompt` says file not found → check if `.md` already exists (`sspec ask li
 
 ### Plan Confirmation (Most Common)
 
-```python
-REASON = r"""Change plan ready for review"""
-QUESTION = r"""
+```yaml
+reason: |
+  Change plan ready for review
+question: |
 Here's my plan for <change-name>:
 **Problem**: <summary>
 **Approach**: <core idea>
 **Key files**: <list>
 **Tasks**: <count>
 Proceed? Adjustments?
-"""
 ```
 
 ### Decision with Options
 
-```python
-REASON = r"""Multiple valid approaches for caching"""
-QUESTION = r"""
+```yaml
+reason: |
+  Multiple valid approaches for caching
+question: |
 **A) Redis** — fast, needs infra
 **B) SQLite** — persistent, zero-config
 **C) In-Memory** — simple, lost on restart
 Which aligns with project priorities?
-"""
 ```
 
 ### Batched Questions
 
-```python
-REASON = r"""Several design decisions needed before starting"""
-QUESTION = r"""
+```yaml
+reason: |
+  Several design decisions needed before starting
+question: |
 1. **Token format**: JWT or opaque?
 2. **Session storage**: Redis or DB?
 3. **Password hashing**: bcrypt or argon2?
-"""
 ```
 
 ---

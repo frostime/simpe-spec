@@ -45,7 +45,7 @@ AI workflow:
    sspec ask create token-storage
    # AI fills question: "Store reset tokens in Redis or DB?"
    # User fills answer in the generated Python file
-   sspec ask prompt .sspec/asks/<file>
+   sspec ask prompt .sspec/asks/<file>.yml
    # AI receives decision
    ```
 3. **Create change** — AI executes `sspec change new --from forgot-password`
@@ -204,7 +204,7 @@ Generates question document, user fills answer in the document.
 
 Agent runs command to get answer:
 ```bash
-sspec ask prompt .sspec/asks/<file>
+sspec ask prompt .sspec/asks/<file>.yml
 ```
 
 > [!note]

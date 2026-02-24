@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import importlib.util
 from pathlib import Path
 
 import pytest
@@ -70,18 +69,18 @@ class TestExtractAskName:
 
 
 class TestCreateAskTemplate:
-    def test_creates_py_file(self, sspec_root: Path):
+    def test_creates_yml_file(self, sspec_root: Path):
         path, _ = create_ask_template(sspec_root, 'token-storage')
         assert path.exists()
-        assert path.suffix == '.py'
+        assert path.suffix == '.yml'
 
     def test_template_content_structure(self, sspec_root: Path):
         path, _ = create_ask_template(sspec_root, 'design-choice')
         content = path.read_text(encoding='utf-8')
-        assert 'CREATED' in content
-        assert 'REASON' in content
-        assert 'QUESTION' in content
-        assert 'USER_ANSWER' in content
+        assert 'created' in content
+        assert 'reason' in content
+        assert 'question' in content
+        assert 'user_answer' in content
 
     def test_name_conversion_warning(self, sspec_root: Path):
         _, warning = create_ask_template(sspec_root, 'my-question')
@@ -102,27 +101,39 @@ class TestCreateAskTemplate:
 class TestExecuteAskPrompt:
     def test_prefilled_answer_returned(self, sspec_root: Path):
         path, _ = create_ask_template(sspec_root, 'prefilled')
-        # Modify the template to have a pre-filled answer
         content = path.read_text(encoding='utf-8')
-        content = content.replace('USER_ANSWER = r""""""', 'USER_ANSWER = r"""Use Redis"""')
+        content = content.replace('user_answer: ""', 'user_answer: "Use Redis"')
         path.write_text(content, encoding='utf-8')
 
         answer = execute_ask_prompt(path)
         assert answer == 'Use Redis'
 
     def test_missing_file_with_md_fallback(self, sspec_root: Path):
-        """If .py is missing but .md exists, return a warning message."""
+        """If pending file is missing but .md exists, return a warning message."""
         asks_dir = sspec_root / 'asks'
-        py_path = asks_dir / 'completed.py'
+        yml_path = asks_dir / 'completed.yml'
         md_path = asks_dir / 'completed.md'
         md_path.write_text('---\nname: completed\n---\n', encoding='utf-8')
 
-        result = execute_ask_prompt(py_path)
+        result = execute_ask_prompt(yml_path)
         assert 'already completed' in result.lower() or 'Warning' in result
 
     def test_truly_missing_file_raises(self, sspec_root: Path):
         with pytest.raises(FileNotFoundError):
-            execute_ask_prompt(sspec_root / 'asks' / 'nonexistent.py')
+            execute_ask_prompt(sspec_root / 'asks' / 'nonexistent.yml')
+
+    def test_legacy_py_prefilled_answer_returned(self, sspec_root: Path):
+        path = sspec_root / 'asks' / 'legacy.py'
+        path.write_text(
+            'CREATED = "2026-01-01T00:00:00"\n'
+            'REASON = r"""legacy reason"""\n'
+            'QUESTION = r"""legacy question"""\n'
+            'USER_ANSWER = r"""Legacy Answer"""\n',
+            encoding='utf-8',
+        )
+
+        answer = execute_ask_prompt(path)
+        assert answer == 'Legacy Answer'
 
 
 # ---------------------------------------------------------------------------
@@ -133,14 +144,13 @@ class TestExecuteAskPrompt:
 class TestSaveAndConvert:
     def test_save_appends_answer(self, sspec_root: Path):
         path, _ = create_ask_template(sspec_root, 'save-test')
-        # Fill in QUESTION for the template to be valid
         content = path.read_text(encoding='utf-8')
         content = content.replace('<YOUR_QUESTION_HERE>', 'What DB to use?')
         path.write_text(content, encoding='utf-8')
 
         save_ask_answer(path, 'PostgreSQL')
         updated = path.read_text(encoding='utf-8')
-        assert 'ANSWER' in updated
+        assert 'answer:' in updated
         assert 'PostgreSQL' in updated
 
     def test_convert_to_md(self, sspec_root: Path):
@@ -154,11 +164,26 @@ class TestSaveAndConvert:
         md_path = convert_ask_to_md(path)
         assert md_path.exists()
         assert md_path.suffix == '.md'
-        assert not path.exists()  # .py should be deleted
+        assert not path.exists()
 
         md_content = md_path.read_text(encoding='utf-8')
         assert 'FastAPI' in md_content
         assert 'Which framework?' in md_content
+
+    def test_convert_legacy_py_to_md(self, sspec_root: Path):
+        path = sspec_root / 'asks' / '260101120000_legacy.py'
+        path.write_text(
+            'CREATED = "2026-01-01T00:00:00"\n'
+            'REASON = r"""legacy reason"""\n'
+            'QUESTION = r"""legacy question"""\n'
+            'ANSWER = r"""legacy answer"""\n',
+            encoding='utf-8',
+        )
+
+        md_path = convert_ask_to_md(path)
+        assert md_path.exists()
+        assert not path.exists()
+        assert 'legacy answer' in md_path.read_text(encoding='utf-8')
 
 
 # ---------------------------------------------------------------------------

@@ -46,7 +46,7 @@ AI 工作流：
    sspec ask create token-storage
    # AI 填写提问："重置令牌存 Redis 还是 DB？"
    # User 在自动生成的 py 文件中填写回答
-   sspec ask prompt .sspec/asks/<file>
+   sspec ask prompt .sspec/asks/<file>.yml
    # AI 接收决策
    ```
 3. **创建变更** — AI 执行 `sspec change new --from forgot-password`
@@ -206,7 +206,7 @@ sspec ask create <topic>
 
 Agent 运行指令获取回答。
 ```bash
-sspec ask prompt .sspec/asks/<file>
+sspec ask prompt .sspec/asks/<file>.yml
 ```
 
 > [!note]

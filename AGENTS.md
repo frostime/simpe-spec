@@ -1,7 +1,5 @@
 # sspec Development Protocol
 
-当前进行中：.sspec/changes/26-02-24T21-47_refactor-to-perf-workflow
-
 ## 0. Self-Hosting Notice
 
 This project uses sspec to develop sspec. Two sets of rules coexist:

@@ -1,107 +1,24 @@
 # sspec
 
-**S**spec **S**ynthesizes **P**rograms from **E**xplicit **C**ontext
+[简体中文](README_zh-CN.md)
 
-A spec-driven framework for AI-assisted development.
+**S**spec **S**ynthesizes **P**rograms from **E**xplicit **C**ontext.
 
----
+sspec is a file-based workflow for AI-assisted development. It keeps planning, decisions, and handover in your repository, so an agent can resume work across sessions instead of restarting from zero.
 
-## Problem
+## Why sspec
 
-AI-assisted development suffers from memory loss:
-- Session 3: "Why Redis over Postgres for caching?" — AI doesn't remember the decision
-- Session 7: "Which file contains auth logic?" — AI suggests multiple conflicting locations
-- Session 14: New chat window — AI requires full project re-explanation
+AI coding sessions usually fail at continuity:
 
-**Root cause**: AI lacks cross-session persistence. Each conversation starts from zero context.
+- decisions get lost after context compression,
+- implementation intent drifts between sessions,
+- humans repeat the same project background.
 
-**Solution**: Project state lives in files. AI reads context from disk, maintains memory in handover files, uses `@ask` for human checkpoints.
+sspec solves this by storing working state in `.sspec/` and defining agent behavior in `AGENTS.md`.
 
----
+## Quick Start
 
-## Workflow
-
-### 1. Create Request
-
-```bash
-sspec request new forgot-password
-```
-
-Edit the generated file.
-
-### 2. Delegate to AI
-
-In AI chat:
-
-```
-@change forgot-password
-```
-
-AI workflow:
-
-1. **Analyze** — Assess scale (micro/single/multi-change)
-2. **Clarify** via `sspec ask`:
-   ```bash
-   sspec ask create token-storage
-   # AI fills question: "Store reset tokens in Redis or DB?"
-   # User fills answer in the generated Python file
-   sspec ask prompt .sspec/asks/<file>.yml
-   # AI receives decision
-   ```
-3. **Create change** — AI executes `sspec change new --from forgot-password`
-4. **Write spec** — AI populates `spec.md`:
-   - Section A: Problem (quantified: "50+ tickets/month, $200 cost")
-   - Section B: Solution ("Email reset, 15min TTL, bcrypt")
-   - Section C: Implementation (file-level breakdown)
-5. **Request approval** — AI shows plan via `@ask`
-6. **Implement** — Upon approval, AI writes code
-7. **Track progress** — AI marks `[x]` in `tasks.md` per completed task
-8. **Maintain memory** — AI records decisions in `handover.md`
-
-### 3. Session End
-
-AI automatically executes `@handover` before terminating, updating memory files.
-
-### 4. Session Resume
-
-```
-@resume
-```
-
-AI reads `handover.md` → restores context → continues work.
-
----
-
-## Responsibility Matrix
-
-### Human
-
-| Action | Trigger |
-|--------|---------|
-| `sspec request new <idea>` | Capture idea (3-5 sentences) |
-| `@change <n>` | Initiate work on request |
-| `@resume` | Resume previous session |
-| Answer AI questions | After Agent runs `sspec ask create` |
-| Approve plan | Respond to design `@ask` |
-| Verify implementation | Review REVIEW-status changes |
-
-### AI
-
-| Responsibility | Replaces |
-|----------------|----------|
-| Execute `sspec change new` | Manual change creation |
-| Populate `spec.md` sections | Writing formal specifications |
-| Maintain `tasks.md` | Manual task tracking |
-| Update `handover.md` | Re-explaining decisions |
-| Execute `sspec ask create` | Deciding when to ask |
-| Reference `project.md`, `spec-docs/` | Reminding AI of conventions |
-| Archive completed work | Manual organization |
-
-Decision-making remains human-controlled via `@ask` checkpoints. Administrative overhead handled by AI.
-
----
-
-## Installation
+### 1) Install
 
 ```bash
 pip install sspec
@@ -109,172 +26,180 @@ pip install sspec
 uv tool install sspec
 ```
 
-## Project Setup
+### 2) Initialize in your project
 
 ```bash
-cd project-root
+cd your-project
 sspec project init
 ```
 
-Generated structure:
+Then fill `.sspec/project.md` with your stack, conventions, and key paths.
 
+### 3) Create a request
+
+```bash
+sspec request new add-password-reset
 ```
+
+Write the request in `.sspec/requests/...` (problem, initial direction, success criteria).
+
+### 4) Hand it to your agent
+
+In chat with your coding agent:
+
+```text
+@change add-password-reset
+```
+
+The agent should run the SSPEC lifecycle, update change files, and ask for human decisions at `@ask` gates.
+
+### 5) Resume later
+
+```text
+@resume
+```
+
+The agent reloads `handover.md`, `tasks.md`, and `spec.md` to continue from the previous stopping point.
+
+## Lifecycle
+
+Each phase has a dedicated SKILL in `.sspec/skills/`.
+
+```text
+[Request] -> [Research] -> [Design] -> [Plan] -> [Implement] -> [Review] -> [Handover]
+                     (ask)      (ask)         (ask)        (feedback loop)
+```
+
+Core rules:
+
+- `Research` focuses on understanding problem space and code context.
+- `Design` and `Implement` are mandatory `@ask` checkpoints.
+- `Plan` uses a lightweight `@ask` confirmation.
+- `Implement` and `Review` form a feedback loop until user acceptance.
+- `Handover` is not optional cleanup; it is a lifecycle phase.
+
+## What sspec creates
+
+```text
 project/
-├── AGENTS.md                    # AI protocol (auto-loaded by tools)
-├── .sspec/
-│   ├── project.md               # Identity, conventions, memory
-│   ├── spec-docs/               # Architecture docs (AI-generated)
-│   ├── changes/                 # Active work (AI-managed)
-│   ├── requests/                # Intent captures (human-created)
-│   └── asks/                    # AI-to-human queries
-└── .xxx/skills/              # AI skill definitions
+├── AGENTS.md
+└── .sspec/
+    ├── project.md
+    ├── changes/
+    ├── requests/
+    ├── asks/
+    ├── spec-docs/
+    ├── skills/
+    └── tmp/
 ```
 
----
+- `project.md`: project identity, conventions, long-term notes.
+- `changes/<id>/spec.md`: problem and proposed solution.
+- `changes/<id>/tasks.md`: executable checklist and progress.
+- `changes/<id>/handover.md`: session memory and next steps.
+- `requests/`: user intents before formal change creation.
+- `asks/`: agent-to-user Q&A records.
 
-## Core Concepts
+## Human vs Agent
 
-### Request (Human-Created)
+**Human responsibilities**
 
-Entry point for work. Describe intent as clearly as possible.
+- create requests,
+- answer `@ask` questions,
+- approve design and review outcomes.
 
-```bash
-sspec request new <idea>
-```
+**Agent responsibilities**
 
-Reference the request file in conversation and tell Agent "sspec@change from this request".
+- assess scope (micro/single/multi-change),
+- create and maintain change files,
+- keep tasks and handover current,
+- drive the ask-feedback loop until accepted.
 
-### Change (AI-Managed)
+## Chat Directives
 
-AI's work unit:
+These directives are interpreted by agents that load your `AGENTS.md`.
 
-```
-.sspec/changes/<timestamp>_<n>/
-├── spec.md      # Problem, solution, implementation plan
-├── tasks.md     # Checklist, updated during execution
-└── handover.md  # Session memory, decisions, references
-```
-
-Status flow:
-```
-PLANNING → DOING → REVIEW → DONE
-    ↑       ↓
-    └─── BLOCKED
-```
-
-Scale assessment (AI-determined):
-- **Micro** (≤3 files, ≤30min): No change ceremony, direct execution
-- **Single** (1 week, ≤15 files): Standard change
-- **Multi** (>1 week, >15 files): Root change + sub-changes
-
-### Handover (AI Memory)
-
-Cross-session persistence mechanism:
-
-- **Background**: Change purpose
-- **Accomplished**: Session work
-- **Next Steps**: Resumption point
-- **References & Memory**:
-  - **Key Files**: Critical file paths
-  - **Decisions & Rationale**: Design choices and reasoning
-  - **Gotchas & Context**: Edge cases, risks, implicit knowledge
-
-Updated during work and at session end. Read-first on `@resume`.
-
-### Spec-doc
-
-Project-level design documents transcending individual changes:
-
-- API standards
-- Architecture decisions
-- Schema definitions
-
-Tell Agent to create document `sspec@doc`, Agent calls CLI and auto-fills.
-
-### sspec ask (AI-to-Human Query)
-
-Synchronous clarification mechanism.
-
-AI creates:
-```bash
-sspec ask create <topic>
-```
-
-Generates question document, user fills answer in the document.
-
-Agent runs command to get answer:
-```bash
-sspec ask prompt .sspec/asks/<file>.yml
-```
-
-> [!note]
-> This process depends on tool call approval
-> User should answer before `sspec ask prompt` tool runs
-
----
-
-## Directives
-
-Chat-based workflow control:
-
-| Directive | Function |
-|-----------|----------|
-| `@status` | Project overview (active changes, blockers) |
-| `@change <n>` | Load change context (handover → tasks → spec) |
-| `@resume` | Continue last active change |
-| `@handover` | Persist state (auto-executed at session end) |
-| `@sync` | Reconcile code changes with tasks.md |
-| `@ask` | Suggest AI consultation (AI decides execution) |
-| `@argue` | Halt current approach |
-
----
+| Directive | Typical use |
+|-----------|-------------|
+| `@change <name>` | Start/resume work on a change |
+| `@resume` | Continue the active change |
+| `@handover` | Persist state for next session |
+| `@sync` | Reconcile docs (`tasks.md`, `handover.md`) with code reality |
+| `@argue` | Stop current approach and reassess scope |
 
 ## CLI Reference
 
-### Human-Executed Commands
+### Project
 
 ```bash
-# Capture intent
-sspec request new <idea>
-
-# Status check
+sspec project init
 sspec project status
-
-sspec request archive
-sspec change archive
+sspec project update --dry-run
 ```
 
-### AI-Executed Commands
+### Requests
 
 ```bash
-# Change management
-sspec change new --from <request>
-sspec change new <n>
-sspec change new --root           # Multi-change
-sspec change list
-sspec change archive <n>
-
-# Documentation
-sspec doc new "<topic>"
-sspec doc new "<topic>" --dir
-sspec doc list
-
-# Query system
-sspec ask create <topic>
-sspec ask list
-
-# Request management
+sspec request new <name>
 sspec request list
-sspec request link <req> <change>
+sspec request show <name>
+sspec request find <query>
+sspec request link <request> <change>
+sspec request archive [name] --with-change
 ```
 
----
+### Changes
+
+```bash
+sspec change new <name>
+sspec change new --from <request>
+sspec change new <name> --root
+sspec change list --all
+sspec change find <query>
+sspec change validate <name>
+sspec change archive [name] --with-request
+```
+
+### Asks
+
+```bash
+sspec ask create <topic>
+sspec ask prompt <ask-file>
+sspec ask list --all
+sspec ask archive [name]
+```
+
+### Spec docs
+
+```bash
+sspec doc list
+sspec doc new "<name>"
+sspec doc new "<name>" --dir
+```
+
+### Optional utilities
+
+```bash
+sspec skill list
+sspec skill new <name>
+sspec cmd add
+sspec cmd list
+sspec cmd run <name>
+sspec tmp new <name>
+sspec tool mdtoc <file>
+sspec tool view-tree
+sspec tool pack-zip --dry-run
+sspec tool patch --prompt
+```
 
 ## Compatibility
 
-Works with AI tools supporting file-based context. `AGENTS.md` is created and filled during project init.
+sspec works best with coding agents that can:
 
----
+- read and write repository files,
+- follow instructions from `AGENTS.md`,
+- execute local CLI commands.
+- use claude skills.
 
 ## License
 

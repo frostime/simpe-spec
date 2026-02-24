@@ -1,22 +1,30 @@
 {
   "schema_version": "6.0",
-  "sspec_version": "0.21.2.dev0+g1d28c376f.d20260222",
+  "sspec_version": "0.22.1.dev5+gdd5cc1032",
   "created_at": "2026-02-07T18:42:39.297150",
-  "updated_at": "2026-02-24T21:12:00.890659",
+  "updated_at": "2026-02-25T01:08:11.096181",
   "file_hashes": {
     "skills/use-powershell": "c14a032ce16697b8",
     "skills/write-patch": "53a7cb880be7ee69",
     "skills/write-spec-doc": "e82f5bb62b549e30",
-    "skills/sspec-ask": "f0e99253b9a50945",
-    "skills/sspec-change": "40633c42387b8f42",
-    "skills/sspec-memory": "381420fc6c23b91c",
-    "skills/sspec-mdtoc": "a9d3dea08e9d0c62"
+    "skills/sspec-ask": "b0f30504c3d543d3",
+    "skills/sspec-mdtoc": "b9fdfc4a23d816e0",
+    "skills/sspec-design": "d492cebef009d006",
+    "skills/sspec-handover": "67aaa4ce2b6e2c53",
+    "skills/sspec-implement": "7f868ed6c15dd8e7",
+    "skills/sspec-plan": "d4c84748ca736d68",
+    "skills/sspec-research": "1843e48cf8e212be",
+    "skills/sspec-review": "c70ea452cbc7f078"
   },
   "managed_skills": [
     "sspec-ask",
-    "sspec-change",
+    "sspec-design",
+    "sspec-handover",
+    "sspec-implement",
     "sspec-mdtoc",
-    "sspec-memory",
+    "sspec-plan",
+    "sspec-research",
+    "sspec-review",
     "use-powershell",
     "write-patch",
     "write-spec-doc"

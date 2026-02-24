@@ -3,7 +3,7 @@ name: sspec-implement
 description: "Execute tasks from tasks.md. Implement code changes, update progress. Use after plan approval."
 metadata:
   author: frostime
-  version: 2.0.0
+  version: 2.1.0
 ---
 
 # SSPEC Implement
@@ -73,7 +73,7 @@ After completing each task, update the Progress section:
 
 ## Handover During Implementation
 
-For long implementation sessions (>50 exchanges or multi-file work):
+For long implementation sessions (>30 exchanges or multi-file work):
 - Write key decisions to `handover.md` Working Memory → Decisions
 - Record discovered gotchas to → Notes
 - Update Key Files as you discover important files

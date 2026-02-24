@@ -3,7 +3,7 @@ name: sspec-plan
 description: "Break design into concrete tasks. Fill tasks.md with file-level execution plan. Use after design alignment."
 metadata:
   author: frostime
-  version: 2.0.0
+  version: 2.1.0
 ---
 
 # SSPEC Plan
@@ -22,6 +22,29 @@ Turn the approved design (spec.md B) into a concrete, file-level execution plan 
 ```
 
 ## Task Standards
+
+### tasks.md Frontmatter (MANDATORY)
+
+Single/sub change:
+
+```yaml
+---
+change: "<change-name>"
+updated: ""
+---
+```
+
+Root change:
+
+```yaml
+---
+change: "<change-name>"
+change-type: root
+updated: ""
+---
+```
+
+Keep `change` exactly aligned with `spec.md` `name`.
 
 ### Granularity
 

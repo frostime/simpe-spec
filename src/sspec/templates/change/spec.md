@@ -11,6 +11,17 @@ reference: null
 status: PLANNING | DOING | REVIEW | DONE | BLOCKED
 change-type: single | sub
 reference?: Array<{source, type: 'request'|'root-change'|'sub-change'|'doc', note?}>
+
+Sub-change MUST link root:
+reference:
+  - source: ".sspec/changes/<root-change-dir>"
+    type: "root-change"
+    note: "Phase <n>: <phase-name>"
+
+Single-change common reference:
+reference:
+  - source: ".sspec/requests/<request-file>.md"
+    type: "request"
 -->
 
 # {{CHANGE_NAME}}

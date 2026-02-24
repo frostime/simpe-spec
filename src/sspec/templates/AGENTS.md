@@ -34,7 +34,7 @@ SSPEC is a document-driven AI collaboration framework. All planning, tracking, a
 
 **Background rules** (always active):
 - Important discovery → write to `handover.md` immediately
-- Long session (>20 exchanges) → checkpoint `handover.md`
+- Long session (>30 exchanges) → checkpoint `handover.md`
 - Uncertain → `@ask` (30s question < hours of rework)
 - User rejects tool call → STOP → `@ask` reason
 

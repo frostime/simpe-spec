@@ -3,7 +3,7 @@ name: sspec-design
 description: "Assess scale, create change, fill spec.md, align with user. Use after research when ready to define the solution."
 metadata:
   author: frostime
-  version: 3.0.0
+  version: 3.1.0
 ---
 
 # SSPEC Design
@@ -53,6 +53,45 @@ sspec change new <name> --root --from <req>    # root from request
 Root change creates a coordinator with different templates:
 - Root `spec.md`: Phase overview, not file-level detail
 - Root `tasks.md`: Milestones, not individual tasks
+
+## Step 2.5: Normalize spec.md Frontmatter (MANDATORY)
+
+Use this schema exactly:
+
+```yaml
+---
+name: <change-name>
+status: PLANNING
+type: ""
+change-type: single|sub|root
+created: <iso-timestamp>
+reference: null|[]
+---
+```
+
+### Sub-Change Must Link Root (Required)
+
+```yaml
+change-type: sub
+reference:
+  - source: "changes/<root-change-dir>"
+    type: "root-change"
+    note: "Phase <n>: <phase-name>"
+```
+
+### Root Should Link Request + Sub-Changes (Bidirectional Tracking)
+
+```yaml
+change-type: root
+reference:
+  - source: "requests/<request-file>.md"
+    type: "request"
+  - source: "changes/<sub-change-dir>"
+    type: "sub-change"
+    note: "Phase <n>: <phase-name>"
+```
+
+Use workspace-relative paths without `./` prefix.
 
 ## Step 3: Fill spec.md
 
@@ -143,6 +182,10 @@ After defining phases → create sub-changes:
 sspec change new <phase-name>    # for each phase, link to root via reference
 ```
 
+For each sub-change, ensure two-way references:
+- Sub `spec.md` has a `reference` item with `type: root-change` pointing to root
+- Root `spec.md` appends a `type: sub-change` entry pointing to that sub-change
+
 Each sub-change then goes through its own design → plan → implement → review cycle.
 
 ## Step 4: @ask for Alignment (MANDATORY)
@@ -155,6 +198,5 @@ Present the design to user for confirmation:
 - Key interfaces and data types
 - (Root) Phase breakdown
 
-Wait for user approval before proceeding to `sspec-plan`.
-
-After user confirms → transition status `PLANNING → DOING` in spec.md frontmatter.
+After user confirms design, proceed to `sspec-plan`.
+Only after user also approves the task plan, transition status `PLANNING → DOING`.

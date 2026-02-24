@@ -3,7 +3,7 @@ name: sspec-handover
 description: "Save session state. Update handover.md, project.md, and spec-docs index. MANDATORY at session end, recommended mid-session."
 metadata:
   author: frostime
-  version: 3.0.0
+  version: 3.1.0
 ---
 
 # SSPEC Handover
@@ -23,7 +23,7 @@ Before ending ANY session, perform the full procedure below. No exceptions.
 ### Mid-Session (Proactive)
 
 Update handover.md Working Memory when:
-- Session is long (>50 exchanges or complex multi-file work)
+- Session is long (>30 exchanges or complex multi-file work)
 - Important decision just made with non-trivial reasoning
 - Key file discovered that future work depends on
 - Design tradeoff resolved after discussion

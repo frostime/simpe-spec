@@ -3,21 +3,24 @@ change: "{{CHANGE_NAME}}"
 updated: ""
 ---
 
-# Implementation Tasks
+# Tasks
 
 ## Legend
-`[ ]` Todo | `[x]` Done (implemented + verified)
+`[ ]` Todo | `[x]` Done
 
 ## Tasks
 <!-- @REPLACE -->
-<!-- @RULE: Organize by phases from spec.md Section C. Each phase has verification.
-Phase emoji: 🚧 in progress | ✅ done | ⏳ pending
-Update progress after EACH task — not in batches.
-📚 Standards: sspec-change SKILL → doc-standards.md
 
-### Phase 1: <n> 🚧
-- [ ] <Demo Task> `path/file.py`
-**Verification**: <how to verify>
+<!-- @RULE: Organize by phases. Each task <2h, independently testable.
+Phase emoji: ⏳ pending | 🚧 in progress | ✅ done
+
+### Phase 1: <name> ⏳
+- [ ] Task description `path/file.py`
+- [ ] Task description `path/file.py`
+**Verification**: <how to verify this phase>
+
+### Feedback Tasks
+Use this section for tasks added during review/feedback loop.
 -->
 
 ---
@@ -25,14 +28,11 @@ Update progress after EACH task — not in batches.
 ## Progress
 <!-- @REPLACE -->
 
-<!-- @RULE: Update percentage and status after EACH task completion.
-sspec change find <n> auto-calculates from checkboxes — keep tasks.md as source of truth. -->
-
 **Overall**: 0%
 
 | Phase | Progress | Status |
 |-------|----------|--------|
-| Phase 1 | 0% | 🚧 |
+| Phase 1 | 0% | ⏳ |
 
 **Recent**:
 - (none yet)

@@ -1,13 +1,13 @@
 {
   "schema_version": "6.0",
-  "sspec_version": "0.22.1.dev5+gdd5cc1032",
+  "sspec_version": "0.22.1.dev6+g1b08fb21d.d20260224",
   "created_at": "2026-02-07T18:42:39.297150",
-  "updated_at": "2026-02-25T01:08:11.096181",
+  "updated_at": "2026-02-25T02:11:16.777638",
   "file_hashes": {
     "skills/use-powershell": "c14a032ce16697b8",
     "skills/write-patch": "53a7cb880be7ee69",
     "skills/write-spec-doc": "e82f5bb62b549e30",
-    "skills/sspec-ask": "b0f30504c3d543d3",
+    "skills/sspec-ask": "99529f9c053d5cdc",
     "skills/sspec-mdtoc": "b9fdfc4a23d816e0",
     "skills/sspec-design": "d492cebef009d006",
     "skills/sspec-handover": "67aaa4ce2b6e2c53",

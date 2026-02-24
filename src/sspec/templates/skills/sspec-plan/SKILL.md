@@ -89,10 +89,18 @@ Each phase MUST have explicit verification criteria:
 
 tasks.md references spec.md B's design. Don't re-describe interfaces or algorithms.
 
+| spec.md B (design) | tasks.md (plan) |
+|---|---|
+| Defines interfaces, data model, logic | Lists file-level actions + verification |
+| Explains *how it should work* | Tells agent *what to do next* |
+| `get_cached_user(user_id) -> Optional[User]` | `Create cache.py — implement interface per spec.md B` |
+
 - ✅ "Implement Tool Interface per spec.md B"
 - ✅ "Create handler following the data flow in spec.md B"
 - ❌ Re-listing all function signatures
 - ❌ Re-describing the algorithm
+
+📚 Complete B → tasks.md flow example: [examples.md](./examples.md#complete-flow-b--tasksmd)
 
 ## Root Change Planning
 
@@ -131,3 +139,12 @@ Present the task breakdown to user:
 - Estimated scope
 
 Wait for user approval before starting `sspec-implement`.
+
+---
+
+## References
+
+| When | Load |
+|------|------|
+| Need concrete tasks.md examples (Simple / Medium / Root) | [examples.md](./examples.md) |
+| Need B → tasks.md complete flow example | [examples.md → Complete Flow](./examples.md#complete-flow-b--tasksmd) |

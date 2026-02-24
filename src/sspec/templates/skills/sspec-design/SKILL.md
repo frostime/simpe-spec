@@ -133,6 +133,8 @@ Prioritize these in Section B. Abstract hand-waving ("we'll handle it later") er
 
 **What does NOT belong in B**: Execution order (tasks.md), file-level task lists (tasks.md).
 
+**B vs tasks.md boundary**: B defines *how it should work* (interfaces, data model, logic). tasks.md defines *what to do* (file-level steps, verification). Tasks reference B — e.g. "implement interface per spec.md B" — never copy.
+
 ### Section B Example (Medium Complexity)
 
 ```markdown
@@ -188,6 +190,15 @@ For each sub-change, ensure two-way references:
 
 Each sub-change then goes through its own design → plan → implement → review cycle.
 
+**Multi-change pitfalls**:
+
+| Mistake | Fix |
+|---------|-----|
+| File-level tasks in root tasks.md | Root tracks milestones only — file tasks go in sub-change |
+| Skip root, jump straight to sub-changes | Root provides phase vision and coordination |
+| Forget bidirectional references | Always link root ↔ sub in both `spec.md` reference fields |
+| Archive root before all subs done | Root stays active until every sub-change is archived |
+
 ## Step 4: @ask for Alignment (MANDATORY)
 
 **Never skip this step.** This is a user-in-the-loop confirmation — like review phase, the user must sign off.
@@ -200,3 +211,12 @@ Present the design to user for confirmation:
 
 After user confirms design, proceed to `sspec-plan`.
 Only after user also approves the task plan, transition status `PLANNING → DOING`.
+
+---
+
+## References
+
+| When | Load |
+|------|------|
+| Need concrete spec.md examples (Simple / Medium / Complex / Root) | [examples.md](./examples.md) |
+| Need B → tasks.md boundary guidance | [examples.md → B → tasks.md Boundary](./examples.md#b--tasksmd-boundary) |

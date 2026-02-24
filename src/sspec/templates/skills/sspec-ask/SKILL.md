@@ -16,7 +16,7 @@ metadata:
 
 In agent/copilot scenarios, the interaction model is: Agent works autonomously → hits a decision point → needs user input.
 
-Some platforms offer basic tools like `vscode Question` in copilot or `question` in opencode. However, these solutions are insufficient for handling complex, multi-turn consultations.
+Some platforms offer basic tools like `Question` in copilot， opencode etc. However, these solutions are insufficient for handling complex, multi-turn consultations.
 
 Without `@ask`: Agent guesses, potentially wastes an entire implementation cycle. Or stops and loses context while waiting.
 

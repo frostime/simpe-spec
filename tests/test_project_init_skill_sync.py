@@ -25,7 +25,7 @@ def test_sync_skill_locations_updates_meta_and_targets(tmp_path: Path):
 
     assert any(str(p).endswith('.github\\skills') for p in result.skill_targets)
     assert result.skill_install_strategies.get('.github/skills') == 'copy'
-    assert (tmp_path / '.github' / 'skills' / 'sspec-change' / 'SKILL.md').exists()
+    assert (tmp_path / '.github' / 'skills' / 'sspec-design' / 'SKILL.md').exists()
 
     meta_path = tmp_path / SSPEC_DIR / '.meta.json'
     meta = json.loads(meta_path.read_text(encoding='utf-8'))

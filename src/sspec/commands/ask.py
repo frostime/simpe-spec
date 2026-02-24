@@ -9,8 +9,6 @@ import questionary
 from rich.console import Console
 
 from sspec.core import ARCHIVE_DIR, SspecNotFoundError, get_sspec_root
-
-console = Console()
 from sspec.services.ask_service import (
     archive_ask,
     convert_ask_to_md,
@@ -20,6 +18,9 @@ from sspec.services.ask_service import (
     find_ask_matches,
     save_ask_answer,
 )
+from sspec.services.editor_service import open_in_editor
+
+console = Console()
 
 
 @click.group(name='ask')
@@ -57,7 +58,7 @@ def _interactive_select_ask(matches: list[Path], name: str) -> Path:
 @ask_group.command(name='create')
 @click.argument('name')
 def ask_create(name: str) -> None:
-    """Create a new ask template (.py file) for editing."""
+    """Create a new ask template (.yml file) for editing."""
 
     try:
         sspec_root = get_sspec_root()
@@ -65,15 +66,15 @@ def ask_create(name: str) -> None:
         raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     try:
-        py_path, warning = create_ask_template(sspec_root=sspec_root, name=name)
+        ask_path, warning = create_ask_template(sspec_root=sspec_root, name=name)
     except ValueError as e:
         raise click.ClickException(str(e)) from None
 
     try:
-        rel = py_path.relative_to(sspec_root.parent)
+        rel = ask_path.relative_to(sspec_root.parent)
         rel_str = str(rel).replace('\\', '/')
     except ValueError:
-        rel_str = str(py_path)
+        rel_str = str(ask_path)
 
     # Show warning if name was converted
     if warning:
@@ -82,7 +83,7 @@ def ask_create(name: str) -> None:
     click.echo(f'✓ Created ask template: {rel_str}')
     click.echo('')
     click.echo('Next steps:')
-    click.echo(f'  1. Edit REASON and QUESTION in {rel_str}')
+    click.echo(f'  1. Edit reason and question in {rel_str}')
     click.echo(f'  2. Run: sspec ask prompt {rel_str}')
     click.echo("  3. Agent will get user's answer from `sspec ask prompt`.")
     click.echo('Note:')
@@ -92,14 +93,16 @@ def ask_create(name: str) -> None:
         'dump it in standalone file under .sspec/tmp and links in QUESTION.'
     )
 
+    open_in_editor(file_path=ask_path, sspec_root=sspec_root)
+
 
 @ask_group.command(name='prompt')
 @click.argument('ask_file', type=click.Path(exists=False, path_type=Path))
 def ask_prompt(ask_file: Path) -> None:
-    """Execute ask prompt, collect answer, and convert to .md."""
+    """Execute ask prompt from .yml/.py, collect answer, and convert to .md."""
 
-    if ask_file.suffix != '.py':
-        raise click.ClickException(f'Ask file must be .py file, got: {ask_file.suffix}')
+    if ask_file.suffix not in {'.yml', '.py'}:
+        raise click.ClickException(f'Ask file must be .yml or .py file, got: {ask_file.suffix}')
 
     if not ask_file.exists():
         md_file = ask_file.with_suffix('.md')
@@ -111,11 +114,11 @@ def ask_prompt(ask_file: Path) -> None:
         # Execute prompt and get answer
         answer = execute_ask_prompt(ask_file_path=ask_file)
 
-        # Save answer to .py file
+        # Save answer to pending ask file
         save_ask_answer(ask_file_path=ask_file, answer=answer)
 
-        # Convert to .md and cleanup .py
-        md_path = convert_ask_to_md(py_path=ask_file)
+        # Convert to .md and cleanup pending ask file
+        md_path = convert_ask_to_md(ask_path=ask_file)
 
         try:
             sspec_root = get_sspec_root()
@@ -149,7 +152,7 @@ def ask_list(include_all: bool) -> None:
         console.print('[dim]No asks found.[/dim]')
         return
 
-    pending_files = sorted(asks_dir.glob('*.py'))
+    pending_files = sorted(list(asks_dir.glob('*.yml')) + list(asks_dir.glob('*.py')))
     completed_files = sorted(asks_dir.glob('*.md'))
 
     archive_dir = asks_dir / ARCHIVE_DIR

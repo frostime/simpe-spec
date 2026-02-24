@@ -11,11 +11,11 @@ updated: ""
 
 ## Milestones
 <!-- @REPLACE -->
-<!-- @RULE: Each milestone maps to a sub-change. Track at phase level, not file level.
-Phase emoji: 🚧 in progress | ✅ done | ⏳ pending
-📚 Standards: sspec-change SKILL → multi-change.md
 
-### Phase 1: <n> 🚧
+<!-- @RULE: Each milestone maps to a sub-change. Track at phase level, not file level.
+Phase emoji: ⏳ pending | 🚧 in progress | ✅ done
+
+### Phase 1: <name> ⏳
 - [ ] Sub-change created and linked
 - [ ] Sub-change completed and archived
 **Deliverable**: <what Phase 1 delivers>
@@ -25,13 +25,12 @@ Phase emoji: 🚧 in progress | ✅ done | ⏳ pending
 ---
 
 ## Progress
-<!-- @REPLACE -->
 
 **Overall**: 0%
 
 | Phase | Sub-Change | Status | Deliverable |
 |-------|------------|--------|-------------|
-| Phase 1 | (pending) | 🚧 | |
+| Phase 1 | (pending) | ⏳ | |
 
 **Recent**:
 - (none yet)

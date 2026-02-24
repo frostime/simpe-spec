@@ -64,17 +64,16 @@ Found 8 files | total chars: 42,310 | total lines: 1,205 | headings: 87
 
 ```bash
 # Instead of blindly reading the entire skill:
-sspec tool mdtoc .sspec/skills/sspec-change/SKILL.md
+sspec tool mdtoc .sspec/skills/sspec-design/SKILL.md
 
-# Output shows it has 198 lines with these sections:
-# L1   # SSPEC Change Skill
-# L8     ## Playbook
-# L24    ## Assess Scale
-# L35    ## Request → Change Flow
+# Output shows sections with line numbers:
+# L1   # SSPEC Design
+# L8     ## Workflow
+# L16    ## Step 1: Assess Scale
 # ...
 
 # Now read only the section you need:
-# read_file(startLine=35, endLine=55)
+# read_file(startLine=16, endLine=30)
 ```
 
 ## Full Specification

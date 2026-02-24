@@ -1,199 +1,109 @@
 ---
 name: sspec-ask
-description: "Mid-execution user consultation via persistent Q&A. USE ACTIVELY — especially in agent scenarios where @ask extends single-session effectiveness."
+description: "Mid-execution user consultation via persistent Q&A. USE ACTIVELY — guessing wastes more tokens than asking."
 metadata:
   author: frostime
-  version: 5.0.0
+  version: 7.0.0
 ---
 
-# SSPEC Ask Skill
+# SSPEC Ask
 
-**USE ACTIVELY** — Guessing wastes more tokens than one ask. When in doubt, ask.
+Persist questions to disk, collect answers via terminal, continue — all within one session.
 
----
-
-## Why @ask Matters
-
-In agent/copilot scenarios, the interaction model is: Agent works autonomously → hits a decision point → needs user input.
-
-Some platforms offer basic tools like `vscode Question` in copilot or `question` in opencode. However, these solutions are insufficient for handling complex, multi-turn consultations.
-
-Without `@ask`: Agent guesses, potentially wastes an entire implementation cycle. Or stops and loses context while waiting.
-
-With `@ask`: Agent persists the question to disk, collects the answer via terminal, and continues — all within the same session. The ask record also serves as permanent decision documentation.
-
-**Cost equation**: One ask ≈ 30 seconds of user time. One wrong guess ≈ full rework cycle.
+**Cost equation**: One ask ≈ 30 seconds. One wrong guess ≈ full rework cycle.
 
 ---
 
-## When to Trigger (Critical Decision Points)
+## sspec ask vs Built-in Question Tool
 
-**REQUIRED use cases** — Agent MUST use sspec ask when:
+Two tools, different purposes. Choose correctly:
 
-1. **User explicitly requested** — User mentions ask/confirmation in their request
-2. **Information missing** — Cannot proceed reliably without user clarification
-3. **Directional choice needed** — Multiple valid approaches exist (not minor tweaks)
-4. **Work completion check** — Agent believes task is done, needs user verification
-5. **Repeated failures** — Multiple attempts failed, need user insight
+| | `sspec ask` (CLI) | Built-in question tool (e.g. VS Code Question) |
+|---|---|---|
+| **Record** | Persists as `.md` file in `.sspec/asks/` | Gone after session |
+| **Use when** | Architecture decisions, plan approval, direction choices, anything worth recording | Quick yes/no, mode switch confirmation, session-end check |
+| **Content** | Structured (REASON + QUESTION with options) | One-liner |
+| **Default** | **Prefer this** when uncertain | Only when answer is ephemeral |
 
-### When NOT to Ask
-
-Don't create an ask for trivial decisions where:
-- Only one reasonable approach exists
-- The choice is easily reversible (e.g., variable naming)
-- The answer is available in project.md or existing spec-docs
-
-**Use question tool (if exists) for simple question**.
+**Rule**: If the question involves a decision that future agents might need to understand → use `sspec ask`.
 
 ---
 
-## Workflow
+## CLI Workflow
 
-### CLI Commands (Agent-Driven)
-
-| Command | When | Notes |
-|---------|------|-------|
-| `sspec ask create <topic>` | Need to ask user something | `<topic>` is a slug: `auth_approach`, `redis_vs_db` |
-| `sspec ask prompt <file.py>` | Collect user's answer | Pass the `.py` file path from create output |
-| `sspec ask list` | Check pending/completed asks | Shows `.py` (pending) and `.md` (answered) |
-
-**Ergonomics**:
-- `create` generates the `.py` template → Agent fills REASON + QUESTION → runs `prompt`
-- `prompt` opens terminal for user input OR get the user prefilled answer before `prompt` is approvaed to run → auto-converts to `.md` record → deletes `.py`
-- The entire cycle happens within one agent session — no context loss
-
-### Step-by-Step
-
-**Step 1**: Create template
 ```bash
-sspec ask create <topic>
-```
-Creates `.sspec/asks/<timestamp>_<topic>.py`
-
-**Step 2**: Edit the `.py` file
-- Fill `REASON` (why asking — for future reference and memory)
-- Fill `QUESTION` (be specific, provide options when possible)
-- Do NOT edit `USER_ANSWER`
-
-**Step 3**: Execute
-```bash
-sspec ask prompt <path-to-py-file>
+sspec ask create <topic>          # Create .yml template
+# → Edit: fill reason + question
+sspec ask prompt <path-to-yml>    # Collect user answer → auto-converts to .md
+sspec ask list                   # Check pending/completed asks
 ```
 
-**Step 4**: Automatic lifecycle
-After execution: user's answer appended → file converted to `.md` → `.py` deleted.
+### Steps
+
+1. `sspec ask create <topic>` — creates `.sspec/asks/<timestamp>_<topic>.yml`
+2. Edit the `.yml`: fill `reason` (why asking) and `question` (specific, with options)
+3. `sspec ask prompt <path>` — user answers → file converts to `.md` → pending `.yml` deleted
+4. Read the `.md` for user's answer, continue work
 
 ### Error Handling
 
-If `sspec ask prompt` reports file not found:
-- The ask may have already been answered. Check if `<timestamp>_<topic>.md` exists in `.sspec/asks/`, or use `sspec ask list`.
-- If the `.md` file exists, read the answer from it directly.
+If `prompt` says file not found → check if `.md` already exists (`sspec ask list`).
+
+---
+
+## Content Rules
+
+**Keep ask files focused.** The QUESTION field is for the question itself, not for long analysis.
+
+| Content type | Where to put it |
+|---|---|
+| The question + brief options | `question` field in `.yml` |
+| Long analysis, draft plans, design docs | Write to `.sspec/tmp/<topic>.md`, reference path in QUESTION |
+| Code samples or large tables | Write to file, reference path |
+
+**Anti-pattern**: Stuffing 200+ lines of analysis into QUESTION field.
+**Correct**: Write analysis to `.sspec/tmp/design-draft.md`, then in QUESTION: "See draft at `.sspec/tmp/design-draft.md`. Does this approach work?"
 
 ---
 
 ## Patterns
 
-### Single Decision Ask
+### Plan Confirmation (Most Common)
 
-```python
-REASON = r"""
-Multiple valid approaches for caching layer refactor
-"""
+```yaml
+reason: |
+  Change plan ready for review
+question: |
+Here's my plan for <change-name>:
+**Problem**: <summary>
+**Approach**: <core idea>
+**Key files**: <list>
+**Tasks**: <count>
+Proceed? Adjustments?
+```
 
-QUESTION = r"""
-I've identified 3 approaches:
+### Decision with Options
 
-**A) Redis + In-Memory Fallback**
-- Pros: High performance, resilient
-- Cons: Operational complexity
-
-**B) Pure In-Memory (LRU)**
-- Pros: Simple, no external deps
-- Cons: Lost on restart
-
-**C) SQLite Cache**
-- Pros: Persistent, zero-config
-- Cons: Slower than Redis
-
+```yaml
+reason: |
+  Multiple valid approaches for caching
+question: |
+**A) Redis** — fast, needs infra
+**B) SQLite** — persistent, zero-config
+**C) In-Memory** — simple, lost on restart
 Which aligns with project priorities?
-"""
 ```
 
 ### Batched Questions
 
-When multiple related questions arise, **batch them in a single ask**:
-
-```python
-REASON = r"""
-Starting auth module implementation, several design decisions needed
-"""
-
-QUESTION = r"""
-Before starting the auth module, I need a few decisions:
-
-1. **Token format**: JWT (stateless, standard) or opaque tokens (revocable, simpler)?
-2. **Session storage**: Redis (fast, needs infra) or DB table (simpler, slower)?
-3. **Password hashing**: bcrypt (proven) or argon2 (newer, more resistant)?
-
-For each, my recommendation is in bold if it helps. Override any as you see fit.
-"""
+```yaml
+reason: |
+  Several design decisions needed before starting
+question: |
+1. **Token format**: JWT or opaque?
+2. **Session storage**: Redis or DB?
+3. **Password hashing**: bcrypt or argon2?
 ```
-
-### Plan Confirmation (Most Common)
-
-```python
-REASON = r"""
-Change plan ready for review before starting implementation
-"""
-
-QUESTION = r"""
-Here's my plan for <change-name>:
-
-**Problem**: <one-line summary>
-**Approach**: <core idea>
-**Key files**: <list>
-**Estimated tasks**: <count>
-
-Proceed with this plan? Any adjustments?
-"""
-```
-
-### Confirmation Before Major Action
-
-```python
-REASON = r"""
-About to delete and recreate the database schema — irreversible action
-"""
-
-QUESTION = r"""
-I'm about to run the migration that drops and recreates the `users` table.
-This will delete all existing user data in dev.
-
-Proceed? (yes/no)
-"""
-```
-
----
-
-## Long Content Handling
-
-If long reusable design doc / research finding / other drafts need to be attached:
-
-1. Write them in `.sspec/tmp/` as standalone files
-2. Reference the file path in QUESTION
-3. After user reply: move useful drafts to `change/reference/`, or discard
-
-**Why**: Ask files should stay focused. Long content in QUESTION makes the `.md` record hard to review later.
-
----
-
-## Memory Integration
-
-Ask records serve as permanent decision documentation:
-
-- Link completed ask `.md` files in handover.md Key Files when the decision is important
-- The ask record preserves context that handover.md summaries may lose (exact user wording, full option analysis)
-- Future agents can trace: handover says "chose Redis" → ask record explains the full discussion
 
 ---
 
@@ -201,11 +111,9 @@ Ask records serve as permanent decision documentation:
 
 | Do | Don't |
 |----|-------|
-| Use descriptive topic name (`auth_approach`) | Use generic names (`q1`, `ask`, `question`) |
-| Keep topic name to letters and underscores only | Use non-ASCII or special characters |
-| Fill `REASON` with context for future reference | Leave `REASON` empty or vague |
-| Ask early when uncertain | Guess and risk rework |
-| Provide options when choices exist | Leave open-ended if you have candidates |
-| Batch related questions in one ask | Create 3 separate asks for related decisions |
-| Check project.md/spec-docs before asking | Ask for info that's already documented |
-| Link important ask records in handover.md | Let ask records become disconnected from change context |
+| Descriptive topic (`auth_approach`) | Generic name (`q1`) |
+| Fill REASON with context | Leave REASON empty |
+| Provide options when possible | Leave open-ended if you have candidates |
+| Batch related questions | Create separate asks for related items |
+| Link important asks in handover.md | Let records become disconnected |
+| Long content → write to file, reference in QUESTION | Stuff everything into QUESTION field |

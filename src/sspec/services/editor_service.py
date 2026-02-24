@@ -30,7 +30,7 @@ def get_editor_command(
     4) `.sspec/config.yaml` -> `editor` (legacy compatibility)
     5) Runtime env `EDITOR`
     """
-    env_map = env or os.environ
+    env_map = os.environ if env is None else env
 
     editor = env_map.get('SSPEC_EDITOR')
     if editor:

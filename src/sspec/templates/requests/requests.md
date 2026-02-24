@@ -36,7 +36,7 @@ the problem has been resolved and meets the user's intention -->
 ## @AGENT
 <!-- What should Agent do to implement this request -->
 Please initiate the "request → change" workflow for this request.
-(You need to consult `sspec-change` SKILL)
+(Read `sspec-research` → `sspec-design` SKILLs to get started)
 
 ---
 

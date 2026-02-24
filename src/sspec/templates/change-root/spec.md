@@ -7,56 +7,47 @@ created: {{TIME}}
 reference: null
 ---
 
-<!-- @RULE: Frontmatter Schema
-status: PLANNING | DOING | REVIEW | DONE | BLOCKED;
-change-type: root (coordinator for sub-changes);
-reference?: Array<{source: str; type: RefType; note?}>;
-type RefType: 'request' | 'root-change' | 'sub-change' | 'doc';
-📚 Full schema details: sspec-change SKILL → doc-standards.md
- -->
+<!-- @RULE: Frontmatter
+status: PLANNING | DOING | REVIEW | DONE | BLOCKED
+change-type: root (coordinator for sub-changes)
+reference?: Array<{source, type: 'request'|'root-change'|'sub-change'|'doc', note?}>
+
+Root reference rules:
+- If created from a request, include a `type: request` entry.
+- For every created sub-change, append one `type: sub-change` entry.
+
+Example:
+reference:
+  - source: ".sspec/requests/<request-file>.md"
+    type: "request"
+  - source: ".sspec/changes/<sub-change-dir>"
+    type: "sub-change"
+    note: "Phase <n>: <phase-name>"
+-->
 
 # {{CHANGE_NAME}}
 
 ## A. Problem Statement
 <!-- @REPLACE -->
 
-<!-- @RULE: Quantify overall impact. This is the root coordinator — describe the full scope, not a single module.
-📚 Standards: sspec-change SKILL → doc-standards.md -->
+<!-- @RULE: Overall impact. This is the root coordinator — describe the FULL scope. -->
 
 ## B. Proposed Solution
 <!-- @REPLACE -->
 
 ### Overall Approach
-<!-- @RULE: High-level strategy. How will this be broken into phases? What's the delivery order? -->
+<!-- High-level strategy. How will this be broken into phases? Delivery order? -->
 
 ### Phase Overview
-<!-- @RULE: List phases with goals, not file-level details. Format:
-- **Phase 1: <n>** — <goal, measurable deliverable>
-- **Phase 2: <n>** — <goal, measurable deliverable>
--->
+<!-- @RULE: List phases with goals. Each phase becomes a sub-change.
 
-## C. Phased Approach
-<!-- @REPLACE -->
+Format:
+- **Phase 1: <name>** — goal, measurable deliverable, scope (subsystems/modules)
+- **Phase 2: <name>** — goal, measurable deliverable, dependencies on Phase 1
 
-<!-- @RULE: Phase-level breakdown. Each phase becomes a sub-change. Format:
+Coordination Notes:
+- Cross-phase dependencies, shared interfaces, integration points
 
-### Phase 1: <n>
-- **Sub-change**: <will be filled when sub-change created>
-- **Goal**: <measurable deliverable>
-- **Dependencies**: <what must complete before this phase>
-- **Scope**: <which subsystems / modules affected>
-
-### Coordination Notes
-- <cross-phase dependencies, shared interfaces, integration points>
-📚 Full multi-change patterns: sspec-change SKILL → multi-change.md -->
-
-## D. Blockers & Feedback
-<!-- @REPLACE -->
-
-<!-- @RULE: Record with dates. Format:
-### Blocker (YYYY-MM-DD)
-**Blocked**: <what> | **Needed**: <to unblock>
-
-### PIVOT (YYYY-MM-DD)
-<direction change and reason>
--->
+When a sub-change is created, sync references in BOTH directions:
+- Root `spec.md` adds `type: sub-change` entry for the sub-change
+- Sub `spec.md` adds `type: root-change` entry back to this root -->

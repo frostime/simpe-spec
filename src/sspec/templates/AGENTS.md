@@ -27,7 +27,7 @@ SSPEC is a document-driven AI collaboration framework. All planning, tracking, a
 
 | Input | Action |
 |-------|--------|
-| Directive (`@resume`, `@handover`, etc.) | Execute → §4 Shortcuts |
+| Directive (`@resume`, `@handover`, etc.) | Execute → §5 Shortcuts |
 | Request (attached or described) | Assess scale → Change Workflow §2 |
 | Resume existing change | `read(handover→tasks→spec)` → continue from where left off |
 | Micro task (≤3 files, ≤30min, obvious) | Do directly, no change needed |
@@ -36,7 +36,6 @@ SSPEC is a document-driven AI collaboration framework. All planning, tracking, a
 - Important discovery → write to `handover.md` immediately
 - Long session (>20 exchanges) → checkpoint `handover.md`
 - Uncertain → `@ask` (30s question < hours of rework)
-- Session ending → `sspec-handover` MANDATORY
 - User rejects tool call → STOP → `@ask` reason
 
 ---
@@ -48,12 +47,18 @@ SSPEC is a document-driven AI collaboration framework. All planning, tracking, a
 Each phase has a dedicated SKILL. Read the SKILL before starting the phase.
 
 ```
-Request ─→ research ─→ design ──→ plan ──→ implement ──→ review ──→ done
-              │           │          │          │            │
-           understand   @ask       @ask      execute      @ask
-           problem      align      approve   tasks       feedback
-           space        design     tasks                  loop
+Request ─→ research ─→ design ──→ plan ──→ implement ──→ review ──→ handover
+              │           │          │          │            │          │
+           understand   @ask       @ask      execute      @ask      persist
+           problem      align      approve   tasks       feedback   session
+           space        design     tasks                  loop      state
 ```
+
+**Handover** is not just session-end cleanup — it's a lifecycle participant. Trigger it:
+- At session end (MANDATORY)
+- Mid-session when context is long (>30 exchanges)
+- When switching between major phases
+- Before any context-losing event (compression, interruption)
 
 ### Phase → SKILL → Files
 
@@ -99,12 +104,33 @@ Request ─→ research ─→ design ──→ plan ──→ implement ──�
 | No | Agent env question tool | Quick yes/no, session-end check |
 
 Default to `sspec ask` when uncertain — a record beats no record.
+Long content → write to `.sspec/tmp/`, reference path in question body.
 
-📚 Full workflow and patterns: `sspec-ask` SKILL
+📚 Full workflow, patterns, and content rules: `sspec-ask` SKILL
 
 ---
 
-## 4. Reference
+## 4. Spec-Docs
+
+Spec-docs capture architecture knowledge that survives beyond any single change.
+
+**When to create/update spec-docs**:
+- After a change produces architectural knowledge (new interfaces, data models, design patterns)
+- When the agent discovers knowledge too complex for `project.md` Notes
+- When user explicitly requests documentation
+
+**Two scenarios**:
+
+| Scenario | Trigger | Action |
+|----------|---------|--------|
+| Post-change update | Change is DONE, produced architectural knowledge | Agent proactively `@ask`: "Should I update/create spec-doc for X?" |
+| User-initiated | User requests spec-doc creation | If small → do directly; if large → may need its own change |
+
+📚 Full guidelines: `write-spec-doc` SKILL
+
+---
+
+## 5. Reference
 
 ### Directive Shortcuts
 
@@ -116,16 +142,38 @@ Default to `sspec ask` when uncertain — a record beats no record.
 | `@sync` | "I coded without tracking" | Update tasks.md/handover.md to match reality |
 | `@argue` | "I disagree" | **STOP** → assess scope (§2 Review) |
 
+### CLI Quick Reference
+
+Common `sspec` commands. Run `sspec <command> --help` for full options.
+
+| Command | Purpose | Example |
+|---------|---------|---------|
+| `sspec change new <name>` | Create single change | `sspec change new fix-auth` |
+| `sspec change new <name> --root` | Create root (multi) change | `sspec change new refactor --root` |
+| `sspec change new --from <req>` | Create from request (auto-link) | `sspec change new --from .sspec/requests/...` |
+| `sspec change find <name>` | Fuzzy-find change dir | `sspec change find auth` |
+| `sspec change list` | List all active changes | |
+| `sspec change archive <path>` | Archive completed change | |
+| `sspec request list` | List requests | |
+| `sspec doc new "<name>"` | Create spec-doc | `sspec doc new "auth-design"` |
+| `sspec ask create <topic>` | Create ask file | `sspec ask create cache_approach` |
+| `sspec ask prompt <path>` | Collect user answer | Combo: create → edit → prompt |
+| `sspec ask list` | List asks | |
+| `sspec tool mdtoc <file>` | Pre-scan Markdown (headings + sizes) | |
+
 ### Scope Quick Reference
 
-| Scope | Location | CLI |
-|-------|----------|-----|
-| Changes | `.sspec/changes/<n>/` | `sspec change new/find/list/archive` |
-| Requests | `.sspec/requests/` | `sspec request new/find/link` |
-| Spec-Docs | `.sspec/spec-docs/` | `sspec doc new "<name>"` |
-| Asks | `.sspec/asks/` | `sspec ask create/prompt/list` |
+| Scope | Location | Key Actions |
+|-------|----------|-------------|
+| Changes | `.sspec/changes/<n>/` | `new`, `find`, `list`, `archive` |
+| Requests | `.sspec/requests/` | `new`, `find`, `link` |
+| Spec-Docs | `.sspec/spec-docs/` | `new` |
+| Asks | `.sspec/asks/` | `create` → `prompt`, `list` |
 
 ### SKILL System
+
+Each SKILL is self-contained — read the one you need for the current phase, no chaining required.
+When a SKILL.md says "read [reference](./references/file.md)" → you **MUST** follow and read it.
 
 | SKILL | When to Read |
 |-------|-------------|
@@ -134,13 +182,11 @@ Default to `sspec ask` when uncertain — a record beats no record.
 | `sspec-plan` | Breaking design into tasks |
 | `sspec-implement` | Executing tasks |
 | `sspec-review` | Handling user feedback |
-| `sspec-handover` | Saving session state |
+| `sspec-handover` | Saving session state (end-of-session or mid-session) |
 | `sspec-ask` | Consulting user mid-work |
 | `sspec-mdtoc` | Pre-scanning large Markdown files |
 | `write-spec-doc` | Creating spec-docs |
 | `write-patch` | Patch-based code modifications |
-
-SKILLs are self-contained. Read the one you need for the current phase — no chaining required.
 
 ### Template Markers
 

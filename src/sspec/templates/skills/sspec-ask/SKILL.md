@@ -3,7 +3,7 @@ name: sspec-ask
 description: "Mid-execution user consultation via persistent Q&A. USE ACTIVELY — guessing wastes more tokens than asking."
 metadata:
   author: frostime
-  version: 6.0.0
+  version: 7.0.0
 ---
 
 # SSPEC Ask
@@ -14,19 +14,18 @@ Persist questions to disk, collect answers via terminal, continue — all within
 
 ---
 
-## When to Use
+## sspec ask vs Built-in Question Tool
 
-**REQUIRED**:
-1. User explicitly requested consultation
-2. Information missing — can't proceed reliably
-3. Directional choice — multiple valid approaches
-4. Work completion — believe task is done, need verification
-5. Repeated failures — multiple attempts failed
+Two tools, different purposes. Choose correctly:
 
-**DON'T ask** when: only one reasonable approach, easily reversible, answer in project.md/spec-docs.
+| | `sspec ask` (CLI) | Built-in question tool (e.g. VS Code Question) |
+|---|---|---|
+| **Record** | Persists as `.md` file in `.sspec/asks/` | Gone after session |
+| **Use when** | Architecture decisions, plan approval, direction choices, anything worth recording | Quick yes/no, mode switch confirmation, session-end check |
+| **Content** | Structured (REASON + QUESTION with options) | One-liner |
+| **Default** | **Prefer this** when uncertain | Only when answer is ephemeral |
 
-**Simple questions**: Use agent env question tool (e.g. VS Code Question).
-**Complex / needs record**: Use `sspec ask`.
+**Rule**: If the question involves a decision that future agents might need to understand → use `sspec ask`.
 
 ---
 
@@ -49,6 +48,21 @@ sspec ask list                   # Check pending/completed asks
 ### Error Handling
 
 If `prompt` says file not found → check if `.md` already exists (`sspec ask list`).
+
+---
+
+## Content Rules
+
+**Keep ask files focused.** The QUESTION field is for the question itself, not for long analysis.
+
+| Content type | Where to put it |
+|---|---|
+| The question + brief options | QUESTION field in `.py` |
+| Long analysis, draft plans, design docs | Write to `.sspec/tmp/<topic>.md`, reference path in QUESTION |
+| Code samples or large tables | Write to file, reference path |
+
+**Anti-pattern**: Stuffing 200+ lines of analysis into QUESTION field.
+**Correct**: Write analysis to `.sspec/tmp/design-draft.md`, then in QUESTION: "See draft at `.sspec/tmp/design-draft.md`. Does this approach work?"
 
 ---
 
@@ -91,10 +105,7 @@ QUESTION = r"""
 """
 ```
 
-## Long Content
-
-Long drafts → write to `.sspec/tmp/`, reference path in QUESTION.
-Ask files should stay focused.
+---
 
 ## Guidelines
 
@@ -105,3 +116,4 @@ Ask files should stay focused.
 | Provide options when possible | Leave open-ended if you have candidates |
 | Batch related questions | Create separate asks for related items |
 | Link important asks in handover.md | Let records become disconnected |
+| Long content → write to file, reference in QUESTION | Stuff everything into QUESTION field |

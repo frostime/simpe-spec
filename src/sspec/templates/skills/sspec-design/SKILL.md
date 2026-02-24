@@ -3,12 +3,14 @@ name: sspec-design
 description: "Assess scale, create change, fill spec.md, align with user. Use after research when ready to define the solution."
 metadata:
   author: frostime
-  version: 2.0.0
+  version: 3.0.0
 ---
 
 # SSPEC Design
 
-Define the problem and design the solution. Create the change. Align with user before planning.
+Define the problem and design the solution. Create the change. **Align with user before planning.**
+
+This is a **user-in-the-loop** phase — like review, the user must confirm your design before you proceed. Never auto-advance to planning.
 
 ---
 
@@ -18,7 +20,7 @@ Define the problem and design the solution. Create the change. Align with user b
 1. Assess scale → micro / single / multi
 2. Create change (CLI)
 3. Fill spec.md
-4. @ask user for alignment
+4. @ask user for alignment (MANDATORY)
 ```
 
 ## Step 1: Assess Scale
@@ -54,6 +56,11 @@ Root change creates a coordinator with different templates:
 
 ## Step 3: Fill spec.md
 
+### What Users Care About Most
+
+Users review designs for: **interfaces**, **data types**, **data flow**, and **logic flow**.
+Prioritize these in Section B. Abstract hand-waving ("we'll handle it later") erodes trust.
+
 ### Single Change
 
 **Section A — Problem Statement**:
@@ -78,8 +85,44 @@ Root change creates a coordinator with different templates:
 | Medium (5-15 files) | Sub-sections: `### Interface Design`, `### Data Model`, `### Key Logic` |
 | Complex (>15 files) | Detailed design in `reference/design.md`, link from B |
 
-**What to include in B**: Interfaces, data models, key algorithms, design rationale.
-**What NOT to include**: Execution order (that's tasks.md), file-level task lists (tasks.md).
+**What MUST appear in B** (by priority):
+1. **Interfaces** — function signatures, API contracts, class interfaces
+2. **Data types** — models, schemas, type definitions
+3. **Data flow** — how data moves through the system (input → transform → output)
+4. **Logic flow** — key algorithms, decision trees, state machines
+5. **Design rationale** — why this approach over alternatives
+
+**What does NOT belong in B**: Execution order (tasks.md), file-level task lists (tasks.md).
+
+### Section B Example (Medium Complexity)
+
+```markdown
+## B. Proposed Solution
+
+### Approach
+Add token refresh via middleware. Background refresh prevents expired tokens from blocking requests.
+
+Why middleware: intercepting at HTTP layer avoids modifying every API call site.
+
+### Key Design
+
+#### Interface
+- `TokenService.refresh(token: str) -> TokenPair`
+- `AuthMiddleware.intercept(request: Request) -> Request`
+- `TokenPair = TypedDict('TokenPair', {'access': str, 'refresh': str, 'expires_at': int})`
+
+#### Data Flow
+```
+Request → AuthMiddleware → check expiry
+  → if valid: pass through
+  → if expiring (<5min): background refresh + pass through
+  → if expired: block, refresh, retry with new token
+```
+
+#### Key Logic
+Refresh uses sliding window: if token expires within `REFRESH_WINDOW` (default 5min),
+trigger background refresh. Concurrent requests share one refresh via lock.
+```
 
 ### Root Change
 
@@ -104,11 +147,12 @@ Each sub-change then goes through its own design → plan → implement → revi
 
 ## Step 4: @ask for Alignment (MANDATORY)
 
-**Never skip this step.** Present the design to user for confirmation:
+**Never skip this step.** This is a user-in-the-loop confirmation — like review phase, the user must sign off.
 
+Present the design to user for confirmation:
 - Problem statement summary
 - Proposed approach and rationale
-- Key design decisions
+- Key interfaces and data types
 - (Root) Phase breakdown
 
 Wait for user approval before proceeding to `sspec-plan`.

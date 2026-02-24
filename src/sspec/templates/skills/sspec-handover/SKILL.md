@@ -1,14 +1,16 @@
 ---
 name: sspec-handover
-description: "Save session state. Update handover.md and project.md Notes. Use at session end or when context is getting long."
+description: "Save session state. Update handover.md, project.md, and spec-docs index. MANDATORY at session end, recommended mid-session."
 metadata:
   author: frostime
-  version: 2.0.0
+  version: 3.0.0
 ---
 
 # SSPEC Handover
 
 Persist session knowledge so any agent can resume within 30 seconds.
+
+**Handover is a lifecycle participant, not just cleanup.** It preserves context across sessions, context compressions, and agent switches.
 
 ---
 
@@ -16,7 +18,7 @@ Persist session knowledge so any agent can resume within 30 seconds.
 
 ### End of Session (MANDATORY)
 
-Before ending ANY session, perform the full procedure below.
+Before ending ANY session, perform the full procedure below. No exceptions.
 
 ### Mid-Session (Proactive)
 
@@ -25,7 +27,7 @@ Update handover.md Working Memory when:
 - Important decision just made with non-trivial reasoning
 - Key file discovered that future work depends on
 - Design tradeoff resolved after discussion
-- About to switch between files/topics
+- About to switch between major phases (e.g. design → plan)
 
 **Rule**: If you'd struggle to reconstruct info after context compression → write it NOW.
 
@@ -47,11 +49,21 @@ Verify tasks.md progress percentage matches reality. All completed tasks marked 
 
 ### 3. Promote to project.md (if applicable)
 
-If any discovery applies beyond this change:
-- Append to `project.md` Notes section with date
+Two promotion targets:
+
+**Notes section**: If any discovery applies beyond this change → append with date.
 - Format: `- YYYY-MM-DD: <learning>`
 
-### 4. Quick Quality Check
+**Spec-Docs Index section**: If spec-docs were created or updated during this session → update the index.
+- Format: `- [name](spec-docs/<file>) — one-line description`
+
+### 4. Suggest spec-doc update (if applicable)
+
+If the change produced architectural knowledge (new interfaces, data models, patterns):
+- `@ask` user: "This change produced knowledge about X. Should I create/update a spec-doc?"
+- If yes → use `write-spec-doc` SKILL
+
+### 5. Quick Quality Check
 
 | Test | Pass? |
 |------|-------|

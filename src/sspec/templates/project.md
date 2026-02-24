@@ -29,6 +29,13 @@ Examples: "snake_case for Python, camelCase for JS", "All API routes: /api/v1/*"
 **Domain Context**
 **Important Constraints**
 
+## Spec-Docs Index
+<!-- @RULE: Quick reference to formal specs in `.sspec/spec-docs/`.
+Agent reads this to know what architecture knowledge exists before starting work.
+Keep entries in sync with actual spec-doc files. Format: `- [name](spec-docs/<file>) — one-line description` -->
+
+(none yet — create spec-docs with `sspec doc new "<name>"`)
+
 ## Notes
 <!-- @RULE: Project-level memory. Append-only log of learnings, gotchas, preferences.
 Agent appends here during @handover when a discovery is project-wide (not change-specific).

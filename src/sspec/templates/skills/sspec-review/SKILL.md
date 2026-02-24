@@ -69,9 +69,9 @@ When user is satisfied:
 
 1. Ensure all tasks (including feedback tasks) are marked `[x]`
 2. Update spec.md frontmatter: `status: REVIEW → DONE`
-3. Suggest next actions:
+3. If change produced architectural knowledge → `@ask` user: "Should I create/update a spec-doc for X?" (use `write-spec-doc` SKILL if yes)
+4. Suggest next actions:
    - Archive the change if work is complete
-   - Update `spec-docs/` if architectural knowledge was produced
    - `@handover` if session is ending
 
 **FORBIDDEN transitions**: PLANNING→DONE, DOING→DONE — never skip REVIEW.

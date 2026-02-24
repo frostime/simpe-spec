@@ -94,11 +94,17 @@ def update_references_in_dirs(
     if verbose:
         from .echo import echo
 
-        echo(f'Updated {modified_count} files for {len(replacements)} replacement rule(s)', bold=True)
+        echo(
+            f'Updated {modified_count} files for {len(replacements)} replacement rule(s)', bold=True
+        )
         for old_path, new_path in replacements.items():
             echo(f'{old_path} -> {new_path}', fg='cyan')
         cwd = Path('.').resolve()
         for f in gathered_files:
-            echo(f'  - {f.relative_to(cwd).as_posix()}', dim=True)
+            try:
+                display_path = f.relative_to(cwd).as_posix()
+            except ValueError:
+                display_path = f.as_posix()
+            echo(f'  - {display_path}', dim=True)
 
     return modified_count

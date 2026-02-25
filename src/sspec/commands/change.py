@@ -1,5 +1,6 @@
 """sspec change command - change management operations."""
 
+import sys
 from pathlib import Path
 
 import click
@@ -35,6 +36,14 @@ STATUS_STYLES: dict[str, tuple[str, str]] = {
     ChangeStatus.REVIEW.value: ('magenta', 'R'),
     ChangeStatus.DONE.value: ('green', 'D'),
 }
+
+
+def _change_tree_prefixes() -> tuple[str, str]:
+    """Pick file tree prefixes compatible with current stdout encoding."""
+    encoding = (getattr(sys.stdout, 'encoding', None) or '').lower()
+    if encoding.startswith('utf'):
+        return ('├──', '└──')
+    return ('|--', '`--')
 
 
 def _interactive_select_change(matches: list[Path], name: str) -> Path:
@@ -197,12 +206,15 @@ def new(name: str | None = None, from_request: str | None = None, root: bool = F
         f'[green][OK][/green] Created {change_type} change: [bold]{change_path.name}[/bold]'
     )
     console.print()
+    branch_prefix, last_prefix = _change_tree_prefixes()
     console.print('[cyan]Files:[/cyan]')
     console.print(f'  {rel_path}/')
-    console.print('  ├── spec.md      # Proposal and context')
-    console.print('  ├── tasks.md     # Executable tasks and progress')
-    console.print('  ├── handover.md  # Session continuity (update every session!)')
-    console.print('  └── reference/   # Use if need to keep auxiliary design/research files')
+    console.print(f'  {branch_prefix} spec.md      # Proposal and context')
+    console.print(f'  {branch_prefix} tasks.md     # Executable tasks and progress')
+    console.print(f'  {branch_prefix} handover.md  # Session continuity (update every session!)')
+    console.print(
+        f'  {last_prefix} reference/   # Use if need to keep auxiliary design/research files'
+    )
     console.print()
     console.print('[yellow]Next:[/yellow]')
     console.print('  0. Read sspec-design skill for standards and best practices')

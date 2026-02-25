@@ -143,7 +143,7 @@ This saves cost in Copilot (tool calls don't consume turns).
 <!-- SSPEC:START -->
 # .sspec Agent Protocol
 
-SSPEC_SCHEMA::9.0
+SSPEC_SCHEMA::9.1
 
 ## 0. Overview
 
@@ -197,7 +197,7 @@ Each phase has a dedicated SKILL. Read it before starting.
 [Request]
    |
    v
-[Research]  (understand problem + gather enough context)
+[Research]  (understand + clarify; @ask mid-research for ambiguities)
    |
    v
 [Design]    -- @ask gate (MANDATORY) --> "Align understanding + solution"
@@ -230,7 +230,7 @@ Flow rules:
 
 | Phase | SKILL | Reads | Writes | Checkpoint |
 |-------|-------|-------|--------|------------|
-| **Research** | `sspec-research` | code, project.md, spec-docs | reference/, handover.md | — (no @ask gate) |
+| **Research** | `sspec-research` | code, project.md, spec-docs | reference/, handover.md | `question` for mid-research clarifications (no formal gate) |
 | **Design** | `sspec-design` | research findings, code | spec.md (A+B) | **@ask align** (MANDATORY) |
 | **Plan** | `sspec-plan` | spec.md B | tasks.md | @ask confirm breakdown (LIGHTWEIGHT) |
 | **Implement** | `sspec-implement` | spec.md B, tasks.md | code, tasks.md progress | **@ask "done for this round, please review"** (MANDATORY) |
@@ -262,15 +262,23 @@ Flow rules:
 
 ## 3. Consultation (@ask)
 
-| Need persistent record? | Tool | Use when |
-|--------------------------|------|----------|
-| Yes | `sspec ask create` → fill → `sspec ask prompt` | Plan/design approval, architecture decisions |
-| No | Built question-like tool (if available) | Quick yes/no, session-end check |
+`@ask` means the Agent proactively asks the User a question, through:
+- Built-in tools such as `AskUserQuestion` (e.g. `vscode/askQuestion`, `opencode/question`)
+- The `sspec ask` CLI tool
 
-For lightweight questions, use `question`.
-If no question-like tool is available, use `sspec ask`.
+**Choose by question type**:
 
-Long content → write to `.sspec/tmp/`, reference path in question body.
+| Question type | Tool |
+|---|---|
+| Simple, bounded — yes/no, pick from options, quick confirm | `question` tool |
+| Complex, open-ended — requires context, involves tradeoffs, or worth recording | `sspec ask` |
+| Phase gates (Design align, Implement review) | `sspec ask` (mandatory) |
+| Mid-research in-flight clarification | `question` tool |
+
+If no `question`-like tool is available → use `sspec ask` for all cases.
+
+**For complex context**: If the question references a large design draft, research findings, or analysis → write that content to `.sspec/tmp/` and link it from the question body. Confirmed valuable materials can be moved to `change/reference/` later.
+
 At phase gates: Design + Implement are mandatory, Plan is lightweight, Review loops until satisfied.
 
 📚 Full workflow, patterns, and content rules: `sspec-ask` SKILL
@@ -327,7 +335,7 @@ Run `sspec <command> --help` for full options.
 
 ### SKILL System
 
-Read the SKILL for the current phase (`sspec-research`, `sspec-design`, `sspec-plan`, `sspec-implement`, `sspec-review`, `sspec-handover`, `sspec-ask`, `sspec-mdtoc`, `write-spec-doc`, `write-patch`).
+Read the SKILL for the current phase (`sspec-research`, `sspec-design`, `sspec-plan`, `sspec-implement`, `sspec-review`, `sspec-handover`, `sspec-ask`, `sspec-mdtoc`, `write-spec-doc`).
 If a SKILL says "read [file](...)" -> **MUST** read it.
 
 ### Template Markers

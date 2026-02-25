@@ -31,7 +31,7 @@ Explore and investigate before designing. This phase is about **understanding**,
 
 **Explore the problem space**:
 - Read request/issue description carefully
-- Identify what's actually being asked vs surface description
+- Identify what's actually being asked vs surface description, follows First Principle
 - Challenge assumptions — find the real problem
 
 **Investigate the codebase**:
@@ -65,3 +65,22 @@ Research is sufficient when you can articulate:
 → Then transition to `sspec-design` phase.
 
 If uncertain whether research is complete → `@ask` user: "Here's my understanding. Is this sufficient to proceed to design?"
+
+---
+
+## Consultation During Research
+
+Research is inherently ambiguous — requirements are often unclear, intent can drift, context may be missing.
+
+**When to ask mid-research** (don't guess, ask):
+- Requirement is ambiguous or contradicts itself
+- User intent is unclear — multiple valid interpretations exist
+- You lack context only the user can provide (preference, priorities, constraints)
+- Codebase reality diverges from the stated problem
+
+**How to ask**:
+- Use `question` tool for quick in-flight clarifications (don't block research for simple things)
+- Batch non-blocking questions → ask at research end with `sspec ask`
+- **Never defer a critical ambiguity to design** — clarify it now, or your research points at the wrong target
+
+**Posture**: One question now beats a wrong design later.

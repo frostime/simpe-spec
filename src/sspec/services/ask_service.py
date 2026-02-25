@@ -196,7 +196,7 @@ def create_ask_template(sspec_root: Path, name: str) -> tuple[Path, str | None]:
             yml_path = asks_dir / f'{base}_{counter}.yml'
             counter += 1
 
-        template = f'''created: "{timestamp}"
+    template = f'''created: "{timestamp}"
 
 # EDIT: Why are you asking this question?
 reason: |-

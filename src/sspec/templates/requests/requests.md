@@ -35,8 +35,8 @@ the problem has been resolved and meets the user's intention -->
 
 ## @AGENT
 <!-- What should Agent do to implement this request -->
-Please initiate the "request → change" workflow for this request.
-(Read `sspec-research` → `sspec-design` SKILLs to get started)
+Adhere to the SSPEC protocol specifications and commence development from the current Request file, following the SSPEC/Development Lifecycle.
+Next step: Read `sspec-research` SKILL + `sspec-design` SKILLs + `sspec change new --from <this>`.
 
 ---
 

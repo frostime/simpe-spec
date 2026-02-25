@@ -54,9 +54,9 @@ description: ""
     except FileExistsError as e:
         raise click.ClickException(str(e)) from None
 
-    console.print(f"[green]✓[/green] Created skill '{name}'")
+    console.print(f"[green][OK][/green] Created skill '{name}'")
     console.print(f'  {result.hub_dir.relative_to(project_root)}/')
-    console.print('  └── SKILL.md')
+    console.print('  `-- SKILL.md')
     console.print()
     console.print('[yellow]Next:[/yellow]')
     console.print('  1. Edit SKILL.md to define your skill')
@@ -111,7 +111,7 @@ def dominate(dir_path: Path) -> None:
     if result.status == 'needs_relink':
         current = result.current_target or result.target_dir.resolve(strict=False)
         if not click.confirm(
-            f"{result.target_dir} points to {current}. Relink to {result.source_dir}?",
+            f'{result.target_dir} points to {current}. Relink to {result.source_dir}?',
             default=False,
         ):
             console.print('[yellow]Skipped[/yellow]')
@@ -137,7 +137,7 @@ def dominate(dir_path: Path) -> None:
         rel_source = result.source_dir
 
     if result.status == 'skipped':
-        console.print(f'[cyan]•[/cyan] Already linked: {rel_target} -> {rel_source}')
+        console.print(f'[cyan]-[/cyan] Already linked: {rel_target} -> {rel_source}')
         return
 
     if result.status == 'merged':
@@ -148,19 +148,19 @@ def dominate(dir_path: Path) -> None:
                 rel_backup = result.backup_path
         else:
             rel_backup = None
-        console.print(f'[green]✓[/green] Dominated skills directory: {rel_target}')
+        console.print(f'[green][OK][/green] Dominated skills directory: {rel_target}')
         if rel_backup:
             console.print(f'  [dim]Backup:[/dim] {rel_backup}')
         merged = result.merged_skills or []
         conflicts = result.conflict_skills or []
         if merged:
-            console.print(f"  [dim]Merged:[/dim] {', '.join(sorted(merged))}")
+            console.print(f'  [dim]Merged:[/dim] {", ".join(sorted(merged))}')
         else:
             console.print('  [dim]Merged:[/dim] none')
         if conflicts:
             console.print(
-                f"[yellow]Warning:[/yellow] Conflict skills kept in project hub (.sspec/skills): "
-                f"{', '.join(sorted(conflicts))}"
+                f'[yellow]Warning:[/yellow] Conflict skills kept in project hub (.sspec/skills): '
+                f'{", ".join(sorted(conflicts))}'
             )
             if rel_backup:
                 console.print(
@@ -170,5 +170,5 @@ def dominate(dir_path: Path) -> None:
         return
 
     action = 'Relinked' if result.status == 'relinked' else 'Linked'
-    console.print(f'[green]✓[/green] {action}: {rel_target} -> {rel_source}')
+    console.print(f'[green][OK][/green] {action}: {rel_target} -> {rel_source}')
     console.print(f'  [dim]Link:[/dim] {result.link_kind}')

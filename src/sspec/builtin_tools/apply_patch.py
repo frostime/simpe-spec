@@ -704,11 +704,11 @@ def register_command(group):
         if parse_result.errors:
             console.print('[red]Parsing errors:[/red]')
             for err in parse_result.errors:
-                console.print(f'  • {err}')
+                console.print(f'  - {err}')
             raise click.Abort()
 
         patches = parse_result.patches
-        console.print(f'[green]✓[/green] Found {len(patches)} patch(es)\n')
+        console.print(f'[green][OK][/green] Found {len(patches)} patch(es)\n')
 
         # Always show preview table (helps understand what will happen)
         table = Table(title='Patches', show_header=True)
@@ -771,7 +771,7 @@ def _display_results(console: Console, results: list[PatchApplyResult]) -> None:
             failed += 1
             table.add_row(
                 'N/A',
-                '[red]✗[/red]',
+                '[red][X][/red]',
                 '-',
                 '-',
                 result.error or 'Unknown parsing error',
@@ -786,7 +786,7 @@ def _display_results(console: Console, results: list[PatchApplyResult]) -> None:
             delta = result.replace_line_count - result.search_line_count
             table.add_row(
                 format_patch_header(result.patch),
-                '[green]✓[/green]',
+                '[green][OK][/green]',
                 match,
                 f'{delta:+d}',
                 'Applied',
@@ -796,7 +796,7 @@ def _display_results(console: Console, results: list[PatchApplyResult]) -> None:
             error_msg = result.error or 'Unknown error'
             table.add_row(
                 format_patch_header(result.patch),
-                '[red]✗[/red]',
+                '[red][X][/red]',
                 (result.match_mode or '-'),
                 '-',
                 error_msg,

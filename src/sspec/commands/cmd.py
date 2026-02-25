@@ -230,7 +230,7 @@ def add(cmd_name: str | None) -> None:
             f'Remove it first with: sspec cmd remove {cmd_name}'
         ) from None
 
-    console.print(f'[green]✓[/green] Added command "{cmd_name}" ({cmd_type})')
+    console.print(f'[green][OK][/green] Added command "{cmd_name}" ({cmd_type})')
     console.print(f'  invoke: {invoke}')
     if script_file:
         console.print(f'  script: .sspec/commands/{script_file}')

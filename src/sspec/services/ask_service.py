@@ -95,8 +95,8 @@ def archive_ask(sspec_root: Path, asks_dir: Path, ask_path: Path) -> Path:
 
 
 def ask_prompt(q: str, tldr: str | None = None) -> str:
-    print(f'\n{"=" * 60}\n  🤖 Agent needs your input\n{"=" * 60}\n\n{q}\n', file=sys.stderr)
-    print('💡 Enter response (type END on new line to finish):', file=sys.stderr)
+    print(f'\n{"=" * 60}\n  [ASK] Agent needs your input\n{"=" * 60}\n\n{q}\n', file=sys.stderr)
+    print('TIP: Enter response (type END on new line to finish):', file=sys.stderr)
     lines = []
     try:
         while (line := input()) != 'END':
@@ -104,7 +104,7 @@ def ask_prompt(q: str, tldr: str | None = None) -> str:
     except (EOFError, KeyboardInterrupt):
         pass
     result = '\n'.join(lines)
-    print(f'\n✓ Received ({len(result)} chars)\n{"=" * 60}\n', file=sys.stderr)
+    print(f'\n[OK] Received ({len(result)} chars)\n{"=" * 60}\n', file=sys.stderr)
     return result
 
 
@@ -130,7 +130,7 @@ def normalize_ask_name(name: str) -> tuple[str, str | None]:
     # Check if conversion happened
     warning = None
     if normalized != original:
-        warning = f'Ask name converted: "{original}" → "{normalized}"'
+        warning = f'Ask name converted: "{original}" -> "{normalized}"'
 
     return normalized, warning
 
@@ -145,11 +145,11 @@ def collect_multiline_input(
     """Collect multi-line input until end_token is entered on a new line."""
 
     print(
-        f'\n{"=" * 60}\n  🤖 sspec ask\n{"=" * 60}\n\n{prompt}\n',
+        f'\n{"=" * 60}\n  [ASK] sspec ask\n{"=" * 60}\n\n{prompt}\n',
         file=output_stream,
     )
     print(
-        f'💡 Enter response (type {end_token} on new line to finish):',
+        f'TIP: Enter response (type {end_token} on new line to finish):',
         file=output_stream,
     )
     lines: list[str] = []
@@ -159,7 +159,7 @@ def collect_multiline_input(
     except (EOFError, KeyboardInterrupt):
         pass
     result = '\n'.join(lines)
-    print(f'\n✓ Received ({len(result)} chars)\n{"=" * 60}\n', file=output_stream)
+    print(f'\n[OK] Received ({len(result)} chars)\n{"=" * 60}\n', file=output_stream)
     return result
 
 
@@ -196,7 +196,7 @@ def create_ask_template(sspec_root: Path, name: str) -> tuple[Path, str | None]:
             yml_path = asks_dir / f'{base}_{counter}.yml'
             counter += 1
 
-    template = f'''created: "{timestamp}"
+    template = f"""created: "{timestamp}"
 
 # EDIT: Why are you asking this question?
 reason: |-
@@ -210,7 +210,7 @@ question: |-
 # User can pre-fill answer here to skip terminal input during execution.
 user_answer: |
   USER_FILL_HERE
-'''
+"""
 
     yml_path.write_text(template, encoding='utf-8')
     return yml_path, warning

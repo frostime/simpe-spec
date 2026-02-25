@@ -438,7 +438,9 @@ def register_command(group):
 
         # -- statistics ----------------------------------------------------
         file_count, dir_count, total_size = collect_stats(
-            path, no_gitignore, gitignore_root=gitignore_root,
+            path,
+            no_gitignore,
+            gitignore_root=gitignore_root,
         )
         stats_line = (
             f'Files: {file_count} | Directories: {dir_count}'
@@ -456,7 +458,7 @@ def register_command(group):
                 text_console.print(tree)
                 text_console.print(f'\n{stats_line}')
 
-            console.print(f'[green]✓[/green] Saved to: {output}')
+            console.print(f'[green][OK][/green] Saved to: {output}')
         else:
             console.print(tree)
             console.print()

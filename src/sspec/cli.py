@@ -4,6 +4,9 @@ import click
 from rich.console import Console
 
 from sspec.commands import ask, change, cmd, doc, project, request, skill, tmp, tool
+from sspec.core import configure_stdio_error_fallback
+
+configure_stdio_error_fallback()
 
 console = Console()
 

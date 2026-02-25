@@ -37,7 +37,7 @@ def new(name: str | None, is_dir: bool) -> None:
     rel_path = result.path.relative_to(sspec_root.parent)
     kind = 'directory' if result.is_dir else 'file'
 
-    console.print(f'[green]✓[/green] Created tmp {kind}: {rel_path}')
+    console.print(f'[green][OK][/green] Created tmp {kind}: {rel_path}')
 
     if open_in_editor(file_path=result.path, sspec_root=sspec_root):
         console.print('[dim]Opened in editor[/dim]')

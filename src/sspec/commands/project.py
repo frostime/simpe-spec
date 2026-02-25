@@ -52,7 +52,7 @@ def _interactive_skill_selection(project_root: Path) -> list[str]:
 
     choices = [
         questionary.Choice(
-            title=f"{loc} {' (existing)' if loc in existing_dirs else ''}",
+            title=f'{loc} {" (existing)" if loc in existing_dirs else ""}',
             value=loc,
             checked=loc in existing_dirs,
         )
@@ -197,7 +197,7 @@ def _show_overview(sspec_root: Path) -> None:
             name = change.name
 
             console.print(
-                f'{status_icon} [bold]{name}[/bold] ' f'[{_get_status_color(status)}]{status}[/]'
+                f'{status_icon} [bold]{name}[/bold] [{_get_status_color(status)}]{status}[/]'
             )
 
             # if change.get('description'):
@@ -212,13 +212,13 @@ def _show_overview(sspec_root: Path) -> None:
 def _get_status_icon(status: str) -> str:
     """Get icon for status."""
     icons = {
-        ChangeStatus.PLANNING.value: '📝',
-        ChangeStatus.DOING.value: '🔄',
-        ChangeStatus.BLOCKED.value: '🚧',
-        ChangeStatus.REVIEW.value: '👀',
-        ChangeStatus.DONE.value: '✅',
+        ChangeStatus.PLANNING.value: 'P',
+        ChangeStatus.DOING.value: 'W',
+        ChangeStatus.BLOCKED.value: 'B',
+        ChangeStatus.REVIEW.value: 'R',
+        ChangeStatus.DONE.value: 'D',
     }
-    return icons.get(status, '•')
+    return icons.get(status, '?')
 
 
 def _get_status_color(status: str) -> str:

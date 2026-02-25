@@ -152,7 +152,7 @@ def new(name: str) -> None:
     except ValueError as e:
         raise click.ClickException(str(e)) from None
 
-    console.print(f'[green]✓[/green] Created request: {normalized}')
+    console.print(f'[green][OK][/green] Created request: {normalized}')
     console.print(f'  [dim]{request_path.relative_to(sspec_root.parent)}[/dim]')
     console.print()
 
@@ -239,28 +239,28 @@ def _display_request(
     """Display a single request in list format."""
     name = request.name
     if dim:
-        name = f"[dim]{name}[/dim]"
+        name = f'[dim]{name}[/dim]'
 
     created = request.created[:10] if request.created else 'unknown'
 
     # Line 1: Name
-    console.print(f"• [bold]{name}[/bold]")
+    console.print(f'- [bold]{name}[/bold]')
 
     # Indented Metadata
-    console.print(f"  [dim]Created:[/dim] [dim]{created}[/dim]")
+    console.print(f'  [dim]Created:[/dim] [dim]{created}[/dim]')
 
     path_rel = request.path.relative_to(Path.cwd())
-    console.print(f"  [dim]Path:[/dim] [dim]{path_rel}[/dim]")
+    console.print(f'  [dim]Path:[/dim] [dim]{path_rel}[/dim]')
 
     if request.attach_change:
-        console.print(f"  [dim]Linked:[/dim] [cyan]→ {request.attach_change}[/cyan]")
+        console.print(f'  [dim]Linked:[/dim] [cyan]-> {request.attach_change}[/cyan]')
 
     # Summary
     if request.tldr:
         summary = request.tldr
         if dim:
-            summary = f"[dim]{summary}[/dim]"
-        console.print(f"  [dim]Summary:[/dim] {summary}")
+            summary = f'[dim]{summary}[/dim]'
+        console.print(f'  [dim]Summary:[/dim] {summary}')
 
 
 def _print_request_list(
@@ -384,7 +384,7 @@ def link_request_cmd(request_name: str, change_name: str) -> None:
     except ValueError as e:
         raise click.ClickException(str(e)) from None
 
-    console.print(f'[green]✓[/green] Linked {request_path.stem} → {change_path.name}')
+    console.print(f'[green][OK][/green] Linked {request_path.stem} -> {change_path.name}')
 
 
 # ============================================================================
@@ -493,7 +493,7 @@ def _archive_requests_interactive(sspec_root: Path, with_change: bool = False) -
             console.print(f'[red]Failed to archive {req.name}: {e}[/red]')
 
     console.print()
-    console.print(f'[green]✓[/green] Archived {archived_count}/{len(selected)} request(s)')
+    console.print(f'[green][OK][/green] Archived {archived_count}/{len(selected)} request(s)')
 
 
 def _archive_single_request(
@@ -514,7 +514,7 @@ def _archive_single_request(
 
     dest_path = archive_request(sspec_root, request_info)
     rel_path = dest_path.relative_to(sspec_root.parent)
-    console.print(f'[green]✓[/green] Archived to: {rel_path}')
+    console.print(f'[green][OK][/green] Archived to: {rel_path}')
 
     if linked_change:
         from sspec.services.change_service import archive_change
@@ -523,7 +523,8 @@ def _archive_single_request(
             change_archive_path = archive_change(sspec_root, linked_change)
             change_rel_path = change_archive_path.relative_to(sspec_root.parent)
             console.print(
-                f'[green]✓[/green] Archived linked change: {linked_change.name} → {change_rel_path}'
+                f'[green][OK][/green] Archived linked change: '
+                f'{linked_change.name} -> {change_rel_path}'
             )
         except Exception as e:
             console.print(

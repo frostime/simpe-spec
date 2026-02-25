@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import pytest
@@ -10,6 +11,7 @@ from sspec.core import (
     SSPEC_DIR,
     ChangeStatus,
     RequestStatus,
+    configure_stdio_error_fallback,
     copy_template,
     find_sspec_root,
     get_template_dir,
@@ -281,3 +283,56 @@ class TestListSkills:
         skills = list_skills(sspec_root)
         names = [s['skill'] for s in skills]
         assert names == sorted(names)
+
+
+# ---------------------------------------------------------------------------
+# configure_stdio_error_fallback
+# ---------------------------------------------------------------------------
+
+
+class _MockStream:
+    def __init__(self, encoding: str = 'cp936', errors: str = 'strict'):
+        self.encoding = encoding
+        self.errors = errors
+        self.reconfigure_calls = 0
+
+    def reconfigure(self, **kwargs):
+        self.reconfigure_calls += 1
+        if 'errors' in kwargs:
+            self.errors = kwargs['errors']
+
+
+class TestConfigureStdioErrorFallback:
+    def test_sets_replace_for_stdout_and_stderr(self, monkeypatch: pytest.MonkeyPatch):
+        stdout = _MockStream()
+        stderr = _MockStream()
+        monkeypatch.setattr(sys, 'stdout', stdout)
+        monkeypatch.setattr(sys, 'stderr', stderr)
+
+        configure_stdio_error_fallback()
+
+        assert stdout.errors == 'replace'
+        assert stderr.errors == 'replace'
+        assert stdout.reconfigure_calls == 1
+        assert stderr.reconfigure_calls == 1
+
+    def test_noop_when_stream_is_already_replace(self, monkeypatch: pytest.MonkeyPatch):
+        stdout = _MockStream(errors='replace')
+        stderr = _MockStream(errors='replace')
+        monkeypatch.setattr(sys, 'stdout', stdout)
+        monkeypatch.setattr(sys, 'stderr', stderr)
+
+        configure_stdio_error_fallback()
+
+        assert stdout.reconfigure_calls == 0
+        assert stderr.reconfigure_calls == 0
+
+    def test_noop_when_stream_cannot_reconfigure(self, monkeypatch: pytest.MonkeyPatch):
+        class NoReconfigure:
+            encoding = 'cp936'
+            errors = 'strict'
+
+        monkeypatch.setattr(sys, 'stdout', NoReconfigure())
+        monkeypatch.setattr(sys, 'stderr', NoReconfigure())
+
+        configure_stdio_error_fallback()

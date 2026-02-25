@@ -117,6 +117,13 @@ uv run sspec <command>       # Test the command
 - `core.py` = shared types and constants (no business logic)
 - Keep commands thin: validate input → call service → format output
 
+### Windows terminal encoding rule
+
+- Treat Windows GBK/cp936 terminals as a supported environment.
+- Any CLI output path must not crash on non-UTF encodings.
+- Keep `configure_stdio_error_fallback()` wired in CLI startup when refactoring entrypoints.
+- For new symbols/emojis in user-facing text, verify behavior in legacy encodings or provide ASCII fallback.
+
 ---
 
 ## 4. sspec-ask for Development

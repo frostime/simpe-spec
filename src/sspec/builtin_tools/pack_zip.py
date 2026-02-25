@@ -69,9 +69,7 @@ class GitignoreParser:
 
                 if patterns:
                     parent = gitignore_path.parent
-                    self.specs[parent] = self.pathspec.PathSpec.from_lines(
-                        'gitwildmatch', patterns
-                    )
+                    self.specs[parent] = self.pathspec.PathSpec.from_lines('gitwildmatch', patterns)
             except Exception:
                 continue
 
@@ -445,9 +443,7 @@ def register_command(group):
             root = sspec_root.parent
         else:
             root = Path.cwd()
-            console.print(
-                f'[yellow]Warning:[/yellow] Not in sspec project, using cwd: {root}'
-            )
+            console.print(f'[yellow]Warning:[/yellow] Not in sspec project, using cwd: {root}')
 
         # Determine output path
         if output is None:
@@ -487,7 +483,7 @@ def register_command(group):
                 exclude_defaults=exclude_defaults,
             )
 
-            console.print(f'[green]✓[/green] Created: {output}')
+            console.print(f'[green][OK][/green] Created: {output}')
             console.print(f'  Files added: {files_added}')
             console.print(f'  Files skipped: {files_skipped}')
 

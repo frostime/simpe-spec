@@ -178,13 +178,13 @@ def _process_command(raw: str, state: EditorState) -> tuple[bool, str | None]:
         return True, None
 
     elif action == 'clear':
-        state.status = '✓ Buffer cleared'
+        state.status = '[OK] Buffer cleared'
         return False, 'clear'
 
     elif action == 'output':
         if arg:
             state.output_path = Path(arg)
-            state.status = f'✓ Output → {arg}'
+            state.status = f'[OK] Output -> {arg}'
         else:
             if state.output_path:
                 state.status = f'Current output: {state.output_path}'
@@ -248,9 +248,7 @@ def _run_fullscreen_editor(
         scrollbar=True,
     )
 
-    command_line = TextArea(
-        text='', multiline=False, height=1, prompt=':', wrap_lines=False
-    )
+    command_line = TextArea(text='', multiline=False, height=1, prompt=':', wrap_lines=False)
 
     @Condition
     def _is_command_mode() -> bool:
@@ -398,8 +396,8 @@ sspec tool prompt -o instruction.md
 
 ### File Path Completion
 Type `@` to trigger file path completion:
-- `@src` → shows files matching "src"
-- `@util` → fuzzy matches files containing "util"
+- `@src` -> shows files matching "src"
+- `@util` -> fuzzy matches files containing "util"
 - Use arrow keys to navigate, Tab/Enter to confirm
 
 ### Command Mode
@@ -440,7 +438,7 @@ sspec tool prompt -o .sspec/asks/new-feature.md
 ```bash
 sspec tool prompt
 # Type some text...
-# Press Esc → /output notes.md
+# Press Esc -> /output notes.md
 # Continue typing...
 # Press Esc+Enter to save to notes.md
 ```
@@ -517,6 +515,6 @@ def register_command(group):
         if final_output:
             final_output.parent.mkdir(parents=True, exist_ok=True)
             final_output.write_text(text, encoding='utf-8')
-            console.print(f'[green]✓[/green] Saved to: {final_output}')
+            console.print(f'[green][OK][/green] Saved to: {final_output}')
         else:
             print(text)

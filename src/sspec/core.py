@@ -1,6 +1,7 @@
 """Core sspec functionality."""
 
 import re
+import sys
 from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
@@ -221,3 +222,34 @@ def list_template_skills() -> list[Path]:
         return []
 
     return [d for d in template_skills_dir.iterdir() if d.is_dir() and (d / 'SKILL.md').exists()]
+
+
+def configure_stdio_error_fallback() -> None:
+    """Prevent UnicodeEncodeError on non-UTF terminals.
+
+    Some Windows shells still run with legacy encodings (for example GBK/cp936).
+    Reconfiguring stdout/stderr to use ``errors='replace'`` keeps CLI output from
+    crashing when symbols like emoji are rendered.
+    """
+
+    _set_stream_error_fallback(sys.stdout)
+    _set_stream_error_fallback(sys.stderr)
+
+
+def _set_stream_error_fallback(stream: object) -> None:
+    """Best-effort stream reconfigure; no-op when unsupported."""
+
+    reconfigure = getattr(stream, 'reconfigure', None)
+    if not callable(reconfigure):
+        return
+
+    encoding = getattr(stream, 'encoding', None)
+    errors = getattr(stream, 'errors', None)
+    if not encoding or errors == 'replace':
+        return
+
+    try:
+        reconfigure(errors='replace')
+    except Exception:
+        # Never block CLI startup due to stream quirks.
+        return

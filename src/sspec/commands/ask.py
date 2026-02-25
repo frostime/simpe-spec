@@ -78,9 +78,9 @@ def ask_create(name: str) -> None:
 
     # Show warning if name was converted
     if warning:
-        click.echo(f'⚠️  {warning}', err=True)
+        click.echo(f'WARNING: {warning}', err=True)
 
-    click.echo(f'✓ Created ask template: {rel_str}')
+    click.echo(f'[OK] Created ask template: {rel_str}')
     click.echo('')
     click.echo('Next steps:')
     click.echo(f'  1. Edit reason and question in {rel_str}')
@@ -107,7 +107,7 @@ def ask_prompt(ask_file: Path) -> None:
     if not ask_file.exists():
         md_file = ask_file.with_suffix('.md')
         if md_file.exists():
-            click.echo(f'✓ Ask already completed, see record file: {md_file}')
+            click.echo(f'[OK] Ask already completed, see record file: {md_file}')
             return
 
     try:
@@ -128,7 +128,7 @@ def ask_prompt(ask_file: Path) -> None:
             rel_str = str(md_path)
 
         click.echo('')
-        click.echo(f'✓ Ask recorded to: {rel_str}')
+        click.echo(f'[OK] Ask recorded to: {rel_str}')
         click.echo('')
         click.echo('Answer:')
         click.echo(answer)
@@ -175,13 +175,13 @@ def ask_list(include_all: bool) -> None:
     if completed_files:
         console.print('[bold]Completed[/bold]')
         for f in completed_files:
-            _display_ask(f, icon='✓', color='green')
+            _display_ask(f, icon='+', color='green')
         console.print()
 
     if archived_files and include_all:
         console.print('[bold dim]Archived[/bold dim]')
         for f in archived_files:
-            _display_ask(f, icon='📁', color='dim', dim=True)
+            _display_ask(f, icon='A', color='dim', dim=True)
         # console.print()
     elif archived_files:
         console.print(f'[dim]Archived: {len(archived_files)} (use --all to show)[/dim]')

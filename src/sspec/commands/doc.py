@@ -161,7 +161,7 @@ def new(name: str, is_dir: bool) -> None:
         target_file.write_text(content, encoding='utf-8')
 
         rel_path = target_dir.relative_to(sspec_root.parent)
-        console.print(f'[green]✓[/green] Created specification document: {rel_path}/')
+        console.print(f'[green][OK][/green] Created specification document: {rel_path}/')
         console.print()
         console.print('[cyan]Structure:[/cyan]')
         console.print(f'  {rel_path}/')
@@ -183,7 +183,7 @@ def new(name: str, is_dir: bool) -> None:
         target_file.write_text(content, encoding='utf-8')
 
         rel_path = target_file.relative_to(sspec_root.parent)
-        console.print(f'[green]✓[/green] Created specification document: {rel_path}')
+        console.print(f'[green][OK][/green] Created specification document: {rel_path}')
         console.print()
         console.print('[yellow]Next:[/yellow]')
         console.print('  1. Add description in frontmatter')

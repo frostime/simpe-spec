@@ -29,11 +29,11 @@ from sspec.services.change_service import (
 console = Console()
 
 STATUS_STYLES: dict[str, tuple[str, str]] = {
-    ChangeStatus.PLANNING.value: ('yellow', '📝'),
-    ChangeStatus.DOING.value: ('cyan', '🔄'),
-    ChangeStatus.BLOCKED.value: ('red', '🚧'),
-    ChangeStatus.REVIEW.value: ('magenta', '👀'),
-    ChangeStatus.DONE.value: ('green', '✅'),
+    ChangeStatus.PLANNING.value: ('yellow', 'P'),
+    ChangeStatus.DOING.value: ('cyan', 'W'),
+    ChangeStatus.BLOCKED.value: ('red', 'B'),
+    ChangeStatus.REVIEW.value: ('magenta', 'R'),
+    ChangeStatus.DONE.value: ('green', 'D'),
 }
 
 
@@ -139,12 +139,8 @@ def _resolve_from_request(sspec_root: Path, from_value: str) -> Path:
 @change.command()
 @click.argument('name', required=False)
 @click.option('--from', 'from_request', help='Link to existing request (name or path)')
-@click.option(
-    '--root', is_flag=True, default=False, help='Create root change for multi-change'
-)
-def new(
-    name: str | None = None, from_request: str | None = None, root: bool = False
-) -> None:
+@click.option('--root', is_flag=True, default=False, help='Create root change for multi-change')
+def new(name: str | None = None, from_request: str | None = None, root: bool = False) -> None:
     """Create a new change proposal (spec, tasks, handover).
 
     NAME is optional when --from is provided; the change name will be
@@ -161,9 +157,7 @@ def new(
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException(
-            "Not a sspec project. Run 'sspec project init' first."
-        ) from None
+        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     # Resolve --from request
     request_file: Path | None = None
@@ -192,7 +186,7 @@ def new(
             link_request_to_change(
                 sspec_root=sspec_root, request_file=request_file, change_path=change_path
             )
-            console.print(f'[green]✓[/green] Linked to request: {request_file.stem}')
+            console.print(f'[green][OK][/green] Linked to request: {request_file.stem}')
         except Exception as e:
             console.print(f'[yellow]Warning:[/yellow] Failed to link request: {e}')
 
@@ -200,7 +194,7 @@ def new(
     change_type = 'root' if root else 'single'
 
     console.print(
-        f'[green]✓[/green] Created {change_type} change: [bold]{change_path.name}[/bold]'
+        f'[green][OK][/green] Created {change_type} change: [bold]{change_path.name}[/bold]'
     )
     console.print()
     console.print('[cyan]Files:[/cyan]')
@@ -208,9 +202,7 @@ def new(
     console.print('  ├── spec.md      # Proposal and context')
     console.print('  ├── tasks.md     # Executable tasks and progress')
     console.print('  ├── handover.md  # Session continuity (update every session!)')
-    console.print(
-        '  └── reference/   # Use if need to keep auxiliary design/research files'
-    )
+    console.print('  └── reference/   # Use if need to keep auxiliary design/research files')
     console.print()
     console.print('[yellow]Next:[/yellow]')
     console.print('  0. Read sspec-design skill for standards and best practices')
@@ -231,9 +223,7 @@ def list_changes_cmd(include_all: bool = False) -> None:
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException(
-            "Not a sspec project. Run 'sspec project init' first."
-        ) from None
+        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     _list_changes(sspec_root, include_all)
 
@@ -267,19 +257,15 @@ def _list_changes(sspec_root: Path, include_all: bool) -> None:
     console.print(f'[dim]Active: {len(active)} | Archived: {len(archived)}[/dim]')
 
 
-def _display_change(
-    change: ChangeInfo, dim: bool = False, in_detail: bool = False
-) -> None:
+def _display_change(change: ChangeInfo, dim: bool = False, in_detail: bool = False) -> None:
     """Display a single change in list format."""
     status = change.status
-    color, icon = STATUS_STYLES.get(status, ('dim', '❓'))
+    color, icon = STATUS_STYLES.get(status, ('dim', '?'))
     if dim:
         color = 'dim'
 
     progress = change.progress
-    progress_str = (
-        f'{progress["done"]}/{progress["total"]}' if progress['total'] > 0 else '0/0'
-    )
+    progress_str = f'{progress["done"]}/{progress["total"]}' if progress['total'] > 0 else '0/0'
 
     # Line 1: Icon Name
     name_line = f'[{color}]{icon} [bold]{change.name}[/bold] [{change.status}][/{color}]'
@@ -305,19 +291,15 @@ def _display_change(
         and isinstance(reference, list)
         and len(reference) > 0
     ):
-        reqeust = list(filter(
-            lambda x: (rt := x.get('type', None)) and rt == 'request', reference
-        ))
+        reqeust = list(filter(lambda x: (rt := x.get('type', None)) and rt == 'request', reference))
         if len(reqeust) == 1:
             console.print(f'  [dim]Linked Requests:[/dim] {reqeust[0]["source"]}')
         elif len(reqeust) > 1:
             console.print(f'  [dim]Linked Requests:[/dim] {len(reqeust)} requests')
 
     flags = []
-    # if change.has_pivot:
-    #     flags.append('⚡pivot')
     if change.has_blockers:
-        flags.append('🚧blocked')
+        flags.append('blocked')
 
     if flags:
         flag_str = f' [yellow]{" ".join(flags)}[/yellow]'
@@ -403,17 +385,11 @@ def _show_change_detail(change_path: Path) -> None:
     )
 
     if status == 'PLANNING':
-        console.print(
-            '\n[dim]Next: Fill spec.md sections A/B/C, then transition to DOING[/dim]'
-        )
+        console.print('\n[dim]Next: Fill spec.md sections A/B/C, then transition to DOING[/dim]')
     elif status == 'DOING':
-        console.print(
-            "\n[dim]Next: Continue tasks. Run 'sspec change status' for progress[/dim]"
-        )
+        console.print("\n[dim]Next: Continue tasks. Run 'sspec change status' for progress[/dim]")
     elif status == 'REVIEW':
-        console.print(
-            '\n[dim]Next: Awaiting user review. After approval → DONE → archive[/dim]'
-        )
+        console.print('\n[dim]Next: Awaiting user review. After approval -> DONE -> archive[/dim]')
 
 
 @change.command()
@@ -423,9 +399,7 @@ def find(query: str) -> None:
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException(
-            "Not a sspec project. Run 'sspec project init' first."
-        ) from None
+        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     changes_dir = sspec_root / 'changes'
     matches = find_change_matches(changes_dir, query, include_archived=True)
@@ -471,9 +445,7 @@ def archive(name: str | None, yes: bool, with_request: bool) -> None:
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException(
-            "Not a sspec project. Run 'sspec project init' first."
-        ) from None
+        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     # Multi-select mode
     if not name:
@@ -561,7 +533,7 @@ def _archive_changes_interactive(sspec_root: Path, with_request: bool = False) -
             console.print(f'[red]Failed to archive {change_info.name}: {e}[/red]')
 
     console.print()
-    console.print(f'[green]✓[/green] Archived {archived_count}/{len(selected)} change(s)')
+    console.print(f'[green][OK][/green] Archived {archived_count}/{len(selected)} change(s)')
 
 
 def _archive_single_change(
@@ -593,7 +565,7 @@ def _archive_single_change(
                     request_rel_path = request_archive_path.relative_to(sspec_root.parent)
                     console.print(
                         f'[green]+[/green] Archived linked request: '
-                        f'{request_info.name} → {request_rel_path}'
+                        f'{request_info.name} -> {request_rel_path}'
                     )
                 except Exception as e:
                     console.print(
@@ -618,9 +590,7 @@ def validate(name: str) -> None:
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException(
-            "Not a sspec project. Run 'sspec project init' first."
-        ) from None
+        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     changes_dir = sspec_root / 'changes'
     matches = find_change_matches(changes_dir, name)
@@ -636,15 +606,14 @@ def validate(name: str) -> None:
     issues = validate_change(change_path)
 
     if not issues:
-        console.print(
-            f'[green]✓[/green] Change [bold]{change_path.name}[/bold] looks good!'
-        )
+        console.print(f'[green][OK][/green] Change [bold]{change_path.name}[/bold] looks good!')
     else:
         console.print(
-            f'[yellow]⚠[/yellow] Change [bold]{change_path.name}[/bold] has {len(issues)} issue(s):'
+            f'[yellow][WARN][/yellow] Change [bold]{change_path.name}[/bold] '
+            f'has {len(issues)} issue(s):'
         )
         console.print()
         for issue in issues:
-            console.print(f'  [yellow]•[/yellow] {issue}')
+            console.print(f'  [yellow]-[/yellow] {issue}')
         console.print()
         console.print('[dim]Fix issues above, then run validate again.[/dim]')

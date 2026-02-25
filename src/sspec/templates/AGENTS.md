@@ -39,6 +39,7 @@ SSPEC activation signals (enter Change Workflow §2 if any is true):
 
 **Background rules**:
 - Important discovery → write to `handover.md` immediately
+- Project-wide discovery (convention, gotcha, cross-cutting) → also append to `project.md` Notes
 - Long session (>30 exchanges) → checkpoint `handover.md`
 - Uncertain → `@ask` (30s question < hours of rework)
 - User rejects tool call → STOP → `@ask` reason

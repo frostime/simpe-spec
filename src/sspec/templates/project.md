@@ -1,11 +1,11 @@
 # Project Context
 
+<!-- This file is the stable identity layer for agents working on this project.
+Read it first every session. Update Conventions + Notes via @handover. -->
+
 **Name**: {{TODO}}
 **Description**: {{TODO}}
 **Repo**: {{TODO}}
-
-## Project Overview
-<!-- [Describe project's purpose and overview design] -->
 
 ## Tech Stack
 - [List primary technologies, e.g. TypeScript, React, Node.js]
@@ -25,9 +25,7 @@ One-liners only. If a convention needs multi-paragraph explanation → write a s
 Examples: "snake_case for Python, camelCase for JS", "All API routes: /api/v1/*",
 "Never commit .env files", "Prefer composition over inheritance" -->
 
-**Architecture Patterns**
-**Domain Context**
-**Important Constraints**
+- [Add conventions here]
 
 ## Spec-Docs Index
 <!-- @RULE: Quick reference to formal specs in `.sspec/spec-docs/`.

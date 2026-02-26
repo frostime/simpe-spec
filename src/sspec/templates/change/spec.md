@@ -10,7 +10,7 @@ reference: null
 <!-- @RULE: Frontmatter
 status: PLANNING | DOING | REVIEW | DONE | BLOCKED
 change-type: single | sub
-reference?: Array<{source, type: 'request'|'root-change'|'sub-change'|'doc', note?}>
+reference?: Array<{source, type: 'request'|'root-change'|'sub-change'|'prev-change' |'doc', note?}>
 
 Sub-change MUST link root:
 reference:
@@ -22,6 +22,9 @@ Single-change common reference:
 reference:
   - source: ".sspec/requests/<request-file>.md"
     type: "request"
+  - source: ".sspec/changes/<change-dir>"
+    type: "prev-change"
+    note: "This change is a follow-up to <change-name> which introduced <feature/bug>. This change addresses <issue> with that feature/bug."
 -->
 
 # {{CHANGE_NAME}}

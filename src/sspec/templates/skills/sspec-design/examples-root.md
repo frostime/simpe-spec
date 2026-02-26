@@ -20,7 +20,7 @@ File-level interface design belongs in each sub-change's own spec.md.
 
 Three phases with clear sequential dependencies. Use dependency-annotated list + ASCII tree.
 
-````markdown
+```markdown
 ---
 name: auth-overhaul
 status: PLANNING
@@ -60,15 +60,15 @@ not start until Phase 1 is in REVIEW or DONE.
   Independent of Phase 2. Scope: `src/models/`, `src/auth/rbac.py`, `src/middleware/rbac.py`.
 
 Dependency tree:
-```
+\`\`\`
 Phase 1: Auth Backend
   ├── Phase 2: Token Refresh  (can start once Phase 1 API is stable)
   └── Phase 3: RBAC           (can start once Phase 1 API is stable)
-```
+\`\`\`
 
 Coordination note: Phase 1 must expose a stable `AuthService` interface before
 Phases 2 and 3 begin. Phases 2 and 3 can run in parallel after that point.
-````
+```
 
 ---
 
@@ -76,7 +76,7 @@ Phases 2 and 3 begin. Phases 2 and 3 can run in parallel after that point.
 
 Four or more phases with a branching dependency graph. Use a dependency table.
 
-````markdown
+```markdown
 ---
 name: platform-perf-overhaul
 status: PLANNING
@@ -119,19 +119,19 @@ Address bottlenecks in priority order: DB first (foundational), then API caching
 | **Phase 4: Auto-scaling** | ECS task auto-scaling + connection pooling. Target: no manual scale events. | Phase 1 + Phase 2 (stable backend) | `infra/ecs/`, `src/db/pool.py` |
 
 Dependency tree:
-```
+\`\`\`
 Phase 1: DB Optimization  ──────────────────────────────────────────┐
   └── Phase 2: API Response Cache                                   │
         └── Phase 4: Auto-scaling  ←────────────────────────────────┘
 Phase 3: CDN + Asset Pipeline  (parallel independent track)
-```
+\`\`\`
 
 Coordination notes:
 - Phase 1 and Phase 3 can start immediately in parallel.
 - Phase 2 starts after Phase 1 reaches REVIEW.
 - Phase 4 starts after Phase 2 is DONE (requires stable cache layer).
 - Each phase creates its own sub-change with full design → plan → implement → review.
-````
+```
 
 ---
 
@@ -157,7 +157,7 @@ Sub-change spec.md must:
 
 ### Example Sub-change spec.md Reference
 
-````markdown
+```markdown
 ---
 name: auth-overhaul--phase1-auth-backend
 status: PLANNING
@@ -184,19 +184,19 @@ a service layer with Redis caching. Target: auth latency <1s.
 ### Key Design
 
 #### Interface Design
-```python
+\`\`\`python
 class AuthService:
     def authenticate(self, token: str) -> User: ...
     def invalidate(self, user_id: str) -> None: ...
-```
+\`\`\`
 
 #### Data Flow
-```
+\`\`\`
 Request → AuthMiddleware
   └── AuthService.authenticate(token)
         ├── cache.get(token_hash)    → HIT: return cached User
         └── MISS: db.get_user() → cache.set(token_hash, user, ttl=300) → return User
-```
+\`\`\`
 
 #### Scope Summary
 | File | Change |
@@ -204,5 +204,5 @@ Request → AuthMiddleware
 | `src/services/auth.py` | New — `AuthService` class |
 | `src/middleware/auth.py` | Refactor to call `AuthService` |
 | `src/auth.py` | Remove — logic moved to service |
+\`\`\`
 ```
-````

@@ -20,7 +20,7 @@ Reference this when filling spec.md in the design phase.
 
 ≤5 files. Interface/data model inline in Approach. Rules 1 and 2 apply in abbreviated form.
 
-````markdown
+```markdown
 ---
 name: request-tldr-autofill
 status: PLANNING
@@ -50,15 +50,15 @@ required by template — always present.
 
 ### Key Design
 
-```python
+\`\`\`python
 # src/sspec/services/request_service.py
 def extract_tldr(content: str) -> str:
     """Return first non-empty paragraph of ## Background, truncated to 120 chars."""
-```
+\`\`\`
 
 Flow: `create_request()` → `extract_tldr(content)` → write to frontmatter `tldr`.
 Applied only when `tldr` is empty string or missing; never overwrites user-set value.
-````
+```
 
 ---
 
@@ -69,7 +69,7 @@ Applied only when `tldr` is empty string or missing; never overwrites user-set v
 This example: add `--tag` to `sspec change new` so changes can carry project-defined
 labels (e.g. `frontend`, `backend`, `docs`) for filtering in `sspec change list`.
 
-````markdown
+```markdown
 ---
 name: change-tags
 status: PLANNING
@@ -102,7 +102,7 @@ and consistent with the existing `type` field pattern in `core.py`.
 
 #### Interface Design
 
-```python
+\`\`\`python
 # src/sspec/core.py — new type alias
 ChangeTag = str  # validated against project-defined allowed tags
 
@@ -114,9 +114,9 @@ class ChangeMeta:
     created: str
     tags: list[ChangeTag] = field(default_factory=list)  # NEW
     reference: list[ChangeRef] | None = None
-```
+\`\`\`
 
-```python
+\`\`\`python
 # src/sspec/services/change_service.py — updated signature
 def create_change(
     name: str,
@@ -128,11 +128,11 @@ def create_change(
 def list_changes(
     filter_tag: str | None = None,   # NEW
 ) -> list[ChangeMeta]: ...
-```
+\`\`\`
 
 #### Data Flow
 
-```
+\`\`\`
 sspec change new <name> --tag frontend --tag backend
   │
   ├── validate_tags(tags)           → check tag values (allow all if no allowlist configured)
@@ -145,7 +145,7 @@ sspec change list --filter-tag frontend
   │
   └── scan_changes()
         └── for each change: parse_frontmatter() → filter by tags
-```
+\`\`\`
 
 #### Key Logic
 
@@ -166,7 +166,7 @@ the given value. Case-insensitive match.
 | `src/sspec/services/change_service.py` | `tags` param in `create_change()`; `filter_tag` in `list_changes()` |
 | `src/sspec/commands/change.py` | `--tag` option on `change new`; `--filter-tag` on `change list` |
 | `src/sspec/templates/change/spec.md` | Add `tags: []` to frontmatter template |
-````
+```
 
 ---
 
@@ -174,7 +174,7 @@ the given value. Case-insensitive match.
 
 >15 files, architectural change. Core approach in B, detailed design in `reference/design.md`.
 
-````markdown
+```markdown
 ---
 name: multi-tenant-rbac
 status: PLANNING
@@ -212,7 +212,7 @@ Full architecture, data model, and API contracts: see [reference/design.md](refe
 
 **Core interfaces** (summary — full detail in reference/design.md):
 
-```python
+\`\`\`python
 # Tenant model
 @dataclass
 class Tenant:
@@ -228,12 +228,12 @@ class AuthClaims:
     tenant_id: str      # NEW
     roles: list[str]    # NEW (tenant-scoped role names)
     exp: int
-```
+\`\`\`
 
 **Core flow**: `Request → TenantMiddleware (extract tenant_id from JWT) → set request.tenant → DB queries filtered by tenant_id via SQLAlchemy mixin`.
 
 Full data model, migration strategy, and permission matrix: [reference/design.md](reference/design.md).
-````
+```
 
 ---
 

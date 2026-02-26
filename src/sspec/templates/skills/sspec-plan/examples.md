@@ -3,7 +3,7 @@
 Concrete examples of tasks.md at different complexity levels.
 Shows how tasks.md references spec.md B without repeating design content.
 
-**📚 Standards**: See [SKILL.md](../SKILL.md) for rules and workflow.
+**📚 Standards**: See [SKILL.md](./SKILL.md) for rules and workflow.
 
 ---
 

@@ -44,5 +44,11 @@ Simple: single paragraph. Complex: split "Current Situation" + "User Requirement
 ### Key Design
 <!-- Interfaces, data models, key logic — scale by complexity:
 Simple (≤5 files): inline in Approach, brief mention
-Medium (5-15 files): dedicated sub-sections (### Interface, ### Data Model)
-Complex (>15 files): detailed design here or in reference/design.md -->
+Medium (5-15 files): dedicated sub-sections (### Interface Design, ### Data Flow, ### Key Logic)
+Complex (>15 files): detailed design here or in reference/design.md
+
+Presentation Rules (see SKILL.md for full examples):
+Rule 1: interfaces/types → typed code block (not prose)
+Rule 2: data flow → ASCII tree (`│ ├── └──` notation) + explanatory text
+Rule 3: ≥3 files → Scope Summary Table at end (| File | Change |)
+Rule 4: ≥3 independent items → label each (Fix A / Feat B / Refactor C…) -->

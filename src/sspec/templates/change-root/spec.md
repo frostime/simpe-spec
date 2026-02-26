@@ -39,15 +39,30 @@ reference:
 <!-- High-level strategy. How will this be broken into phases? Delivery order? -->
 
 ### Phase Overview
-<!-- @RULE: List phases with goals. Each phase becomes a sub-change.
+<!-- @RULE: List phases with goals and dependencies. Each phase becomes a sub-change.
 
-Format:
+Format (≤3 phases): dependency-annotated list + ASCII dependency tree
 - **Phase 1: <name>** — goal, measurable deliverable, scope (subsystems/modules)
 - **Phase 2: <name>** — goal, measurable deliverable, dependencies on Phase 1
 
+Dependency tree:
+Phase 1: <name>
+  ├── Phase 2: <name>  (depends on Phase 1)
+  └── Phase 3: <name>  (depends on Phase 1, independent of Phase 2)
+
+Format (≥4 phases): use a dependency table
+| Phase | Goal | Depends On | Scope |
+|-------|------|-----------|-------|
+| Phase 1: <name> | measurable goal | — | subsystems/modules |
+| Phase 2: <name> | measurable goal | Phase 1 | subsystems/modules |
+
 Coordination Notes:
-- Cross-phase dependencies, shared interfaces, integration points
+- Cross-phase constraints, shared interfaces, integration handoffs
+- Which phases can run in parallel
 
 When a sub-change is created, sync references in BOTH directions:
 - Root `spec.md` adds `type: sub-change` entry for the sub-change
-- Sub `spec.md` adds `type: root-change` entry back to this root -->
+- Sub `spec.md` adds `type: root-change` entry back to this root
+
+Note: root spec does NOT include file-level interface/data-model detail.
+File-level design belongs in each sub-change's own spec.md Section B. -->

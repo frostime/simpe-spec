@@ -188,6 +188,7 @@ SSPEC activation signals (enter Change Workflow §2 if any is true):
 
 **Background rules**:
 - Important discovery → write to `handover.md` immediately
+- Project-wide discovery (convention, gotcha, cross-cutting) → also append to `project.md` Notes
 - Long session (>30 exchanges) → checkpoint `handover.md`
 - Uncertain → `@ask` (30s question < hours of rework)
 - User rejects tool call → STOP → `@ask` reason
@@ -332,7 +333,7 @@ Run `sspec <command> --help` for full options.
 |---------|-----|
 | `sspec change new <name>` | Create a change |
 | `sspec change new <name> --root` | Create a root change |
-| `sspec change new --from <req>` | Create change from request |
+| `sspec change new --from <path>` | Create change from request file |
 | `sspec change list` / `find <name>` | Locate active changes |
 | `sspec change archive <path>` | Archive completed change |
 | `sspec ask create <topic>` + `sspec ask prompt <path>` | Create and ask |
@@ -349,7 +350,7 @@ If a SKILL says "read [file](...)" -> **MUST** read it.
 
 | Marker | Meaning | Action |
 |--------|---------|--------|
-| `<!-- @RULE: ... -->` | Standards reminder | Read and follow. DO NOT delete |
+| `<!-- @RULE: ... -->` | Standards reminder | Read and follow. |
 | `<!-- @REPLACE -->` | Anchor for first edit | Replace with content |
 | `[ ]` / `[x]` | Task todo / done | Update as work progresses |
 <!-- SSPEC:END -->

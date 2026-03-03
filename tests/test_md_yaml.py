@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import pytest
-
 from sspec.libs.md_yaml import parse_frontmatter, update_frontmatter
-
 
 # ---------------------------------------------------------------------------
 # parse_frontmatter

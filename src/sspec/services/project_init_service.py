@@ -23,7 +23,7 @@ from sspec.core import (
 )
 from sspec.libs.hashing import compute_dir_hash, compute_hash
 from sspec.services.agents_service import update_root_agents_block
-from sspec.services.meta_service import META_SCHEMA_VERSION, load_meta, save_meta
+from sspec.services.meta_service import META_SCHEMA, load_meta, save_meta
 
 
 class ProjectAlreadyInitializedError(RuntimeError):
@@ -72,7 +72,6 @@ def get_skill_targets_from_locations(
 
     targets.append(project_root / sspec_dir / 'skills')
     return targets
-
 
 
 DEFAULT_GITIGNORE = """
@@ -180,8 +179,8 @@ def initialize_project(
 
     # Create initial .meta.json
     meta_data: dict[str, Any] = {
-        'meta_schema_version': META_SCHEMA_VERSION,
-        'schema_version': SCHEMA_VERSION,
+        'meta_schema': META_SCHEMA,
+        'sspec_schema': SCHEMA_VERSION,
         'sspec_version': __version__,
         'created_at': datetime.now().isoformat(),
         'updated_at': datetime.now().isoformat(),
@@ -255,6 +254,7 @@ def sync_skill_locations(
     install_pairs = [(hub_skills_dir, spoke_target) for spoke_target in spoke_targets]
 
     from sspec.skill_installer import SkillInstaller
+
     installer = SkillInstaller._get_installer()
 
     batch_results = installer.install_batch(

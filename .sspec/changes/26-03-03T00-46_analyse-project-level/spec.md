@@ -67,24 +67,21 @@ tmp/**
 
 **Fix A1a（Bug）**: 在 `skill_service.py:create_skill_in_hub()` 中，将 `meta['updated_at'] = __version__` 改为 `meta['updated_at'] = datetime.now().isoformat()`。
 
-**Fix A1b（defaults）**: 在 `meta_service.py` 中增加 `get_meta_defaults()` 函数，返回 meta 的默认字段结构，供 `load_meta` 在字段缺失时填充（不强制迁移，仅 soft-defaults）：
+**Fix A1b（defaults + typed model + migrations）**: 在 `meta_service.py` 中建立明确的 meta 数据模型，并实现基于 schema 的迁移策略。
 
-```python
-def get_meta_with_defaults(meta: dict[str, Any]) -> dict[str, Any]:
-    """Return meta with missing fields filled by defaults (non-destructive)."""
-    defaults = {
-        'meta_schema_version': META_SCHEMA_VERSION,
-        'schema_version': '',
-        'sspec_version': '',
-        'created_at': '',
-        'updated_at': '',
-        'file_hashes': {},
-        'managed_skills': [],
-        'skill_locations': [],
-        'skill_install_strategies': {},
-    }
-    return {**defaults, **meta}
-```
+核心原则：
+- `.meta.json` 是版本化配置文件，必须有独立 schema 标识 `meta_schema`。
+- `meta_schema`（meta 文件 schema）与 `sspec_schema`（AGENTS.md 协议 schema）是两条独立版本轴。
+- `load_meta` 对调用方提供稳定键（通过迁移），但在文件缺失/损坏时返回 `{}`。
+
+迁移实现：
+- 当前 `meta_schema` 定义为 `2.0`
+- schema 驱动升级：`0.0 -> 1.0 -> 2.0`（缺失 schema 视为 `0.0`）
+- 2.0 的关键变更：
+  - `schema_version` -> `sspec_schema`
+  - `meta_schema_version` -> `meta_schema`
+
+（实现细节见：`src/sspec/services/meta_service.py`）
 
 ### Fix A2 — 重命名 `.agent` → `.agents`，增加自定义目录输入
 
@@ -109,16 +106,15 @@ save_meta(sspec_root, meta)
 
 或者将此逻辑封装到 `dominate_skills_location` 服务内（接受 `project_root` 参数）。
 
-### Fix A4 — 引入独立的 `META_SCHEMA_VERSION`
+### Fix A4 — meta_schema v2 + 迁移与 update 集成
 
-在 `meta_service.py` 中定义：
-```python
-META_SCHEMA_VERSION = '1'   # 独立版本，从 1 开始
-```
+引入 `meta_schema` 作为 `.meta.json` 的独立 schema 标识（当前为 `2.0`），并将 meta 迁移变成 `project update` 的必经环节：
 
-`initialize_project` 写 meta 时使用 `meta_schema_version: META_SCHEMA_VERSION`（新字段），保留 `schema_version: SCHEMA_VERSION`（向后兼容，记录 AGENTS.md schema 版本信息，后续可考虑移除）。
+- `project init` 写入：`meta_schema` 与 `sspec_schema`
+- `project update` 第一阶段执行 meta 加载+迁移+校验（失败则 CLI 友好报错）
+- 即使没有任何文件需要更新，只要 meta 需要迁移，也必须写回最新 schema
 
-`project update` 中可利用 `meta_schema_version` 做未来的结构迁移。
+（实现细节见：`src/sspec/services/project_update_service.py` 与 `src/sspec/commands/project.py`）
 
 ### Fix A5 — 修复 `.gitignore` 方案
 
@@ -161,8 +157,10 @@ tmp/**
 |------|--------|
 | `src/sspec/core.py` | Fix A2a: `.agent` → `.agents` in `WORKSPACE_DIRS` |
 | `src/sspec/commands/project.py` | Fix A2a/b/c: update skill loc list, add custom input, fallback rename |
-| `src/sspec/services/meta_service.py` | Fix A4: add `META_SCHEMA_VERSION`; Fix A1b: add `get_meta_with_defaults()` |
-| `src/sspec/services/project_init_service.py` | Fix A4: use `meta_schema_version`; Fix A5: new DEFAULT_GITIGNORE |
+| `src/sspec/services/meta_service.py` | Fix A1b/A4: `MetaModel` + schema-based migrations (`meta_schema=2.0`), legacy key rename |
+| `src/sspec/services/project_update_service.py` | Fix A4: `prepare_meta_for_project_update()` mandatory migration stage |
+| `src/sspec/services/project_init_service.py` | Fix A4: write `meta_schema` + `sspec_schema`; Fix A5: new DEFAULT_GITIGNORE |
 | `src/sspec/services/skill_service.py` | Fix A1a: fix `updated_at` bug; Fix A3: dominate writes meta |
 | `src/sspec/commands/skill.py` | Fix A3 (alt): update meta after dominate if done in command layer |
 | `tests/` | Update affected tests |
+| `.sspec/spec-docs/meta-json.md` | New spec-doc: `.meta.json` schema + migration + update-time guarantees |

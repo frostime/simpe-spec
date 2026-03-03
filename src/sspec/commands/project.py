@@ -3,6 +3,7 @@
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import click
 import questionary
@@ -20,17 +21,19 @@ from sspec.core import (
 )
 from sspec.services.agents_service import update_root_agents_block
 from sspec.services.change_service import list_changes
-from sspec.services.meta_service import load_meta, save_meta
+from sspec.services.meta_service import META_SCHEMA, save_meta
 from sspec.services.project_init_service import (
     ProjectAlreadyInitializedError,
     initialize_project,
     sync_skill_locations,
 )
 from sspec.services.project_update_service import (
+    MetaMigrationError,
     apply_skill_update,
     collect_orphaned_skills,
     collect_update_candidates,
     migrate_legacy_skill_layouts,
+    prepare_meta_for_project_update,
     remove_orphaned_skill,
 )
 
@@ -256,11 +259,21 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
         raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     template_dir = get_template_dir()
-    meta = load_meta(sspec_root)
-    old_hashes = meta.get('file_hashes', {}) or {}
+    try:
+        meta_state = prepare_meta_for_project_update(sspec_root=sspec_root)
+    except MetaMigrationError as err:
+        raise click.ClickException(f'Failed to migrate .meta.json: {err}') from None
+
+    meta: dict[str, Any] = meta_state.meta
+    old_hashes = meta_state.old_hashes
     project_root = sspec_root.parent
 
     common_replacements = {'SCHEMA_VERSION': SCHEMA_VERSION, 'SCHEMA': SCHEMA_VERSION}
+
+    if meta_state.migration_needed and dry_run:
+        console.print(
+            f'[cyan]Would migrate {sspec_root / ".meta.json"} to meta_schema {META_SCHEMA}[/cyan]'
+        )
 
     # -----------------------------------------------------------------
     # Phase 0: Migrate legacy per-skill spoke layout to directory-level
@@ -378,6 +391,14 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
     )
 
     if not actions and not agents_needs_update and not orphans and not migrations:
+        if meta_state.migration_needed and not dry_run:
+            meta['meta_schema'] = META_SCHEMA
+            meta['sspec_schema'] = SCHEMA_VERSION
+            meta['updated_at'] = datetime.now().isoformat()
+            meta['sspec_version'] = __version__
+            save_meta(sspec_root, meta)
+            console.print('[green]+[/green] Migrated .meta.json to latest schema')
+
         console.print('[green]+[/green] All files are up to date')
         return
 
@@ -434,12 +455,21 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
         if not upd.is_symlink and upd.new_hash:
             new_hashes[upd.hash_key] = upd.new_hash
 
-    # Update metadata
-    if updated_count or skill_updated_count or orphans or migrations:
+    # Update metadata (also persist schema migrations + agents-only updates)
+    if (
+        updated_count
+        or skill_updated_count
+        or orphans
+        or migrations
+        or agents_needs_update
+        or meta_state.migration_needed
+    ):
         meta['file_hashes'] = new_hashes
         meta['managed_skills'] = sorted(d.name for d in list_template_skills())
         meta['updated_at'] = datetime.now().isoformat()
         meta['sspec_version'] = __version__
+        meta['sspec_schema'] = SCHEMA_VERSION
+        meta['meta_schema'] = META_SCHEMA
         save_meta(sspec_root, meta)
 
     # Update root AGENTS.md block

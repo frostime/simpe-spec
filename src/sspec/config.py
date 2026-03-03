@@ -80,9 +80,7 @@ class GlobalSspecConfig:
                 'SSPEC_EDITOR',
                 data.get('sspec_editor', DEFAULT_SSPEC_EDITOR),
             )
-            return cls(
-                sspec_editor=editor_value or DEFAULT_SSPEC_EDITOR
-            )
+            return cls(sspec_editor=editor_value or DEFAULT_SSPEC_EDITOR)
         except (yaml.YAMLError, OSError):
             return cls()
 

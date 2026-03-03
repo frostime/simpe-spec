@@ -184,15 +184,10 @@ class ElevationManager:
                 f'Start-Process -Verb RunAs powershell.exe '
                 f'-ArgumentList "-NoProfile","-File","{ps_path}" -Wait',
             ]
-            subprocess.run(
-                cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-            )
+            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
             # 验证每个符号链接是否创建成功
-            return [
-                check_path_link(target, expected_target=source)
-                for source, target in pairs
-            ]
+            return [check_path_link(target, expected_target=source) for source, target in pairs]
         except Exception:
             self.mark_disabled()
             return [False] * len(pairs)
@@ -302,9 +297,7 @@ class SkillInstaller:
             ),
         ]
         try:
-            subprocess.run(
-                cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-            )
+            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             return check_path_link(target, expected_target=source)
         except Exception:
             return False
@@ -371,9 +364,7 @@ class SkillInstaller:
         if failed_pairs and allow_elevation:
             elevated_success = self._elevation.try_elevated_symlinks(failed_pairs)
             remaining_pairs = []
-            for (source, target), success in zip(
-                failed_pairs, elevated_success, strict=True
-            ):
+            for (source, target), success in zip(failed_pairs, elevated_success, strict=True):
                 if success:
                     self._add_to_gitignore(target)
                     results.append(SkillInstallResult(target, source, 'symlink'))
@@ -494,9 +485,7 @@ class SkillInstaller:
         Returns:
             使用的安装策略
         """
-        results = SkillInstaller.install_skills_batch(
-            [(source_dir, target_dir)], prefer_symlink
-        )
+        results = SkillInstaller.install_skills_batch([(source_dir, target_dir)], prefer_symlink)
         if results:
             return results[0][2]
         raise OSError('Failed to install skill')

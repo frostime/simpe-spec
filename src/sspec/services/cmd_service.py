@@ -13,8 +13,6 @@ from typing import Any, Literal
 
 import yaml
 
-from sspec.commands import project
-
 COMMANDS_DIR = 'commands'
 REGISTRY_FILE = 'registry.yaml'
 
@@ -141,9 +139,7 @@ def remove_command(sspec_root: Path, name: str) -> CommandInfo:
     return removed
 
 
-def handle_script_file(
-    sspec_root: Path, source: Path, strategy: ScriptStrategy
-) -> str | None:
+def handle_script_file(sspec_root: Path, source: Path, strategy: ScriptStrategy) -> str | None:
     """Handle script file according to strategy.
 
     - copy: Copy the script file to .sspec/commands/. Returns the filename.
@@ -261,7 +257,7 @@ def run_command(cmd: CommandInfo, sspec_root: Path, extra_args: list[str]) -> in
     script_path = resolve_script_path(cmd, sspec_root)
     if script_path and not script_path.exists():
         raise FileNotFoundError(
-            f'Script file not found: {cmd.script_file}\n' f'Expected at: {script_path}'
+            f'Script file not found: {cmd.script_file}\nExpected at: {script_path}'
         )
 
     result = subprocess.run(invoke_str, shell=True, cwd=project_root)

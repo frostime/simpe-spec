@@ -45,6 +45,7 @@ Read it first every session. Update Conventions + Notes via @handover. -->
 - [Builtin Tools System](spec-docs/builtin-tools.md) — `sspec tool` subcommands, built-in tool registration and execution
 - [Project Specifications](spec-docs/README.md) — overview index for all spec-docs
 - [SKILL Installation & Sync](spec-docs/skill-installation.md) — hub-spoke skill install model, symlink strategy
+- [meta.json (Project Metadata)](spec-docs/meta-json.md) — `.sspec/.meta.json` schema + migration + update-time guarantees
 - [Testing Standards](spec-docs/testing-standards.md) — test patterns, fixtures, coverage conventions
 
 ## Notes

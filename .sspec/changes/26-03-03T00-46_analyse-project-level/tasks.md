@@ -10,11 +10,13 @@ updated: "2026-03-03"
 
 ## Tasks
 
-### Phase 1: Fix A1 — meta.json bugs & defaults ✅
-- [x] Fix `updated_at` bug in `skill_service.py:create_skill_in_hub()` (was `= __version__`, should be `datetime.now().isoformat()`) `src/sspec/services/skill_service.py`
-- [x] Add `META_SCHEMA_VERSION = '1'` constant to `meta_service.py` `src/sspec/services/meta_service.py`
-- [x] Add `get_meta_with_defaults()` helper in `meta_service.py` `src/sspec/services/meta_service.py`
-- [x] Use `meta_schema_version` (new field) when writing meta in `project_init_service.py` `src/sspec/services/project_init_service.py`
+### Phase 1: Fix A1/A4 — meta.json schema v2 + migration (mandatory) ✅
+- [x] Rename meta keys: `schema_version` -> `sspec_schema`, `meta_schema_version` -> `meta_schema` `src/sspec/services/meta_service.py`
+- [x] Define explicit meta model (`MetaModel`) and migration API (`upgrade_meta`, `load_meta_latest`) `src/sspec/services/meta_service.py`
+- [x] Set `meta_schema = 2.0` and implement schema-based migration strategy `src/sspec/services/meta_service.py`
+- [x] Make meta migration an explicit first stage of `project update` (`prepare_meta_for_project_update`) `src/sspec/services/project_update_service.py`
+- [x] `project update` persists meta migration even if no file updates occur `src/sspec/commands/project.py`
+- [x] CLI-friendly error when meta declares unsupported future schema `src/sspec/commands/project.py`
 
 ### Phase 2: Fix A2 — .agent → .agents + custom dir input ✅
 - [x] Rename `.agent` → `.agents` in `core.py:WORKSPACE_DIRS` `src/sspec/core.py`
@@ -29,22 +31,18 @@ updated: "2026-03-03"
 - [x] Update `DEFAULT_GITIGNORE` in `project_init_service.py` to only ignore `skills/**` and `tmp/**` `src/sspec/services/project_init_service.py`
 
 ### Phase 5: Update tests ✅
-- [x] Update `test_project_init_service.py` for `meta_schema_version` field `tests/test_project_init_service.py`
-- [x] Add `TestMetaSchemaVersion` and `TestGetMetaWithDefaults` test classes `tests/test_meta_service.py`
-- [x] All 232 tests pass, lint clean
+- [x] Update init/meta tests for `meta_schema` + `sspec_schema` `tests/test_project_init_service.py`
+- [x] Add migration tests for legacy keys + future schema errors `tests/test_meta_service.py`
+- [x] Add command-level tests to ensure `project update` always migrates meta `tests/test_project_command.py`
+- [x] All tests pass, lint clean (ruff)
+
+### Phase 6: Spec-doc ✅
+- [x] Add spec-doc for `.meta.json` schema + migration + update-time guarantees `.sspec/spec-docs/meta-json.md`
+- [x] Update spec-doc indexes `.sspec/spec-docs/README.md`, `.sspec/project.md`
 
 ---
 
 ## Progress
-- All 5 phases complete
-- 232 tests passing, lint clean (ruff F,E,I)
+- All phases complete
+- Tests passing, lint clean (ruff)
 - Status: REVIEW
-
-**Overall**: 0%
-
-| Phase | Progress | Status |
-|-------|----------|--------|
-| Phase 1 | 0% | ⏳ |
-
-**Recent**:
-- (none yet)

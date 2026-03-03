@@ -84,9 +84,9 @@ sspec tool mdtoc README.md      # Single file
 class Heading:
     """Represents a single Markdown heading."""
 
-    level: int      # 1-6
-    text: str       # stripped heading text (without leading #s)
-    line_num: int   # 1-based line number
+    level: int  # 1-6
+    text: str  # stripped heading text (without leading #s)
+    line_num: int  # 1-based line number
 
 
 @dataclass
@@ -222,7 +222,7 @@ def _format_toc(toc: FileToc, base_path: Path | None = None) -> str:
 # ============================================================================
 
 
-def register_command(group: 'click.Group') -> None:
+def register_command(group: click.Group) -> None:
     """Register mdtoc as a Click subcommand."""
     import click
     from rich.console import Console
@@ -231,10 +231,15 @@ def register_command(group: 'click.Group') -> None:
 
     @group.command(name=TOOL_NAME, help=TOOL_DESCRIPTION)
     @click.argument('source', default='.', metavar='<source>')
-    @click.option('--depth', default=6, show_default=True,
-                  help='Maximum heading depth to include (1-6).')
-    @click.option('--prompt', 'show_prompt', is_flag=True,
-                  help='Show full tool specification for LLM consumption.')
+    @click.option(
+        '--depth', default=6, show_default=True, help='Maximum heading depth to include (1-6).'
+    )
+    @click.option(
+        '--prompt',
+        'show_prompt',
+        is_flag=True,
+        help='Show full tool specification for LLM consumption.',
+    )
     def mdtoc_command(source: str, depth: int, show_prompt: bool) -> None:
         """Show Markdown TOC with line numbers.
 

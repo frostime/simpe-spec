@@ -9,8 +9,11 @@ import pytest
 
 from sspec.core import SSPEC_DIR
 from sspec.services.project_init_service import (
-    InitResult, ProjectAlreadyInitializedError,
-    get_skill_targets_from_locations, initialize_project)
+    InitResult,
+    ProjectAlreadyInitializedError,
+    get_skill_targets_from_locations,
+    initialize_project,
+)
 
 # ---------------------------------------------------------------------------
 # get_skill_targets_from_locations
@@ -19,17 +22,13 @@ from sspec.services.project_init_service import (
 
 class TestGetSkillTargets:
     def test_single_location(self, tmp_path: Path):
-        targets = get_skill_targets_from_locations(
-            project_root=tmp_path, locations=['.claude']
-        )
+        targets = get_skill_targets_from_locations(project_root=tmp_path, locations=['.claude'])
         paths = [t.relative_to(tmp_path).as_posix() for t in targets]
         assert '.claude/skills' in paths
         assert '.sspec/skills' in paths  # always included
 
     def test_sspec_only(self, tmp_path: Path):
-        targets = get_skill_targets_from_locations(
-            project_root=tmp_path, locations=['.sspec']
-        )
+        targets = get_skill_targets_from_locations(project_root=tmp_path, locations=['.sspec'])
         assert len(targets) == 1
         assert targets[0] == tmp_path / SSPEC_DIR / 'skills'
 
@@ -75,11 +74,13 @@ class TestInitializeProject:
         meta_path = tmp_path / SSPEC_DIR / '.meta.json'
         assert meta_path.exists()
         meta = json.loads(meta_path.read_text(encoding='utf-8'))
-        assert 'schema_version' in meta
-        assert 'meta_schema_version' in meta
+        assert 'sspec_schema' in meta
+        assert 'meta_schema' in meta
         assert 'sspec_version' in meta
         assert 'file_hashes' in meta
         assert 'managed_skills' in meta
+        assert 'schema_version' not in meta
+        assert 'meta_schema_version' not in meta
 
     def test_creates_project_md(self, tmp_path: Path):
         initialize_project(

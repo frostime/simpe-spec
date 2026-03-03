@@ -5,17 +5,47 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from sspec.core import SCHEMA_VERSION, SSPEC_DIR, get_template_dir, list_template_skills
 from sspec.services.project_init_service import initialize_project
 from sspec.services.project_update_service import (
+    MetaMigrationError,
     OrphanedSkill,
     collect_orphaned_skills,
     collect_update_candidates,
     migrate_legacy_skill_layouts,
+    prepare_meta_for_project_update,
     remove_orphaned_skill,
 )
 
 COMMON_REPLACEMENTS = {'SCHEMA_VERSION': SCHEMA_VERSION, 'SCHEMA': SCHEMA_VERSION}
+
+
+class TestPrepareMetaForProjectUpdate:
+    def test_migrates_legacy_meta_keys(self, tmp_path: Path):
+        sspec_root = _init_project(tmp_path)
+        meta_path = sspec_root / '.meta.json'
+        meta_path.write_text(
+            json.dumps({'meta_schema_version': '1', 'schema_version': '9.1'}),
+            encoding='utf-8',
+        )
+
+        state = prepare_meta_for_project_update(sspec_root=sspec_root)
+
+        assert state.migration_needed is True
+        assert state.meta.get('meta_schema') == '2.0'
+        assert state.meta.get('sspec_schema') == '9.1'
+        assert 'meta_schema_version' not in state.meta
+        assert 'schema_version' not in state.meta
+
+    def test_rejects_future_meta_schema(self, tmp_path: Path):
+        sspec_root = _init_project(tmp_path)
+        meta_path = sspec_root / '.meta.json'
+        meta_path.write_text(json.dumps({'meta_schema': '999.0'}), encoding='utf-8')
+
+        with pytest.raises(MetaMigrationError, match='Unsupported future meta_schema'):
+            prepare_meta_for_project_update(sspec_root=sspec_root)
 
 
 def _init_project(tmp_path: Path) -> Path:
@@ -162,6 +192,7 @@ def test_migrate_legacy_skill_layouts_detects_legacy_in_dry_run(monkeypatch, tmp
     meta['skill_locations'] = ['.sspec/skills', '.github/skills']
 
     import sspec.services.project_update_service as update_module
+
     original_check = update_module.check_path_link
 
     def fake_check(path: Path, expected_target: Path | None = None) -> bool:

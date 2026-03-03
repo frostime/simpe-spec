@@ -1,26 +1,60 @@
-"""Read/write sspec project metadata (.meta.json)."""
+"""Read/write sspec project metadata (.meta.json).
+
+`.meta.json` is treated as a versioned config:
+- `meta_schema` is the schema marker for the meta file itself.
+- `sspec_schema` records the sspec protocol schema used by templates (AGENTS.md).
+"""
 
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict, cast
 
 META_FILE = '.meta.json'
 
-# Independent schema version for .meta.json structure.
-# Increment when the meta.json field layout changes (NOT tied to AGENTS.md schema).
-META_SCHEMA_VERSION = '1'
+# Schema marker for `.meta.json` structure.
+# Bump when the meta.json field layout changes (NOT tied to AGENTS.md schema).
+META_SCHEMA = '2.0'
 
 
-def get_meta_with_defaults(meta: dict[str, Any]) -> dict[str, Any]:
+class MetaModel(TypedDict, total=False):
+    """On-disk `.meta.json` model (latest known schema).
+
+    `.meta.json` is extensible; unknown keys are allowed and preserved.
+    """
+
+    meta_schema: str
+    sspec_schema: str
+
+    sspec_version: str
+    created_at: str
+    updated_at: str
+
+    file_hashes: dict[str, str]
+    managed_skills: list[str]
+    skill_locations: list[str]
+    skill_install_strategies: dict[str, str]
+
+
+@dataclass(frozen=True, slots=True)
+class MetaUpgradeResult:
+    meta: MetaModel
+    changed: bool
+    from_schema: str
+    to_schema: str
+
+
+def get_meta_with_defaults(meta: Mapping[str, Any]) -> MetaModel:
     """Return meta with missing fields filled by defaults (non-destructive).
 
     Merges caller-supplied meta on top of defaults so existing values are preserved.
     """
-    defaults: dict[str, Any] = {
-        'meta_schema_version': META_SCHEMA_VERSION,
-        'schema_version': '',
+    defaults: MetaModel = {
+        'meta_schema': META_SCHEMA,
+        'sspec_schema': '',
         'sspec_version': '',
         'created_at': '',
         'updated_at': '',
@@ -29,13 +63,133 @@ def get_meta_with_defaults(meta: dict[str, Any]) -> dict[str, Any]:
         'skill_locations': [],
         'skill_install_strategies': {},
     }
-    return {**defaults, **meta}
+    # Preserve unknown keys by merging caller data on top.
+    return cast(MetaModel, {**defaults, **dict(meta)})
+
+
+def _normalize_schema_str(value: Any) -> str:
+    if value is None:
+        return '0.0'
+    if isinstance(value, (int, float)):
+        value = str(value)
+    if not isinstance(value, str):
+        return '0.0'
+
+    v = value.strip()
+    if not v:
+        return '0.0'
+    # Accept legacy major-only strings like "1".
+    if '.' not in v and v.isdigit():
+        return f'{v}.0'
+    return v
+
+
+def _parse_schema(v: str) -> tuple[int, ...] | None:
+    parts = v.split('.')
+    out: list[int] = []
+    for p in parts:
+        if p == '' or not p.isdigit():
+            return None
+        out.append(int(p))
+    return tuple(out) if out else None
+
+
+def _compare_schema(v1: str, v2: str) -> int:
+    a = _parse_schema(_normalize_schema_str(v1))
+    b = _parse_schema(_normalize_schema_str(v2))
+    if a is None or b is None:
+        # Treat unparsable schema as oldest (0.0) to allow self-healing.
+        a = a or (0, 0)
+        b = b or (0, 0)
+
+    length = max(len(a), len(b))
+    a2 = a + (0,) * (length - len(a))
+    b2 = b + (0,) * (length - len(b))
+    if a2 < b2:
+        return -1
+    if a2 > b2:
+        return 1
+    return 0
+
+
+def _declared_meta_schema(data: Mapping[str, Any]) -> str:
+    # v2+ uses `meta_schema`; v1 used `meta_schema_version`.
+    if 'meta_schema' in data:
+        return _normalize_schema_str(data.get('meta_schema'))
+    if 'meta_schema_version' in data:
+        return _normalize_schema_str(data.get('meta_schema_version'))
+    return '0.0'
+
+
+def _migrate_to_1_0(data: dict[str, Any]) -> dict[str, Any]:
+    # Introduce explicit version marker for very old meta files.
+    out = dict(data)
+    out.setdefault('meta_schema_version', '1')
+    return out
+
+
+def _migrate_to_2_0(data: dict[str, Any]) -> dict[str, Any]:
+    # 1.0 -> 2.0: rename schema markers.
+    out = dict(data)
+
+    # schema_version (AGENTS) -> sspec_schema
+    if 'sspec_schema' not in out:
+        if 'schema_version' in out:
+            out['sspec_schema'] = str(out.get('schema_version') or '')
+        else:
+            out['sspec_schema'] = ''
+    out.pop('schema_version', None)
+
+    # meta_schema_version -> meta_schema (new key), but schema value becomes 2.0.
+    out.pop('meta_schema_version', None)
+    out['meta_schema'] = META_SCHEMA
+    return out
+
+
+def upgrade_meta(meta: Mapping[str, Any]) -> MetaUpgradeResult:
+    """Upgrade a raw meta dict to the latest meta_schema.
+
+    - Uses ONLY the declared schema fields (`meta_schema` / legacy `meta_schema_version`).
+    - Missing schema is treated as "0.0".
+    - Future schema versions raise ValueError to avoid data loss.
+    """
+
+    raw: dict[str, Any] = dict(meta)
+    from_schema = _declared_meta_schema(raw)
+
+    if _compare_schema(from_schema, META_SCHEMA) > 0:
+        raise ValueError(f'Unsupported future meta_schema: {from_schema} (current {META_SCHEMA})')
+
+    result: dict[str, Any] = raw
+    current = from_schema
+
+    if _compare_schema(current, '1.0') < 0:
+        result = _migrate_to_1_0(result)
+        current = '1.0'
+
+    if _compare_schema(current, '2.0') < 0:
+        result = _migrate_to_2_0(result)
+        current = '2.0'
+
+    # Always enforce latest schema marker (idempotent).
+    result['meta_schema'] = META_SCHEMA
+    result.pop('meta_schema_version', None)
+
+    upgraded = get_meta_with_defaults(result)
+    changed = upgraded != raw
+
+    return MetaUpgradeResult(
+        meta=upgraded,
+        changed=changed,
+        from_schema=from_schema,
+        to_schema=META_SCHEMA,
+    )
 
 
 def load_meta(sspec_root: Path) -> dict[str, Any]:
     """Load metadata from .meta.json.
 
-    Returns an empty dict on missing/corrupt files (CLI should handle defaults).
+    Returns an empty dict on missing/corrupt files.
     """
     meta_path = sspec_root / META_FILE
     if not meta_path.exists():
@@ -46,10 +200,51 @@ def load_meta(sspec_root: Path) -> dict[str, Any]:
     except (json.JSONDecodeError, OSError):
         return {}
 
-    if isinstance(data, dict):
-        return data
+    if not isinstance(data, dict):
+        return {}
 
-    return {}
+    # Load is migration-aware so callers can treat meta keys as stable.
+    return cast(dict[str, Any], upgrade_meta(data).meta)
+
+
+def load_meta_raw(sspec_root: Path) -> dict[str, Any]:
+    """Load raw metadata without migrations.
+
+    This is used when callers need to decide whether to persist an automatic
+    migration.
+    """
+
+    meta_path = sspec_root / META_FILE
+    if not meta_path.exists():
+        return {}
+
+    try:
+        data = json.loads(meta_path.read_text(encoding='utf-8'))
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+    return data if isinstance(data, dict) else {}
+
+
+def load_meta_latest(sspec_root: Path) -> MetaUpgradeResult:
+    """Load meta and return migration/change info.
+
+    This is primarily for commands that need to decide whether to persist an
+    automatic migration (e.g. `sspec project update`).
+    """
+
+    meta_path = sspec_root / META_FILE
+    if not meta_path.exists():
+        res = upgrade_meta({})
+        return MetaUpgradeResult(
+            meta=res.meta,
+            changed=True,
+            from_schema=res.from_schema,
+            to_schema=res.to_schema,
+        )
+
+    raw = load_meta_raw(sspec_root)
+    return upgrade_meta(raw)
 
 
 def save_meta(sspec_root: Path, meta: dict[str, Any]) -> None:

@@ -36,7 +36,7 @@ def _write_tasks(change_path: Path, done: int, total: int) -> None:
     lines = []
     for i in range(total):
         marker = 'x' if i < done else ' '
-        lines.append(f'- [{marker}] Task {i+1}')
+        lines.append(f'- [{marker}] Task {i + 1}')
     (change_path / 'tasks.md').write_text('\n'.join(lines), encoding='utf-8')
 
 
@@ -321,7 +321,6 @@ class TestValidateChange:
         change_path = create_change(sspec_root, 'filled')
         # Fill in spec sections
         spec = change_path / 'spec.md'
-        content = spec.read_text(encoding='utf-8')
         # Ensure sections A, B, C have content
         filled = (
             '---\nname: filled\nstatus: DOING\n---\n'

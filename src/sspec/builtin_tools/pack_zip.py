@@ -5,6 +5,10 @@ from __future__ import annotations
 import zipfile
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import pathspec
 
 __all__ = [
     'TOOL_NAME',
@@ -41,7 +45,7 @@ class GitignoreParser:
 
     def __init__(self, root: Path):
         self.root = root.resolve()
-        self.specs: dict[Path, 'pathspec.PathSpec'] = {}
+        self.specs: dict[Path, pathspec.PathSpec] = {}
         self.has_pathspec = False
 
         # Try to import pathspec
@@ -97,7 +101,7 @@ class GitignoreParser:
     def _should_ignore_pathspec(self, path: Path) -> bool:
         """Check using pathspec library."""
         try:
-            rel_path = path.relative_to(self.root)
+            path.relative_to(self.root)
         except ValueError:
             return True
 
@@ -232,7 +236,6 @@ def pack_zip(
 
             try:
                 rel_path = file_path.relative_to(root)
-                rel_str = str(rel_path).replace('\\', '/')
 
                 # Force include has highest priority
                 if include_matcher and include_matcher.matches(file_path, root):
@@ -371,7 +374,6 @@ def register_command(group):
     """Register pack-zip command to the tool group."""
     import click
     from rich.console import Console
-    from rich.table import Table
 
     from sspec.core import find_sspec_root
 
@@ -489,7 +491,7 @@ def register_command(group):
 
         except Exception as e:
             console.print(f'[red]Error:[/red] {e}')
-            raise click.Abort()
+            raise click.Abort() from e
 
 
 def preview_files(

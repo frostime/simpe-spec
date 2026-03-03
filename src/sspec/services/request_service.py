@@ -132,7 +132,7 @@ def find_request_matches(
         if archive_dir.exists():
             results.extend(_collect_from(archive_dir))
 
-    return sorted(list(set(results)))
+    return sorted(set(results))
 
 
 def parse_request_file(path: Path, archived: bool = False) -> RequestInfo | None:
@@ -325,10 +325,7 @@ def archive_request(sspec_root: Path, request_info: RequestInfo) -> Path:
     request_file = request_info.path
     requests_dir = request_file.parent
 
-    # Read and capture attach-change before modifying
     content = request_file.read_text(encoding='utf-8')
-    meta, _body = parse_frontmatter(content)
-    attach_change = meta.get('attach-change')
 
     # Add archived timestamp to frontmatter
     archived_time = datetime.now().isoformat(timespec='seconds')

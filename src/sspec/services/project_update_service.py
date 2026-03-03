@@ -50,6 +50,41 @@ class LegacySkillMigration:
     merged_custom_skills: list[str]
 
 
+class MetaMigrationError(RuntimeError):
+    """Raised when project update cannot migrate .meta.json safely."""
+
+
+@dataclass(frozen=True, slots=True)
+class MetaUpdateState:
+    """Meta state prepared for the project update pipeline."""
+
+    meta: dict[str, Any]
+    old_hashes: dict[str, str]
+    migration_needed: bool
+
+
+def prepare_meta_for_project_update(*, sspec_root: Path) -> MetaUpdateState:
+    """Load and validate meta for project update.
+
+    Meta migration is an explicit first stage of `project update`.
+    """
+
+    from sspec.services.meta_service import load_meta_latest
+
+    try:
+        meta_res = load_meta_latest(sspec_root)
+    except ValueError as err:
+        raise MetaMigrationError(str(err)) from err
+
+    meta: dict[str, Any] = dict(meta_res.meta)
+    old_hashes: dict[str, str] = dict(meta.get('file_hashes', {}) or {})
+    return MetaUpdateState(
+        meta=meta,
+        old_hashes=old_hashes,
+        migration_needed=meta_res.changed,
+    )
+
+
 def apply_skill_update(*, source: Path, target: Path, strategy: SkillStrategy) -> None:
     """Apply skill update through service boundary."""
     from sspec.skill_installer import SkillInstaller
@@ -95,9 +130,7 @@ def migrate_legacy_skill_layouts(
             continue
 
         children = [
-            child
-            for child in location_path.iterdir()
-            if child.is_dir() or check_path_link(child)
+            child for child in location_path.iterdir() if child.is_dir() or check_path_link(child)
         ]
         if not children:
             continue
@@ -295,7 +328,7 @@ def collect_update_candidates(
         skill_name = skill_dir.name
         template_skill_file = skill_dir / 'SKILL.md'
         if not template_skill_file.exists():
-            #TODO 无法增加新的 SKILL
+            # TODO 无法增加新的 SKILL
             continue
 
         # Hash key: prefer new format, fall back to legacy

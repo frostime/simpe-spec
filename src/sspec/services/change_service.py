@@ -61,7 +61,7 @@ def find_change_matches(changes_dir: Path, name: str, include_archived: bool = F
         if archive_dir.exists():
             results.extend(_collect_from(archive_dir))
 
-    return sorted(list(set(results)))
+    return sorted(set(results))
 
 
 def extract_change_name_from_dirname(dirname: str) -> str:

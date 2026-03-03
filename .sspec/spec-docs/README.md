@@ -6,6 +6,7 @@
 ## 项目规范文档
 
 - `skill-installation.md`：当前 SKILL 安装、同步、更新与 legacy 迁移设计（含旧方案对照）
+- `meta-json.md`：`.sspec/.meta.json` 的 schema 定义、迁移策略与 `project update` 的一致性保证
 
 <!-- 以下内容仅为示例，实际规范类型由项目需求决定
 | 类型 | 示例 | 用途 |

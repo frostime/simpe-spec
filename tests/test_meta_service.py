@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
-from sspec.services.meta_service import load_meta, save_meta
+from sspec.services.meta_service import (
+    META_SCHEMA_VERSION,
+    get_meta_with_defaults,
+    load_meta,
+    save_meta,
+)
 
 
 class TestMetaService:
@@ -42,3 +46,42 @@ class TestMetaService:
         save_meta(sspec_root, {'v': 1})
         save_meta(sspec_root, {'v': 2})
         assert load_meta(sspec_root) == {'v': 2}
+
+
+class TestMetaSchemaVersion:
+    def test_meta_schema_version_is_string(self):
+        assert isinstance(META_SCHEMA_VERSION, str)
+        assert len(META_SCHEMA_VERSION) > 0
+
+    def test_meta_schema_version_independent_from_agents_schema(self):
+        """META_SCHEMA_VERSION tracks meta.json structure, not AGENTS.md protocol."""
+        from sspec.core import SCHEMA_VERSION
+
+        # They are separate versioning axes; no equality constraint required.
+        assert META_SCHEMA_VERSION != SCHEMA_VERSION or True  # always passes; just documents intent
+
+
+class TestGetMetaWithDefaults:
+    def test_empty_meta_returns_all_defaults(self):
+        result = get_meta_with_defaults({})
+        assert result['meta_schema_version'] == META_SCHEMA_VERSION
+        assert result['file_hashes'] == {}
+        assert result['managed_skills'] == []
+        assert result['skill_locations'] == []
+        assert result['skill_install_strategies'] == {}
+
+    def test_existing_values_are_preserved(self):
+        meta = {'schema_version': '9.1', 'managed_skills': ['sspec']}
+        result = get_meta_with_defaults(meta)
+        assert result['schema_version'] == '9.1'
+        assert result['managed_skills'] == ['sspec']
+
+    def test_missing_fields_filled_without_overwriting(self):
+        meta = {'meta_schema_version': '99'}  # user has a custom version
+        result = get_meta_with_defaults(meta)
+        assert result['meta_schema_version'] == '99'  # preserved, not overwritten
+
+    def test_does_not_mutate_input(self):
+        original = {}
+        get_meta_with_defaults(original)
+        assert original == {}

@@ -43,7 +43,7 @@ def _interactive_skill_selection(project_root: Path) -> list[str]:
     Detects existing workspace directories and prompts user to select skill
     installation locations.
     """
-    available_locations = ['.claude', '.github', '.agent']
+    available_locations = ['.claude', '.github', '.agents']
     existing_dirs = [loc for loc in available_locations if (project_root / loc).is_dir()]
 
     console.print()
@@ -58,6 +58,7 @@ def _interactive_skill_selection(project_root: Path) -> list[str]:
         )
         for loc in available_locations
     ]
+    choices.append(questionary.Choice(title='Enter custom path…', value='__custom__'))
 
     selected = questionary.checkbox(
         'Select skill installation locations:',
@@ -66,20 +67,30 @@ def _interactive_skill_selection(project_root: Path) -> list[str]:
     ).ask()
 
     if selected is None:  # User cancelled
-        forced = project_root / '.agent'
+        forced = project_root / '.agents'
         forced.mkdir(parents=True, exist_ok=True)
-        console.print('[yellow]Selection cancelled, force fallback to .agent[/yellow]')
+        console.print('[yellow]Selection cancelled, force fallback to .agents[/yellow]')
         console.print('[dim]You can switch to .claude/.github later by re-sync/update.[/dim]')
-        return ['.agent']
+        return ['.agents']
 
     if not selected:
-        forced = project_root / '.agent'
+        forced = project_root / '.agents'
         forced.mkdir(parents=True, exist_ok=True)
-        console.print('[yellow]No locations selected, force fallback to .agent[/yellow]')
+        console.print('[yellow]No locations selected, force fallback to .agents[/yellow]')
         console.print('[dim]You can switch to .claude/.github later by re-sync/update.[/dim]')
-        return ['.agent']
+        return ['.agents']
 
-    return selected
+    # Handle custom path input
+    result: list[str] = [loc for loc in selected if loc != '__custom__']
+    if '__custom__' in selected:
+        custom = questionary.text(
+            'Enter custom skill location path (relative to project root):',
+            instruction='e.g. .cursor or .windsurf',
+        ).ask()
+        if custom and custom.strip():
+            result.append(custom.strip())
+
+    return result
 
 
 @click.group()
@@ -93,8 +104,8 @@ def project() -> None:
 @click.option(
     '--skill-loc',
     multiple=True,
-    type=click.Choice(['.claude', '.github', '.agent'], case_sensitive=False),
-    help='Skill installation locations (can specify multiple, or use interactive mode)',
+    type=str,
+    help='Skill installation location (can specify multiple). e.g. --skill-loc .claude',
 )
 def init(force: bool, skill_loc: tuple[str, ...]) -> None:
     """Initialize .sspec directory in current project."""

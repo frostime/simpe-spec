@@ -17,7 +17,6 @@ from typing import Any, Literal, TypedDict
 
 import yaml
 
-from sspec import __version__
 from sspec.core import SKILL_SUBDIR, SKILLS_DIR, SSPEC_DIR, WORKSPACE_DIRS
 from sspec.libs.hashing import compute_dir_hash
 from sspec.services.meta_service import load_meta, save_meta
@@ -374,7 +373,8 @@ def create_skill_in_hub(
     skill_file.write_text(template_content, encoding='utf-8')
 
     meta: dict[str, Any] = load_meta(sspec_root)
-    meta['updated_at'] = __version__
+    meta['updated_at'] = datetime.now().isoformat()
     save_meta(sspec_root, meta)
 
+    return CreateSkillResult(hub_dir=hub_dir, skill_name=name)
     return CreateSkillResult(hub_dir=hub_dir, skill_name=name)

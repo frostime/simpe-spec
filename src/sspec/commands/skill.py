@@ -9,13 +9,27 @@ from rich.console import Console
 from rich.table import Table
 
 from sspec.core import SspecNotFoundError, get_sspec_root
-from sspec.services.skill_service import (
-    create_skill_in_hub,
-    dominate_skills_location,
-    list_skills,
-)
+from sspec.services.meta_service import load_meta, save_meta
+from sspec.services.skill_service import create_skill_in_hub, dominate_skills_location, list_skills
 
 console = Console()
+
+
+def _record_dominate_location(sspec_root: Path, dominate_dir: Path) -> None:
+    """Record a newly dominated directory in .meta.json skill_locations."""
+    project_root = sspec_root.parent
+    try:
+        # store the skills/ sub-path so it matches the convention used by init/sync
+        location_path = (dominate_dir / 'skills').relative_to(project_root).as_posix()
+    except ValueError:
+        # dominate_dir is outside project_root — use absolute posix path
+        location_path = (dominate_dir / 'skills').as_posix()
+
+    meta = load_meta(sspec_root)
+    stored: set[str] = set(meta.get('skill_locations', []) or [])
+    stored.add(location_path)
+    meta['skill_locations'] = sorted(stored)
+    save_meta(sspec_root, meta)
 
 
 @click.group()
@@ -139,6 +153,9 @@ def dominate(dir_path: Path) -> None:
     if result.status == 'skipped':
         console.print(f'[cyan]-[/cyan] Already linked: {rel_target} -> {rel_source}')
         return
+
+    # For all successful operations (linked, relinked, merged) record in meta
+    _record_dominate_location(sspec_root, dominate_dir)
 
     if result.status == 'merged':
         if result.backup_path:

@@ -8,6 +8,29 @@ from typing import Any
 
 META_FILE = '.meta.json'
 
+# Independent schema version for .meta.json structure.
+# Increment when the meta.json field layout changes (NOT tied to AGENTS.md schema).
+META_SCHEMA_VERSION = '1'
+
+
+def get_meta_with_defaults(meta: dict[str, Any]) -> dict[str, Any]:
+    """Return meta with missing fields filled by defaults (non-destructive).
+
+    Merges caller-supplied meta on top of defaults so existing values are preserved.
+    """
+    defaults: dict[str, Any] = {
+        'meta_schema_version': META_SCHEMA_VERSION,
+        'schema_version': '',
+        'sspec_version': '',
+        'created_at': '',
+        'updated_at': '',
+        'file_hashes': {},
+        'managed_skills': [],
+        'skill_locations': [],
+        'skill_install_strategies': {},
+    }
+    return {**defaults, **meta}
+
 
 def load_meta(sspec_root: Path) -> dict[str, Any]:
     """Load metadata from .meta.json.

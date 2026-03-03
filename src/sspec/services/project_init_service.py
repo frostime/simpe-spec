@@ -23,7 +23,7 @@ from sspec.core import (
 )
 from sspec.libs.hashing import compute_dir_hash, compute_hash
 from sspec.services.agents_service import update_root_agents_block
-from sspec.services.meta_service import load_meta, save_meta
+from sspec.services.meta_service import META_SCHEMA_VERSION, load_meta, save_meta
 
 
 class ProjectAlreadyInitializedError(RuntimeError):
@@ -76,14 +76,9 @@ def get_skill_targets_from_locations(
 
 
 DEFAULT_GITIGNORE = """
-!project.md
-!spec-docs/**
-!commands/**
-!.meta.json
-changes/**
-requests/**
+# Installed skills (managed by sspec, symlinks or copies — not for VCS)
 skills/**
-asks/**
+# Temporary workspace drafts
 tmp/**
 """.strip()
 
@@ -185,6 +180,7 @@ def initialize_project(
 
     # Create initial .meta.json
     meta_data: dict[str, Any] = {
+        'meta_schema_version': META_SCHEMA_VERSION,
         'schema_version': SCHEMA_VERSION,
         'sspec_version': __version__,
         'created_at': datetime.now().isoformat(),

@@ -6,16 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from sspec.services.ask_service import (
-    archive_ask,
-    convert_ask_to_md,
-    create_ask_template,
-    execute_ask_prompt,
-    extract_ask_name_from_filename,
-    find_ask_matches,
-    normalize_ask_name,
-    save_ask_answer,
-)
+from sspec.services.ask_service import (archive_ask, convert_ask_to_md,
+                                        create_ask_template,
+                                        execute_ask_prompt,
+                                        extract_ask_name_from_filename,
+                                        find_ask_matches, normalize_ask_name,
+                                        save_ask_answer)
 
 # ---------------------------------------------------------------------------
 # normalize_ask_name
@@ -102,7 +98,7 @@ class TestExecuteAskPrompt:
     def test_prefilled_answer_returned(self, sspec_root: Path):
         path, _ = create_ask_template(sspec_root, 'prefilled')
         content = path.read_text(encoding='utf-8')
-        content = content.replace('user_answer: ""', 'user_answer: "Use Redis"')
+        content = content.replace('USER_FILL_HERE', 'Use Redis')
         path.write_text(content, encoding='utf-8')
 
         answer = execute_ask_prompt(path)

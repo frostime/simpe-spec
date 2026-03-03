@@ -10,7 +10,7 @@ from typing import TypedDict
 
 SSPEC_DIR = '.sspec'
 SKILLS_DIR = 'skills'
-WORKSPACE_DIRS = ['.github', '.claude', '.agent']
+WORKSPACE_DIRS = ['.github', '.claude', '.agents']
 SKILL_SUBDIR = 'skills'
 CHANGES_DIR = 'changes'
 REQUEST_DIR = 'requests'

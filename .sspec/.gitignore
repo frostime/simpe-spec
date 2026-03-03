@@ -1,5 +1,5 @@
-requests/*
-changes/*
-asks/*
+requests/archive
+changes/archive
+asks/archive
 skills/*
 tmp/*

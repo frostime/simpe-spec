@@ -9,11 +9,8 @@ import pytest
 
 from sspec.core import SSPEC_DIR
 from sspec.services.project_init_service import (
-    InitResult,
-    ProjectAlreadyInitializedError,
-    get_skill_targets_from_locations,
-    initialize_project,
-)
+    InitResult, ProjectAlreadyInitializedError,
+    get_skill_targets_from_locations, initialize_project)
 
 # ---------------------------------------------------------------------------
 # get_skill_targets_from_locations
@@ -79,6 +76,7 @@ class TestInitializeProject:
         assert meta_path.exists()
         meta = json.loads(meta_path.read_text(encoding='utf-8'))
         assert 'schema_version' in meta
+        assert 'meta_schema_version' in meta
         assert 'sspec_version' in meta
         assert 'file_hashes' in meta
         assert 'managed_skills' in meta

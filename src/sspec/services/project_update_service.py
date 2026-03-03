@@ -292,7 +292,9 @@ def collect_update_candidates(
             old_hash = old_hashes.get(file_path)
 
             if old_hash is None:
-                status = 'unknown'
+                # If we can verify the file matches the current template, treat as current.
+                # This avoids projects being stuck in 'unknown' when hashes are missing.
+                status = 'current' if current_hash == new_hash else 'unknown'
             elif current_hash == new_hash:
                 status = 'current'
             elif current_hash == old_hash:

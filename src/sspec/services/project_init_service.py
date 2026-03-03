@@ -197,7 +197,7 @@ def initialize_project(
             rel_loc = target_dir.relative_to(project_root)
         except ValueError:
             continue
-        meta_data['skill_locations'].append(str(rel_loc))
+        meta_data['skill_locations'].append(rel_loc.as_posix())
 
     for file_path in UPDATABLE_FILES:
         dest_path = sspec_path / file_path

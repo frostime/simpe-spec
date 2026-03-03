@@ -25,7 +25,10 @@ def _record_dominate_location(sspec_root: Path, dominate_dir: Path) -> None:
         # dominate_dir is outside project_root — use absolute posix path
         location_path = (dominate_dir / 'skills').as_posix()
 
-    meta = load_meta(sspec_root)
+    try:
+        meta = load_meta(sspec_root)
+    except ValueError as e:
+        raise click.ClickException(f'Invalid .meta.json: {e}') from None
     stored: set[str] = set(meta.get('skill_locations', []) or [])
     stored.add(location_path)
     meta['skill_locations'] = sorted(stored)
@@ -65,7 +68,7 @@ description: ""
             name=name,
             template_content=template_content,
         )
-    except FileExistsError as e:
+    except (FileExistsError, ValueError, OSError) as e:
         raise click.ClickException(str(e)) from None
 
     console.print(f"[green][OK][/green] Created skill '{name}'")
@@ -115,7 +118,22 @@ def dominate(dir_path: Path) -> None:
         raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
     project_root = sspec_root.parent
-    dominate_dir = dir_path.resolve()
+
+    # User often passes a full ".../skills" path; normalize back to the parent directory.
+    if dir_path.name == 'skills':
+        if dir_path.parent == Path('.'):
+            raise click.ClickException(
+                "Invalid DIR. Pass the parent directory (e.g. '.claude'), not 'skills'."
+            )
+        dir_path = dir_path.parent
+
+    if getattr(dir_path, 'drive', '') and not dir_path.is_absolute():
+        raise click.ClickException(
+            f'Invalid path: {dir_path}. Use an absolute path or a path relative to project root.'
+        )
+    dominate_dir = (
+        (project_root / dir_path).resolve() if not dir_path.is_absolute() else dir_path.resolve()
+    )
 
     try:
         result = dominate_skills_location(sspec_root=sspec_root, dominate_dir=dominate_dir)
@@ -150,12 +168,13 @@ def dominate(dir_path: Path) -> None:
     except ValueError:
         rel_source = result.source_dir
 
+    # For all successful operations (including already-linked) record in meta.
+    if result.status in {'linked', 'relinked', 'merged', 'skipped'}:
+        _record_dominate_location(sspec_root, dominate_dir)
+
     if result.status == 'skipped':
         console.print(f'[cyan]-[/cyan] Already linked: {rel_target} -> {rel_source}')
         return
-
-    # For all successful operations (linked, relinked, merged) record in meta
-    _record_dominate_location(sspec_root, dominate_dir)
 
     if result.status == 'merged':
         if result.backup_path:

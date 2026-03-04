@@ -191,27 +191,6 @@ def init(force: bool, skill_loc: tuple[str, ...]) -> None:
     # Resolve requested external locations after core init
     skill_locations = list(skill_loc) if skill_loc else _interactive_skill_selection(project_root)
     skill_locations = _validate_skill_locations(project_root, skill_locations)
-    allow_elevation = True
-    prefer_junction_on_windows = False
-
-    if skill_locations and sys.platform == 'win32':
-        # try:
-        #     elevated_choice = questionary.confirm(
-        #         'Try admin elevation to create symbolic links on Windows?',
-        #         default=False,
-        #     ).ask()
-        # except Exception:
-        #     elevated_choice = False
-        #     console.print(
-        #         '[yellow]Non-interactive console detected; skip elevation prompt and use '
-        #         'junction/copy fallback.[/yellow]'
-        #     )
-        # if not elevated_choice:
-        #     allow_elevation = False
-        #     prefer_junction_on_windows = True
-        # 反正 junction link 效果也一样，就不浪费那个步骤了
-        allow_elevation = False
-        prefer_junction_on_windows = True
 
     if skill_locations:
         try:
@@ -219,8 +198,6 @@ def init(force: bool, skill_loc: tuple[str, ...]) -> None:
                 project_root=project_root,
                 locations=skill_locations,
                 prefer_symlink=True,
-                allow_elevation=allow_elevation,
-                prefer_junction_on_windows=prefer_junction_on_windows,
             )
         except (OSError, RuntimeError, ValueError) as e:
             raise click.ClickException(str(e)) from None
@@ -588,8 +565,8 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
             # 输出信息
             if upd.status == 'missing':
                 action = 'Created'
-            elif upd.strategy in ('symlink', 'junction'):
-                action = 'Updated symlink'
+            elif upd.strategy == 'link':
+                action = 'Updated link'
             else:
                 action = 'Updated'
             console.print(f'  [green]+[/green] {action} {path}')

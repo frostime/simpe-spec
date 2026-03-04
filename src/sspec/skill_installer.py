@@ -1,10 +1,7 @@
-"""优化后的 SKILL 安装策略模块
+"""SKILL install helpers for hub-spoke sync.
 
-核心改进：
-1. 职责分离：ElevationManager 专门处理 Windows 提权
-2. 统一接口：单一批量安装方法支持所有场景
-3. 清晰状态：使用实例变量和结果对象
-4. 消除重复：合并相似逻辑
+Public strategy contract is `link|copy`.
+Internal link handling still distinguishes symlink and junction where needed.
 """
 
 from __future__ import annotations
@@ -18,11 +15,19 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-SkillStrategy = Literal['symlink', 'junction', 'copy']
+SkillStrategy = Literal['link', 'copy']
+LegacySkillStrategy = Literal['symlink', 'junction', 'link', 'copy']
 LinkKind = Literal['none', 'symlink', 'junction']
 
 GITIGNORE_FENCE_START = '# >>> sspec-managed skills >>>'
 GITIGNORE_FENCE_END = '# <<< sspec-managed skills <<<'
+
+
+def normalize_legacy_strategy(raw: str | None) -> SkillStrategy:
+    """Normalize strategy values into the public `link|copy` contract."""
+    if raw in {'symlink', 'junction', 'link'}:
+        return 'link'
+    return 'copy'
 
 
 def _is_junction(path: Path) -> bool:
@@ -97,116 +102,13 @@ class SkillInstallResult:
     error: str | None = None
 
 
-class ElevationManager:
-    """Windows 提权管理器（单例模式）"""
-
-    _instance: ElevationManager | None = None
-
-    def __new__(cls) -> ElevationManager:
-        if cls._instance is None:
-            instance = super().__new__(cls)
-            instance._attempted = False
-            instance._disabled = False
-            cls._instance = instance
-        return cls._instance
-
-    @property
-    def attempted(self) -> bool:
-        """是否已尝试过提权"""
-        return self._attempted
-
-    @property
-    def disabled(self) -> bool:
-        """提权是否被禁用"""
-        return self._disabled
-
-    def mark_attempted(self) -> None:
-        """标记已尝试提权"""
-        self._attempted = True
-
-    def mark_disabled(self) -> None:
-        """标记提权被禁用"""
-        self._disabled = True
-
-    @staticmethod
-    def is_windows_admin() -> bool:
-        """检查是否已有管理员权限"""
-        try:
-            import ctypes
-
-            return bool(ctypes.windll.shell32.IsUserAnAdmin())
-        except Exception:
-            return False
-
-    def try_elevated_symlinks(self, pairs: list[tuple[Path, Path]]) -> list[bool]:
-        """尝试使用提权创建批量符号链接
-
-        Args:
-            pairs: (source, target) 路径对列表
-
-        Returns:
-            每个 pair 的成功状态列表
-        """
-        if not pairs:
-            return []
-
-        # 跳过条件检查
-        if self._disabled or self.is_windows_admin() or self._attempted:
-            return [False] * len(pairs)
-
-        self.mark_attempted()
-
-        import tempfile
-
-        if sys.platform != 'win32':
-            return [False] * len(pairs)
-
-        # 生成 PowerShell 脚本
-        ps_lines = []
-        for source, target in pairs:
-            ps_lines.append(
-                f'$src = "{source}"; $dst = "{target}"; '
-                f'if (Test-Path -LiteralPath $dst) {{ '
-                f'Remove-Item -LiteralPath $dst -Recurse -Force }}; '
-                f'New-Item -ItemType SymbolicLink -Path $dst -Target $src | Out-Null'
-            )
-
-        ps_content = '\n'.join(ps_lines)
-
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.ps1', delete=False) as f:
-            f.write(ps_content)
-            ps_path = f.name
-
-        try:
-            cmd = [
-                'powershell',
-                '-Command',
-                f'Start-Process -Verb RunAs powershell.exe '
-                f'-ArgumentList "-NoProfile","-File","{ps_path}" -Wait',
-            ]
-            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-            # 验证每个符号链接是否创建成功
-            return [check_path_link(target, expected_target=source) for source, target in pairs]
-        except Exception:
-            self.mark_disabled()
-            return [False] * len(pairs)
-        finally:
-            import os
-
-            try:
-                os.unlink(ps_path)
-            except Exception:
-                pass
-
-
 class SkillInstaller:
-    """Skill 安装器：处理 symlink/copy 策略及 hub-spoke 模式"""
+    """Skill 安装器：处理 link/copy 策略及 hub-spoke 模式"""
 
     _default_installer: SkillInstaller | None = None
 
-    def __init__(self, elevation_manager: ElevationManager | None = None):
-        self._elevation = elevation_manager or ElevationManager()
+    def __init__(self):
+        pass
 
     @classmethod
     def _get_installer(cls) -> SkillInstaller:
@@ -306,8 +208,6 @@ class SkillInstaller:
         self,
         items: list[tuple[Path, Path]],
         prefer_symlink: bool = True,
-        allow_elevation: bool = True,
-        prefer_junction_on_windows: bool = False,
     ) -> list[SkillInstallResult]:
         """批量安装 skills
 
@@ -335,76 +235,36 @@ class SkillInstaller:
                 results.append(SkillInstallResult(target, source, 'copy'))
             return results
 
-        if prefer_junction_on_windows and sys.platform == 'win32':
-            still_failed_pairs: list[tuple[Path, Path]] = []
-            for source, target in items:
-                if self._try_create_junction(source, target):
-                    self._add_to_gitignore(target)
-                    results.append(SkillInstallResult(target, source, 'junction'))
-                else:
-                    still_failed_pairs.append((source, target))
-
-            for source, target in still_failed_pairs:
-                shutil.copytree(source, target)
-                self._add_to_gitignore(target)
-                results.append(SkillInstallResult(target, source, 'copy'))
-            return results
-
-        # 优先 symlink：第一轮尝试不提权
-        failed_pairs: list[tuple[Path, Path]] = []
         for source, target in items:
-            if self._try_create_symlink(source, target):
+            linked = (
+                self._try_create_junction(source, target)
+                if sys.platform == 'win32'
+                else self._try_create_symlink(source, target)
+            )
+            if linked:
                 self._add_to_gitignore(target)
-                results.append(SkillInstallResult(target, source, 'symlink'))
-            else:
-                failed_pairs.append((source, target))
+                results.append(SkillInstallResult(target, source, 'link'))
+                continue
 
-        # 第二轮：Windows 提权尝试
-        remaining_pairs = failed_pairs
-        if failed_pairs and allow_elevation:
-            elevated_success = self._elevation.try_elevated_symlinks(failed_pairs)
-            remaining_pairs = []
-            for (source, target), success in zip(failed_pairs, elevated_success, strict=True):
-                if success:
-                    self._add_to_gitignore(target)
-                    results.append(SkillInstallResult(target, source, 'symlink'))
-                else:
-                    remaining_pairs.append((source, target))
-
-        # 第三轮：Windows junction 尝试（无需管理员权限）
-        still_failed_pairs = remaining_pairs
-        if remaining_pairs and sys.platform == 'win32':
-            still_failed_pairs = []
-            for source, target in remaining_pairs:
-                if self._try_create_junction(source, target):
-                    self._add_to_gitignore(target)
-                    results.append(SkillInstallResult(target, source, 'junction'))
-                else:
-                    still_failed_pairs.append((source, target))
-
-        # 第四轮：最终回退 copy
-        for source, target in still_failed_pairs:
             shutil.copytree(source, target)
             self._add_to_gitignore(target)
             results.append(SkillInstallResult(target, source, 'copy'))
 
         return results
 
-    def _recreate_link(self, source: Path, target: Path, strategy: SkillStrategy) -> None:
-        """Recreate symlink/junction based on recorded strategy."""
+    def _recreate_link(self, source: Path, target: Path) -> None:
+        """Recreate platform-preferred link (junction on Windows, symlink otherwise)."""
         target.parent.mkdir(parents=True, exist_ok=True)
 
-        if strategy == 'junction':
+        if sys.platform == 'win32':
             if not self._try_create_junction(source, target):
-                if self._try_create_symlink(source, target):
-                    return
-                raise OSError(f'Failed to create junction/symlink for {target}')
+                raise OSError(f'Failed to create junction for {target}')
             return
 
         if not self._try_create_symlink(source, target):
             raise OSError(f'Failed to create symlink for {target}')
 
-    def update_skill(self, source: Path, target: Path, strategy: SkillStrategy) -> None:
+    def update_skill(self, source: Path, target: Path, strategy: LegacySkillStrategy) -> None:
         """更新已安装的 skill
 
         Args:
@@ -412,7 +272,7 @@ class SkillInstaller:
             target: 已安装的 skill 目录
             strategy: 记录的安装策略
         """
-        if strategy in ('symlink', 'junction'):
+        if normalize_legacy_strategy(strategy) == 'link':
             # link 策略：确保链接有效且指向正确
             if check_path_link(target, expected_target=source):
                 return
@@ -422,7 +282,7 @@ class SkillInstaller:
             elif target.exists():
                 shutil.rmtree(target)
 
-            self._recreate_link(source, target, strategy)
+            self._recreate_link(source, target)
         else:
             # 复制策略：重新复制
             if target.exists():
@@ -449,10 +309,9 @@ class SkillInstaller:
         Returns:
             (target, source, strategy) 三元组列表
         """
+        del allow_elevation, prefer_junction_on_windows
         installer = SkillInstaller._get_installer()
-        results = installer.install_batch(
-            installs, prefer_symlink, allow_elevation, prefer_junction_on_windows
-        )
+        results = installer.install_batch(installs, prefer_symlink=prefer_symlink)
         return [(r.target, r.source, r.strategy) for r in results]
 
     @staticmethod
@@ -520,14 +379,17 @@ class SkillInstaller:
             self._add_to_gitignore(hub)
             result_dict[hub] = 'copy'
 
-        # 第二步：收集所有 spokes 对，批量创建 symlink（只提权一次）
+        # 第二步：收集所有 spokes 对，按平台创建 link。
         all_spoke_pairs: list[tuple[Path, Path]] = []
         for _source, hub, spokes in items:
             for spoke in spokes:
                 all_spoke_pairs.append((hub, spoke))
 
         if all_spoke_pairs:
-            spoke_results = self.install_batch(all_spoke_pairs, prefer_symlink)
+            spoke_results = self.install_batch(
+                all_spoke_pairs,
+                prefer_symlink=prefer_symlink,
+            )
             for result in spoke_results:
                 result_dict[result.target] = result.strategy
 

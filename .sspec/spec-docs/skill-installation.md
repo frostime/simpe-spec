@@ -1,7 +1,7 @@
 ---
 name: SKILL Installation & Sync
 description: sspec 中 SKILL 的安装、同步、更新与 legacy 迁移设计
-updated: 2026-02-13
+updated: 2026-03-04
 scope:
   - /src/sspec/skill_installer.py
   - /src/sspec/services/project_init_service.py
@@ -42,10 +42,10 @@ graph TD
 
 1. `project init` 先完成 `.sspec` 核心初始化并安装 hub skills。
 2. 再询问外部同步位置。
-3. Windows 额外询问是否提权创建 symlink：
-   - 同意：`symlink -> elevated symlink -> junction -> copy`
-   - 不同意：`junction -> copy`
-4. 若用户未选择任何外部目录，强制回退 `.agent`，并提示后续可迁移。
+3. 安装策略按平台固定：
+   - Windows：`junction -> copy`
+   - Linux/macOS：`symlink -> copy`
+4. 若用户未选择任何外部目录，强制回退 `.agents`，并提示后续可迁移。
 
 ## Update Flow
 
@@ -100,5 +100,5 @@ Skill 候选状态语义（copy 目录）：
 ## Decision Notes
 
 - 目录级 spoke 优于逐 skill spoke：结构更稳定，识别更一致。
-- Junction 是 Windows 下可接受回退，不与 symlink 判定混用。
+- Junction 是 Windows 下默认 link 方式；对外策略统一为 `link`。
 - 修改保护优先：`modified` 状态默认不覆盖，需 `--force`。

@@ -1,7 +1,7 @@
 ---
 name: meta.json (Project Metadata)
 description: Define `.sspec/.meta.json` schema, migration strategy, and update-time guarantees
-updated: 2026-03-03
+updated: 2026-03-04
 scope:
   - /.sspec/.meta.json
   - /src/sspec/services/meta_service.py
@@ -49,7 +49,7 @@ The file is upgraded and maintained by:
 1) `meta_schema` (meta file schema)
 - Meaning: the schema version of `.meta.json` itself.
 - Owned by: `src/sspec/services/meta_service.py`.
-- Current: `2.0` (`META_SCHEMA`).
+- Current: `2.1` (`META_SCHEMA`).
 
 2) `sspec_schema` (sspec protocol schema)
 - Meaning: the sspec protocol schema used by templates (not the meta file schema).
@@ -58,13 +58,13 @@ The file is upgraded and maintained by:
 
 Design rule: these two versions are independent and must not be conflated.
 
-## Current On-Disk Model (meta_schema = 2.0)
+## Current On-Disk Model (meta_schema = 2.1)
 
-Canonical keys in v2.0:
+Canonical keys in v2.1:
 
 | Key | Type | Meaning |
 |-----|------|---------|
-| `meta_schema` | string | meta file schema version, current `2.0` |
+| `meta_schema` | string | meta file schema version, current `2.1` |
 | `sspec_schema` | string | sspec protocol schema version (e.g. `9.1`) |
 | `sspec_version` | string | sspec package version used to write meta |
 | `created_at` | string | ISO datetime string |
@@ -72,7 +72,6 @@ Canonical keys in v2.0:
 | `file_hashes` | object | map of tracked paths -> hash |
 | `managed_skills` | array | template skill names that are managed |
 | `skill_locations` | array | directories where `skills/` are installed/synced |
-| `skill_install_strategies` | object | map of location -> `symlink/junction/copy` |
 
 Typed model (source of truth): `MetaModel` in `src/sspec/services/meta_service.py`.
 
@@ -101,6 +100,7 @@ Migration is schema-driven and declared-schema-based:
 - Upgrade path is linear:
   - `< 1.0` -> migrate to `1.0`
   - `< 2.0` -> migrate to `2.0`
+  - `< 2.1` -> migrate to `2.1`
 
 ### 1.0 -> 2.0 Migration (Key Renames)
 
@@ -109,6 +109,11 @@ Migration is schema-driven and declared-schema-based:
 - Drop old keys after migration.
 
 Implementation: `upgrade_meta()` in `src/sspec/services/meta_service.py`.
+
+### 2.0 -> 2.1 Migration (Field Removal)
+
+- Remove deprecated `skill_install_strategies` from on-disk model.
+- Keep runtime behavior based on filesystem link detection, not strategy map.
 
 ### Future Schema Handling
 
@@ -151,11 +156,11 @@ These guarantees are tested by:
 }
 ```
 
-### After upgrade (v2.0)
+### After upgrade (v2.1)
 
 ```json
 {
-  "meta_schema": "2.0",
+  "meta_schema": "2.1",
   "sspec_schema": "6.0",
   "file_hashes": {},
   "managed_skills": []

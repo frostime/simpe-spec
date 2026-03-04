@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -35,7 +36,7 @@ class TestPrepareMetaForProjectUpdate:
         state = prepare_meta_for_project_update(sspec_root=sspec_root)
 
         assert state.migration_needed is True
-        assert state.meta.get('meta_schema') == '2.0'
+        assert state.meta.get('meta_schema') == '2.1'
         assert state.meta.get('sspec_schema') == '9.1'
         assert 'meta_schema_version' not in state.meta
         assert 'schema_version' not in state.meta
@@ -112,9 +113,10 @@ class TestCollectUpdateCandidates:
                     meta=meta,
                     common_replacements=COMMON_REPLACEMENTS,
                 )
-                # User-edited copied skill should now be treated as modified
-                statuses = {c.status for c in candidates}
-                assert 'modified' in statuses or 'current' in statuses
+                target_rel = f'.sspec/skills/{skill_name}/SKILL.md'.replace('/', '\\')
+                target = next((c for c in candidates if c.display_path == target_rel), None)
+                assert target is not None
+                assert target.status == 'modified'
 
     def test_empty_meta_still_works(self, tmp_path: Path):
         sspec_root = tmp_path / SSPEC_DIR
@@ -130,6 +132,27 @@ class TestCollectUpdateCandidates:
         # Should not crash; missing skills → status 'missing'
         if candidates:
             assert any(c.status == 'missing' for c in candidates)
+
+    def test_missing_spoke_root_is_not_recreated_as_per_skill_copy(self, tmp_path: Path):
+        sspec_root = _init_project(tmp_path)
+        meta = json.loads((sspec_root / '.meta.json').read_text(encoding='utf-8'))
+        meta['skill_locations'] = ['.sspec/skills', '.github/skills']
+
+        spoke_root = tmp_path / '.github' / 'skills'
+        if spoke_root.exists():
+            if spoke_root.is_dir():
+                shutil.rmtree(spoke_root)
+            else:
+                spoke_root.unlink()
+
+        candidates = collect_update_candidates(
+            sspec_root=sspec_root,
+            template_dir=get_template_dir(),
+            meta=meta,
+            common_replacements=COMMON_REPLACEMENTS,
+        )
+
+        assert not any(c.display_path.startswith('.github\\skills\\') for c in candidates)
 
 
 # ---------------------------------------------------------------------------

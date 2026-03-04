@@ -12,8 +12,6 @@ from pathlib import Path
 
 from dotenv import dotenv_values
 
-from sspec.config import get_config, get_global_config
-
 
 def get_editor_command(
     sspec_root: Path,
@@ -21,20 +19,14 @@ def get_editor_command(
     env: Mapping[str, str] | None = None,
     cwd: Path | None = None,
 ) -> str | None:
-    """Get editor command from config, env vars, or a local .env.
+    """Get editor command from local .env and process env vars.
 
     Resolution order:
-    1) Runtime env `SSPEC_EDITOR`
-    2) `.env` in cwd -> `SSPEC_EDITOR`
-    3) Global config `~/.config/sspec/sspec.config.yaml` -> `SSPEC_EDITOR`
-    4) `.sspec/config.yaml` -> `editor` (legacy compatibility)
-    5) Runtime env `EDITOR`
+    1) `.env` in cwd -> `SSPEC_EDITOR`
+    2) Runtime env `SSPEC_EDITOR`
+    3) Runtime env `EDITOR`
     """
     env_map = os.environ if env is None else env
-
-    editor = env_map.get('SSPEC_EDITOR')
-    if editor:
-        return editor
 
     env_path = (cwd or Path.cwd()) / '.env'
     if env_path.exists():
@@ -43,13 +35,9 @@ def get_editor_command(
         if editor:
             return editor
 
-    global_config = get_global_config()
-    if global_config.sspec_editor:
-        return global_config.sspec_editor
-
-    config = get_config(sspec_root)
-    if config.editor:
-        return config.editor
+    editor = env_map.get('SSPEC_EDITOR')
+    if editor:
+        return editor
 
     return env_map.get('EDITOR')
 

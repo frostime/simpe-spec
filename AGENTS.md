@@ -139,6 +139,16 @@ This saves cost in Copilot (tool calls don't consume turns).
 
 ---
 
+## Git Commit
+
+When User ask Agent to commit:
+
+- Consult: git-commit-msg SKILL
+- Write suitable commit msg
+- If the commit file is too complex, ask user if split to several of commits
+
+---
+
 <!-- ====================================================================
      Below: SSPEC protocol block, auto-managed by `sspec project update`.
      Provides the standard workflow (changes, requests, handover, etc.).
@@ -150,7 +160,7 @@ This saves cost in Copilot (tool calls don't consume turns).
 <!-- SSPEC:START -->
 # .sspec Agent Protocol
 
-SSPEC_SCHEMA::9.1
+SSPEC_SCHEMA::9.2
 
 ## 0. Overview
 
@@ -208,7 +218,7 @@ Each phase has a dedicated SKILL. Read it before starting.
 [Research]  (understand + clarify; @ask mid-research for ambiguities)
    |
    v
-[Design]    -- @ask gate (MANDATORY) --> "Align understanding + solution"
+[Design]    -- @ask gate (MANDATORY) + [Handover] --> "Align understanding + solution"
    |
    v
 [Plan]      -- @ask gate (LIGHTWEIGHT) --> "Confirm task breakdown"
@@ -217,7 +227,7 @@ Each phase has a dedicated SKILL. Read it before starting.
 [Implement] -- @ask gate (MANDATORY) --> "Done for this round, please review"
    |
    v
-[Review]    -- user feedback --> (if not satisfied, return to Implement)
+[Review]    -- user feedback + [Handover] --> (if not satisfied, return to Implement)
    |
    +-- satisfied --> [Handover]
 ```

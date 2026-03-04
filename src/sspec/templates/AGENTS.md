@@ -59,7 +59,7 @@ Each phase has a dedicated SKILL. Read it before starting.
 [Research]  (understand + clarify; @ask mid-research for ambiguities)
    |
    v
-[Design]    -- @ask gate (MANDATORY) --> "Align understanding + solution"
+[Design]    -- @ask gate (MANDATORY) + [Handover] --> "Align understanding + solution"
    |
    v
 [Plan]      -- @ask gate (LIGHTWEIGHT) --> "Confirm task breakdown"
@@ -68,7 +68,7 @@ Each phase has a dedicated SKILL. Read it before starting.
 [Implement] -- @ask gate (MANDATORY) --> "Done for this round, please review"
    |
    v
-[Review]    -- user feedback --> (if not satisfied, return to Implement)
+[Review]    -- user feedback + [Handover] --> (if not satisfied, return to Implement)
    |
    +-- satisfied --> [Handover]
 ```

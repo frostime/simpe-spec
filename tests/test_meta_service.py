@@ -125,3 +125,19 @@ class TestUpgradeMeta:
         }
         res = upgrade_meta(raw)
         assert res.meta.get('skill_locations') == ['.claude/skills']
+
+    def test_skill_install_strategies_are_normalized_and_filtered(self):
+        raw = {
+            'meta_schema_version': '1',
+            'schema_version': '9.1',
+            'skill_install_strategies': {
+                '.sspec\\skills': 'copy',
+                '.claude\\skills/': 'junction',
+                '.github/skills': 'invalid',
+            },
+        }
+        res = upgrade_meta(raw)
+        assert res.meta.get('skill_install_strategies') == {
+            '.sspec/skills': 'copy',
+            '.claude/skills': 'junction',
+        }

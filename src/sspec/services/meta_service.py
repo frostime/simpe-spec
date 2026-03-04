@@ -11,13 +11,14 @@ import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, TypedDict, cast
+from typing import Any, Literal, TypedDict, cast
 
 META_FILE = '.meta.json'
 
 # Schema marker for `.meta.json` structure.
 # Bump when the meta.json field layout changes (NOT tied to AGENTS.md schema).
 META_SCHEMA = '2.0'
+SkillInstallStrategy = Literal['symlink', 'junction', 'copy']
 
 
 class MetaModel(TypedDict, total=False):
@@ -36,7 +37,7 @@ class MetaModel(TypedDict, total=False):
     file_hashes: dict[str, str]
     managed_skills: list[str]
     skill_locations: list[str]
-    skill_install_strategies: dict[str, str]
+    skill_install_strategies: dict[str, SkillInstallStrategy]
 
 
 @dataclass(frozen=True, slots=True)
@@ -214,6 +215,24 @@ def upgrade_meta(meta: Mapping[str, Any]) -> MetaUpgradeResult:
             if s:
                 normalized.add(s)
         upgraded['skill_locations'] = sorted(normalized)
+
+    # Keep strategy keys stable across platforms and constrain values
+    # to the supported install strategy enum.
+    raw_strategies = upgraded.get('skill_install_strategies', {}) or {}
+    normalized_strategies: dict[str, SkillInstallStrategy] = {}
+    if isinstance(raw_strategies, Mapping):
+        for raw_key, raw_strategy in raw_strategies.items():
+            if not isinstance(raw_key, str) or not isinstance(raw_strategy, str):
+                continue
+
+            key = raw_key.replace('\\', '/').rstrip('/')
+            if not key:
+                continue
+
+            if raw_strategy in ('symlink', 'junction', 'copy'):
+                normalized_strategies[key] = cast(SkillInstallStrategy, raw_strategy)
+
+    upgraded['skill_install_strategies'] = normalized_strategies
 
     changed = upgraded != raw
 

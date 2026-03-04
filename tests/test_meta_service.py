@@ -78,7 +78,6 @@ class TestGetMetaWithDefaults:
         assert result.get('file_hashes') == {}
         assert result.get('managed_skills') == []
         assert result.get('skill_locations') == []
-        assert result.get('skill_install_strategies') == {}
 
     def test_existing_values_are_preserved(self):
         meta = {'sspec_schema': '9.1', 'managed_skills': ['sspec']}
@@ -126,10 +125,9 @@ class TestUpgradeMeta:
         res = upgrade_meta(raw)
         assert res.meta.get('skill_locations') == ['.claude/skills']
 
-    def test_skill_install_strategies_are_normalized_and_filtered(self):
+    def test_upgrade_drops_deprecated_skill_install_strategies(self):
         raw = {
-            'meta_schema_version': '1',
-            'schema_version': '9.1',
+            'meta_schema': '2.0',
             'skill_install_strategies': {
                 '.sspec\\skills': 'copy',
                 '.claude\\skills/': 'junction',
@@ -137,7 +135,5 @@ class TestUpgradeMeta:
             },
         }
         res = upgrade_meta(raw)
-        assert res.meta.get('skill_install_strategies') == {
-            '.sspec/skills': 'copy',
-            '.claude/skills': 'junction',
-        }
+        assert res.meta.get('meta_schema') == META_SCHEMA
+        assert 'skill_install_strategies' not in res.meta

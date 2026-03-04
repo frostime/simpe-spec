@@ -16,8 +16,8 @@ from sspec.skill_installer import SkillInstaller
 console = Console()
 
 
-def _record_dominate_location(sspec_root: Path, dominate_dir: Path, *, strategy: str) -> None:
-    """Record dominated location + install strategy in .meta.json."""
+def _record_dominate_location(sspec_root: Path, dominate_dir: Path) -> None:
+    """Record dominated location in .meta.json."""
     project_root = sspec_root.parent
     try:
         # store the skills/ sub-path so it matches the convention used by init/sync
@@ -33,10 +33,6 @@ def _record_dominate_location(sspec_root: Path, dominate_dir: Path, *, strategy:
     stored: set[str] = set(meta.get('skill_locations', []) or [])
     stored.add(location_path)
     meta['skill_locations'] = sorted(stored)
-
-    strategies = dict(meta.get('skill_install_strategies', {}) or {})
-    strategies[location_path] = strategy
-    meta['skill_install_strategies'] = strategies
 
     save_meta(sspec_root, meta)
 
@@ -182,7 +178,7 @@ def dominate(dir_path: Path) -> None:
     # For all successful operations (including already-linked) record in meta.
     if result.status in {'linked', 'relinked', 'merged', 'skipped'}:
         try:
-            _record_dominate_location(sspec_root, dominate_dir, strategy=result.link_kind)
+            _record_dominate_location(sspec_root, dominate_dir)
             _ensure_spoke_gitignore(dominate_dir)
         except OSError as e:
             raise click.ClickException(str(e)) from None
@@ -217,9 +213,9 @@ def dominate(dir_path: Path) -> None:
                 console.print(
                     f'[yellow]Warning:[/yellow] Review backup and merge manually: {rel_backup}'
                 )
-        console.print(f'  [dim]Link:[/dim] {result.link_kind}')
+        console.print('  [dim]Link:[/dim] link')
         return
 
     action = 'Relinked' if result.status == 'relinked' else 'Linked'
     console.print(f'[green][OK][/green] {action}: {rel_target} -> {rel_source}')
-    console.print(f'  [dim]Link:[/dim] {result.link_kind}')
+    console.print('  [dim]Link:[/dim] link')

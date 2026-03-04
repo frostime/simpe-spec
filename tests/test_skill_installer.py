@@ -52,10 +52,9 @@ def test_install_batch_uses_junction_fallback(monkeypatch, tmp_path: Path):
     installer = SkillInstaller()
     monkeypatch.setattr(installer, '_try_create_symlink', lambda _s, _t: False)
     monkeypatch.setattr(installer, '_try_create_junction', lambda _s, _t: True)
-    monkeypatch.setattr(installer._elevation, 'try_elevated_symlinks', lambda _pairs: [False])
     monkeypatch.setattr(skill_installer.sys, 'platform', 'win32')
 
     results = installer.install_batch([(source, target)], prefer_symlink=True)
 
     assert len(results) == 1
-    assert results[0].strategy == 'junction'
+    assert results[0].strategy == 'link'

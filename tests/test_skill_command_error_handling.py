@@ -63,7 +63,6 @@ def test_skill_dominate_updates_meta_strategy_and_parent_gitignore(tmp_path: Pat
 
     meta = json.loads((sspec_root / '.meta.json').read_text(encoding='utf-8'))
     assert '.claude/skills' in (meta.get('skill_locations') or [])
-    assert (meta.get('skill_install_strategies') or {}).get('.claude/skills') == 'junction'
 
     gitignore_path = tmp_path / '.claude' / '.gitignore'
     content = gitignore_path.read_text(encoding='utf-8')

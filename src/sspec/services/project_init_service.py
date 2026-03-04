@@ -142,7 +142,7 @@ def initialize_project(
             existing = skill_install_strategies.get(location_key)
             if existing is None:
                 skill_install_strategies[location_key] = strategy
-            elif existing == 'symlink' and strategy == 'copy':
+            elif existing == 'link' and strategy == 'copy':
                 skill_install_strategies[location_key] = 'copy'
         except ValueError:
             continue
@@ -185,7 +185,6 @@ def initialize_project(
         'file_hashes': skill_hashes,
         'managed_skills': sorted(managed_skill_names),
         'skill_locations': [],
-        'skill_install_strategies': skill_install_strategies,
     }
 
     for target_dir in skill_targets:
@@ -226,8 +225,6 @@ def sync_skill_locations(
     project_root: Path,
     locations: list[str],
     prefer_symlink: bool = True,
-    allow_elevation: bool = True,
-    prefer_junction_on_windows: bool = False,
     sspec_dir: str = SSPEC_DIR,
 ) -> SkillSyncResult:
     """Sync installed hub skills to external skill locations.
@@ -258,8 +255,6 @@ def sync_skill_locations(
     batch_results = installer.install_batch(
         install_pairs,
         prefer_symlink=prefer_symlink,
-        allow_elevation=allow_elevation,
-        prefer_junction_on_windows=prefer_junction_on_windows,
     )
     results = [(r.target, r.source, r.strategy) for r in batch_results]
 
@@ -273,7 +268,7 @@ def sync_skill_locations(
         existing = skill_install_strategies.get(location_key)
         if existing is None:
             skill_install_strategies[location_key] = strategy
-        elif existing == 'symlink' and strategy == 'copy':
+        elif existing == 'link' and strategy == 'copy':
             skill_install_strategies[location_key] = 'copy'
 
     sspec_path = project_root / sspec_dir
@@ -285,11 +280,7 @@ def sync_skill_locations(
         except ValueError:
             continue
 
-    stored_strategies = dict(meta.get('skill_install_strategies', {}) or {})
-    stored_strategies.update(skill_install_strategies)
-
     meta['skill_locations'] = sorted(stored_locations)
-    meta['skill_install_strategies'] = stored_strategies
     save_meta(sspec_path, meta)
 
     return SkillSyncResult(

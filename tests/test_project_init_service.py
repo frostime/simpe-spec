@@ -81,6 +81,7 @@ class TestInitializeProject:
         assert 'managed_skills' in meta
         assert 'schema_version' not in meta
         assert 'meta_schema_version' not in meta
+        assert 'skill_install_strategies' not in meta
 
     def test_creates_project_md(self, tmp_path: Path):
         initialize_project(

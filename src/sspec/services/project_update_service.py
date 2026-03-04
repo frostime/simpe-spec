@@ -170,7 +170,7 @@ def migrate_legacy_skill_layouts(
     - `.claude/skills/<skill-b>` (symlink)
 
     Target layout:
-    - `.claude/skills` -> `.sspec/skills` (symlink/junction/copy fallback)
+    - `.claude/skills` -> `.sspec/skills` (link/copy fallback)
     """
     skill_locations: list[str] = meta.get('skill_locations', []) or []
     hub_skills_dir = sspec_root / 'skills'
@@ -248,16 +248,10 @@ def migrate_legacy_skill_layouts(
             install_results = installer.install_batch(
                 [(hub_skills_dir, location_path)],
                 prefer_symlink=True,
-                allow_elevation=False,
-                prefer_junction_on_windows=True,
             )
             strategy = install_results[0].strategy if install_results else 'copy'
-
-            existing_strategies = dict(meta.get('skill_install_strategies', {}) or {})
-            existing_strategies[location] = strategy
-            meta['skill_install_strategies'] = existing_strategies
         else:
-            strategy = 'symlink/junction/copy'
+            strategy = 'link/copy'
 
         migrations.append(
             LegacySkillMigration(
@@ -385,9 +379,8 @@ def collect_update_candidates(
     project_root = sspec_root.parent
     skill_locations: list[str] = meta.get('skill_locations', []) or []
     # NOTE: Skill update behavior is based on actual filesystem state.
-    # - If the installed skill directory is a symlink, we skip it entirely.
+    # - If the installed skill directory is a link, we skip it entirely.
     # - If it's a real directory (copy), we update it via directory hash.
-    # meta.skill_install_strategies is kept for informational purposes only.
 
     for skill_dir in list_template_skills():
         skill_name = skill_dir.name
@@ -408,7 +401,7 @@ def collect_update_candidates(
             skill_dest_dir = project_root / loc_str / skill_name
             skill_dest_file = skill_dest_dir / 'SKILL.md'
 
-            # Skip link-like skills (symlink/junction) during update.
+            # Skip link-like skills during update.
             # They should point to hub (.sspec/skills) and are not updated here.
             if check_path_link(skill_dest_dir):
                 continue

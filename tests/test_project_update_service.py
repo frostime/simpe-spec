@@ -35,7 +35,7 @@ class TestPrepareMetaForProjectUpdate:
         state = prepare_meta_for_project_update(sspec_root=sspec_root)
 
         assert state.migration_needed is True
-        assert state.meta.get('meta_schema') == '2.0'
+        assert state.meta.get('meta_schema') == '2.1'
         assert state.meta.get('sspec_schema') == '9.1'
         assert 'meta_schema_version' not in state.meta
         assert 'schema_version' not in state.meta

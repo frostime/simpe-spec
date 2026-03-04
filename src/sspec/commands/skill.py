@@ -11,12 +11,13 @@ from rich.table import Table
 from sspec.core import SspecNotFoundError, get_sspec_root
 from sspec.services.meta_service import load_meta, save_meta
 from sspec.services.skill_service import create_skill_in_hub, dominate_skills_location, list_skills
+from sspec.skill_installer import SkillInstaller
 
 console = Console()
 
 
-def _record_dominate_location(sspec_root: Path, dominate_dir: Path) -> None:
-    """Record a newly dominated directory in .meta.json skill_locations."""
+def _record_dominate_location(sspec_root: Path, dominate_dir: Path, *, strategy: str) -> None:
+    """Record dominated location + install strategy in .meta.json."""
     project_root = sspec_root.parent
     try:
         # store the skills/ sub-path so it matches the convention used by init/sync
@@ -32,7 +33,17 @@ def _record_dominate_location(sspec_root: Path, dominate_dir: Path) -> None:
     stored: set[str] = set(meta.get('skill_locations', []) or [])
     stored.add(location_path)
     meta['skill_locations'] = sorted(stored)
+
+    strategies = dict(meta.get('skill_install_strategies', {}) or {})
+    strategies[location_path] = strategy
+    meta['skill_install_strategies'] = strategies
+
     save_meta(sspec_root, meta)
+
+
+def _ensure_spoke_gitignore(dominate_dir: Path) -> None:
+    """Ensure parent `.gitignore` ignores dominated `skills` directory."""
+    SkillInstaller.add_skill_to_gitignore(dominate_dir / 'skills')
 
 
 @click.group()
@@ -170,7 +181,11 @@ def dominate(dir_path: Path) -> None:
 
     # For all successful operations (including already-linked) record in meta.
     if result.status in {'linked', 'relinked', 'merged', 'skipped'}:
-        _record_dominate_location(sspec_root, dominate_dir)
+        try:
+            _record_dominate_location(sspec_root, dominate_dir, strategy=result.link_kind)
+            _ensure_spoke_gitignore(dominate_dir)
+        except OSError as e:
+            raise click.ClickException(str(e)) from None
 
     if result.status == 'skipped':
         console.print(f'[cyan]-[/cyan] Already linked: {rel_target} -> {rel_source}')

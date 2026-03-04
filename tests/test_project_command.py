@@ -8,7 +8,7 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from sspec.cli import main
-from sspec.core import SSPEC_DIR
+from sspec.core import SCHEMA_VERSION, SSPEC_DIR
 from sspec.services.project_init_service import initialize_project
 
 
@@ -43,7 +43,7 @@ def test_project_update_migrates_meta_even_without_file_updates(tmp_path: Path, 
     assert result.exit_code == 0
     new_meta = json.loads(meta_path.read_text(encoding='utf-8'))
     assert new_meta.get('meta_schema') == '2.0'
-    assert new_meta.get('sspec_schema') == '9.1'
+    assert new_meta.get('sspec_schema') == SCHEMA_VERSION
     assert 'meta_schema_version' not in new_meta
     assert 'schema_version' not in new_meta
 

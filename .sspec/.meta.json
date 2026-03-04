@@ -1,19 +1,20 @@
 {
-  "schema_version": "6.0",
-  "sspec_version": "0.22.1.dev6+g1b08fb21d.d20260224",
+  "meta_schema": "2.0",
+  "sspec_schema": "9.1",
+  "sspec_version": "1.2.1.dev7+ge8d3d6bce.d20260304",
   "created_at": "2026-02-07T18:42:39.297150",
-  "updated_at": "2026-02-25T02:11:16.777638",
+  "updated_at": "2026-03-04T12:42:32.625195",
   "file_hashes": {
     "skills/use-powershell": "c14a032ce16697b8",
     "skills/write-patch": "53a7cb880be7ee69",
     "skills/write-spec-doc": "e82f5bb62b549e30",
     "skills/sspec-ask": "99529f9c053d5cdc",
     "skills/sspec-mdtoc": "b9fdfc4a23d816e0",
-    "skills/sspec-design": "d492cebef009d006",
+    "skills/sspec-design": "fb46cce9f946f26d",
     "skills/sspec-handover": "67aaa4ce2b6e2c53",
     "skills/sspec-implement": "7f868ed6c15dd8e7",
-    "skills/sspec-plan": "d4c84748ca736d68",
-    "skills/sspec-research": "1843e48cf8e212be",
+    "skills/sspec-plan": "116f80ec4fa59dd0",
+    "skills/sspec-research": "d74fc3081a08f89d",
     "skills/sspec-review": "c70ea452cbc7f078"
   },
   "managed_skills": [
@@ -30,13 +31,13 @@
     "write-spec-doc"
   ],
   "skill_locations": [
-    ".claude\\skills",
-    ".github\\skills",
-    ".sspec\\skills"
+    ".claude/skills",
+    ".github/skills",
+    ".sspec/skills"
   ],
   "skill_install_strategies": {
-    ".sspec\\skills": "copy",
-    ".claude\\skills": "junction",
-    ".github\\skills": "junction"
+    ".sspec/skills": "copy",
+    ".claude/skills": "junction",
+    ".github/skills": "junction"
   }
 }

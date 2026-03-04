@@ -17,6 +17,7 @@ from sspec.services.project_update_service import (
     migrate_legacy_skill_layouts,
     prepare_meta_for_project_update,
     remove_orphaned_skill,
+    sync_hub_skills_gitignore,
 )
 
 COMMON_REPLACEMENTS = {'SCHEMA_VERSION': SCHEMA_VERSION, 'SCHEMA': SCHEMA_VERSION}
@@ -215,3 +216,39 @@ def test_migrate_legacy_skill_layouts_detects_legacy_in_dry_run(monkeypatch, tmp
 
     assert len(migrations) == 1
     assert migrations[0].location == '.github/skills'
+
+
+def test_sync_hub_skills_gitignore_updates_only_hub_file(tmp_path: Path):
+    sspec_root = _init_project(tmp_path)
+    hub_gitignore = sspec_root / 'skills' / '.gitignore'
+    sspec_gitignore = sspec_root / '.gitignore'
+    sspec_before = sspec_gitignore.read_text(encoding='utf-8')
+
+    changed = sync_hub_skills_gitignore(
+        sspec_root=sspec_root,
+        managed_skill_names=['alpha-skill', 'beta-skill'],
+        dry_run=False,
+    )
+
+    assert changed is True
+    content = hub_gitignore.read_text(encoding='utf-8')
+    assert '# >>> sspec-managed skills >>>' in content
+    assert 'alpha-skill' in content
+    assert 'beta-skill' in content
+    assert sspec_gitignore.read_text(encoding='utf-8') == sspec_before
+
+
+def test_sync_hub_skills_gitignore_dry_run_does_not_write(tmp_path: Path):
+    sspec_root = _init_project(tmp_path)
+    hub_gitignore = sspec_root / 'skills' / '.gitignore'
+    before = hub_gitignore.read_text(encoding='utf-8') if hub_gitignore.exists() else ''
+
+    changed = sync_hub_skills_gitignore(
+        sspec_root=sspec_root,
+        managed_skill_names=['new-managed-skill'],
+        dry_run=True,
+    )
+
+    assert changed is True
+    after = hub_gitignore.read_text(encoding='utf-8') if hub_gitignore.exists() else ''
+    assert after == before

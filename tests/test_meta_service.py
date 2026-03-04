@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from sspec.services.meta_service import (
     META_SCHEMA,
     get_meta_with_defaults,
@@ -107,3 +109,35 @@ class TestUpgradeMeta:
         assert res.meta.get('sspec_schema') == '9.1'
         assert 'schema_version' not in res.meta
         assert 'meta_schema_version' not in res.meta
+
+    def test_declared_but_unparseable_schema_raises(self):
+        with pytest.raises(ValueError):
+            upgrade_meta({'meta_schema': '2.0-beta'})
+
+        with pytest.raises(ValueError):
+            upgrade_meta({'meta_schema_version': ''})
+
+    def test_skill_locations_are_normalized_to_posix(self):
+        raw = {
+            'meta_schema_version': '1',
+            'schema_version': '9.1',
+            'skill_locations': ['.claude\\skills', '.claude/skills/'],
+        }
+        res = upgrade_meta(raw)
+        assert res.meta.get('skill_locations') == ['.claude/skills']
+
+    def test_skill_install_strategies_are_normalized_and_filtered(self):
+        raw = {
+            'meta_schema_version': '1',
+            'schema_version': '9.1',
+            'skill_install_strategies': {
+                '.sspec\\skills': 'copy',
+                '.claude\\skills/': 'junction',
+                '.github/skills': 'invalid',
+            },
+        }
+        res = upgrade_meta(raw)
+        assert res.meta.get('skill_install_strategies') == {
+            '.sspec/skills': 'copy',
+            '.claude/skills': 'junction',
+        }

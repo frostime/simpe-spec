@@ -10,7 +10,13 @@ from typing import Any, Literal
 
 from sspec.core import UPDATABLE_FILES, list_template_skills
 from sspec.libs.hashing import compute_dir_hash, compute_file_hash, compute_hash
-from sspec.skill_installer import SkillStrategy, check_path_link, remove_path_link
+from sspec.skill_installer import (
+    GITIGNORE_FENCE_END,
+    GITIGNORE_FENCE_START,
+    SkillStrategy,
+    check_path_link,
+    remove_path_link,
+)
 
 UpdateStatus = Literal['missing', 'current', 'updatable', 'modified', 'unknown']
 
@@ -83,6 +89,63 @@ def prepare_meta_for_project_update(*, sspec_root: Path) -> MetaUpdateState:
         old_hashes=old_hashes,
         migration_needed=meta_res.changed,
     )
+
+
+def sync_hub_skills_gitignore(
+    *, sspec_root: Path, managed_skill_names: list[str], dry_run: bool
+) -> bool:
+    """Sync `.sspec/skills/.gitignore` to ignore exactly managed skills.
+
+    This keeps `.sspec/skills/` usable as the single source of truth:
+    - sspec-managed skills are ignored (they can be updated by `project update`)
+    - user-added custom skills remain trackable
+
+    Returns True when the file content would change.
+    """
+    hub_skills_dir = sspec_root / 'skills'
+    if not hub_skills_dir.exists():
+        return False
+
+    gitignore_path = hub_skills_dir / '.gitignore'
+    before = gitignore_path.read_text(encoding='utf-8') if gitignore_path.exists() else ''
+
+    lines = before.splitlines()
+    in_managed = False
+    preserved: list[str] = []
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped == GITIGNORE_FENCE_START:
+            in_managed = True
+            continue
+        if stripped == GITIGNORE_FENCE_END:
+            in_managed = False
+            continue
+
+        if in_managed:
+            continue
+
+        preserved.append(line)
+
+    while preserved and preserved[-1] == '':
+        preserved.pop()
+
+    if preserved:
+        preserved.append('')
+
+    entries = sorted({n.strip() for n in managed_skill_names if isinstance(n, str) and n.strip()})
+    preserved.append(GITIGNORE_FENCE_START)
+    preserved.extend(entries)
+    preserved.append(GITIGNORE_FENCE_END)
+
+    after = '\n'.join(preserved) + '\n'
+    changed = after != before
+
+    if changed and not dry_run:
+        gitignore_path.parent.mkdir(parents=True, exist_ok=True)
+        gitignore_path.write_text(after, encoding='utf-8')
+
+    return changed
 
 
 def apply_skill_update(*, source: Path, target: Path, strategy: SkillStrategy) -> None:
@@ -292,7 +355,9 @@ def collect_update_candidates(
             old_hash = old_hashes.get(file_path)
 
             if old_hash is None:
-                status = 'unknown'
+                # If we can verify the file matches the current template, treat as current.
+                # This avoids projects being stuck in 'unknown' when hashes are missing.
+                status = 'current' if current_hash == new_hash else 'unknown'
             elif current_hash == new_hash:
                 status = 'current'
             elif current_hash == old_hash:

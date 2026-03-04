@@ -360,6 +360,13 @@ def create_skill_in_hub(
     User should run `project update` after creating to sync to other locations.
     """
 
+    if not name or not isinstance(name, str):
+        raise ValueError('Skill name must be a non-empty string')
+    if name.strip() != name:
+        raise ValueError('Skill name must not contain leading/trailing whitespace')
+    if '/' in name or '\\' in name or '..' in name or ':' in name:
+        raise ValueError(f'Invalid skill name: {name!r}')
+
     hub_skills_dir = sspec_root / 'skills'
     hub_dir = hub_skills_dir / name
 
@@ -376,5 +383,4 @@ def create_skill_in_hub(
     meta['updated_at'] = datetime.now().isoformat()
     save_meta(sspec_root, meta)
 
-    return CreateSkillResult(hub_dir=hub_dir, skill_name=name)
     return CreateSkillResult(hub_dir=hub_dir, skill_name=name)

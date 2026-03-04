@@ -11,13 +11,14 @@ import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, TypedDict, cast
+from typing import Any, Literal, TypedDict, cast
 
 META_FILE = '.meta.json'
 
 # Schema marker for `.meta.json` structure.
 # Bump when the meta.json field layout changes (NOT tied to AGENTS.md schema).
 META_SCHEMA = '2.0'
+SkillInstallStrategy = Literal['symlink', 'junction', 'copy']
 
 
 class MetaModel(TypedDict, total=False):
@@ -36,7 +37,7 @@ class MetaModel(TypedDict, total=False):
     file_hashes: dict[str, str]
     managed_skills: list[str]
     skill_locations: list[str]
-    skill_install_strategies: dict[str, str]
+    skill_install_strategies: dict[str, SkillInstallStrategy]
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,17 +68,22 @@ def get_meta_with_defaults(meta: Mapping[str, Any]) -> MetaModel:
     return cast(MetaModel, {**defaults, **dict(meta)})
 
 
-def _normalize_schema_str(value: Any) -> str:
+def _normalize_schema_str(value: Any) -> str | None:
+    """Normalize schema marker into a comparable string.
+
+    Returns None when the value is missing/blank/invalid type.
+    """
+
     if value is None:
-        return '0.0'
+        return None
     if isinstance(value, (int, float)):
         value = str(value)
     if not isinstance(value, str):
-        return '0.0'
+        return None
 
     v = value.strip()
     if not v:
-        return '0.0'
+        return None
     # Accept legacy major-only strings like "1".
     if '.' not in v and v.isdigit():
         return f'{v}.0'
@@ -94,13 +100,32 @@ def _parse_schema(v: str) -> tuple[int, ...] | None:
     return tuple(out) if out else None
 
 
+def _require_parseable_schema(value: Any, *, key_name: str) -> str:
+    """Return a normalized schema string or raise ValueError.
+
+    Policy:
+    - Missing marker key -> caller decides (often treated as 0.0).
+    - Marker key present but value is blank/unparseable -> error (no silent coercion).
+    """
+
+    norm = _normalize_schema_str(value)
+    if norm is None:
+        raise ValueError(f'Invalid {key_name}: {value!r}')
+    if _parse_schema(norm) is None:
+        raise ValueError(f'Invalid {key_name}: {value!r}')
+    return norm
+
+
 def _compare_schema(v1: str, v2: str) -> int:
-    a = _parse_schema(_normalize_schema_str(v1))
-    b = _parse_schema(_normalize_schema_str(v2))
+    a_norm = _normalize_schema_str(v1)
+    b_norm = _normalize_schema_str(v2)
+    if a_norm is None or b_norm is None:
+        raise ValueError(f'Unparseable schema comparison: {v1!r} vs {v2!r}')
+
+    a = _parse_schema(a_norm)
+    b = _parse_schema(b_norm)
     if a is None or b is None:
-        # Treat unparsable schema as oldest (0.0) to allow self-healing.
-        a = a or (0, 0)
-        b = b or (0, 0)
+        raise ValueError(f'Unparseable schema comparison: {v1!r} vs {v2!r}')
 
     length = max(len(a), len(b))
     a2 = a + (0,) * (length - len(a))
@@ -115,9 +140,11 @@ def _compare_schema(v1: str, v2: str) -> int:
 def _declared_meta_schema(data: Mapping[str, Any]) -> str:
     # v2+ uses `meta_schema`; v1 used `meta_schema_version`.
     if 'meta_schema' in data:
-        return _normalize_schema_str(data.get('meta_schema'))
+        return _require_parseable_schema(data.get('meta_schema'), key_name='meta_schema')
     if 'meta_schema_version' in data:
-        return _normalize_schema_str(data.get('meta_schema_version'))
+        return _require_parseable_schema(
+            data.get('meta_schema_version'), key_name='meta_schema_version'
+        )
     return '0.0'
 
 
@@ -176,6 +203,37 @@ def upgrade_meta(meta: Mapping[str, Any]) -> MetaUpgradeResult:
     result.pop('meta_schema_version', None)
 
     upgraded = get_meta_with_defaults(result)
+
+    # Normalize known path-like fields to keep keys stable across platforms.
+    locs = upgraded.get('skill_locations', []) or []
+    if isinstance(locs, list):
+        normalized: set[str] = set()
+        for loc in locs:
+            if not isinstance(loc, str):
+                continue
+            s = loc.replace('\\', '/').rstrip('/')
+            if s:
+                normalized.add(s)
+        upgraded['skill_locations'] = sorted(normalized)
+
+    # Keep strategy keys stable across platforms and constrain values
+    # to the supported install strategy enum.
+    raw_strategies = upgraded.get('skill_install_strategies', {}) or {}
+    normalized_strategies: dict[str, SkillInstallStrategy] = {}
+    if isinstance(raw_strategies, Mapping):
+        for raw_key, raw_strategy in raw_strategies.items():
+            if not isinstance(raw_key, str) or not isinstance(raw_strategy, str):
+                continue
+
+            key = raw_key.replace('\\', '/').rstrip('/')
+            if not key:
+                continue
+
+            if raw_strategy in ('symlink', 'junction', 'copy'):
+                normalized_strategies[key] = cast(SkillInstallStrategy, raw_strategy)
+
+    upgraded['skill_install_strategies'] = normalized_strategies
+
     changed = upgraded != raw
 
     return MetaUpgradeResult(

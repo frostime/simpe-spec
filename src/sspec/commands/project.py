@@ -35,9 +35,55 @@ from sspec.services.project_update_service import (
     migrate_legacy_skill_layouts,
     prepare_meta_for_project_update,
     remove_orphaned_skill,
+    sync_hub_skills_gitignore,
 )
 
 console = Console()
+
+
+def _validate_skill_locations(project_root: Path, locations: list[str]) -> list[str]:
+    """Validate skill locations as safe, project-relative directories."""
+
+    root = project_root.resolve()
+    out: list[str] = []
+    seen: set[str] = set()
+
+    for raw in locations:
+        loc = (raw or '').strip()
+        if not loc:
+            continue
+
+        p = Path(loc)
+
+        # Allow users to pass a full ".../skills" path; normalize it back to the location dir.
+        if p.name == 'skills':
+            p = p.parent
+
+        if p.as_posix() in {'.', ''}:
+            raise click.ClickException('Skill location must not be the project root')
+
+        if p.is_absolute() or getattr(p, 'drive', '') or getattr(p, 'root', ''):
+            raise click.ClickException(
+                f'Invalid skill location (must be relative to project root): {loc!r}'
+            )
+        if any(part == '..' for part in p.parts):
+            raise click.ClickException(f'Invalid skill location (must not contain ..): {loc!r}')
+
+        resolved = (root / p).resolve()
+        try:
+            resolved.relative_to(root)
+        except ValueError:
+            raise click.ClickException(
+                f'Invalid skill location (escapes project root): {loc!r}'
+            ) from None
+
+        normalized = p.as_posix().rstrip('/')
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        out.append(normalized)
+
+    return out
 
 
 def _interactive_skill_selection(project_root: Path) -> list[str]:
@@ -63,11 +109,15 @@ def _interactive_skill_selection(project_root: Path) -> list[str]:
     ]
     choices.append(questionary.Choice(title='Enter custom path…', value='__custom__'))
 
-    selected = questionary.checkbox(
-        'Select skill installation locations:',
-        choices=choices,
-        instruction='(Use arrow keys, space to toggle, enter to confirm)',
-    ).ask()
+    try:
+        selected = questionary.checkbox(
+            'Select skill installation locations:',
+            choices=choices,
+            instruction='(Use arrow keys, space to toggle, enter to confirm)',
+        ).ask()
+    except Exception:
+        # Non-interactive / unsupported console (e.g. Git Bash on Windows).
+        selected = None
 
     if selected is None:  # User cancelled
         forced = project_root / '.agents'
@@ -86,10 +136,13 @@ def _interactive_skill_selection(project_root: Path) -> list[str]:
     # Handle custom path input
     result: list[str] = [loc for loc in selected if loc != '__custom__']
     if '__custom__' in selected:
-        custom = questionary.text(
-            'Enter custom skill location path (relative to project root):',
-            instruction='e.g. .cursor or .windsurf',
-        ).ask()
+        try:
+            custom = questionary.text(
+                'Enter custom skill location path (relative to project root):',
+                instruction='e.g. .cursor or .windsurf',
+            ).ask()
+        except Exception:
+            custom = None
         if custom and custom.strip():
             result.append(custom.strip())
 
@@ -137,26 +190,40 @@ def init(force: bool, skill_loc: tuple[str, ...]) -> None:
 
     # Resolve requested external locations after core init
     skill_locations = list(skill_loc) if skill_loc else _interactive_skill_selection(project_root)
+    skill_locations = _validate_skill_locations(project_root, skill_locations)
     allow_elevation = True
     prefer_junction_on_windows = False
 
     if skill_locations and sys.platform == 'win32':
-        elevated_choice = questionary.confirm(
-            'Try admin elevation to create symbolic links on Windows?',
-            default=False,
-        ).ask()
-        if not elevated_choice:
-            allow_elevation = False
-            prefer_junction_on_windows = True
+        # try:
+        #     elevated_choice = questionary.confirm(
+        #         'Try admin elevation to create symbolic links on Windows?',
+        #         default=False,
+        #     ).ask()
+        # except Exception:
+        #     elevated_choice = False
+        #     console.print(
+        #         '[yellow]Non-interactive console detected; skip elevation prompt and use '
+        #         'junction/copy fallback.[/yellow]'
+        #     )
+        # if not elevated_choice:
+        #     allow_elevation = False
+        #     prefer_junction_on_windows = True
+        # 反正 junction link 效果也一样，就不浪费那个步骤了
+        allow_elevation = False
+        prefer_junction_on_windows = True
 
     if skill_locations:
-        sync_result = sync_skill_locations(
-            project_root=project_root,
-            locations=skill_locations,
-            prefer_symlink=True,
-            allow_elevation=allow_elevation,
-            prefer_junction_on_windows=prefer_junction_on_windows,
-        )
+        try:
+            sync_result = sync_skill_locations(
+                project_root=project_root,
+                locations=skill_locations,
+                prefer_symlink=True,
+                allow_elevation=allow_elevation,
+                prefer_junction_on_windows=prefer_junction_on_windows,
+            )
+        except (OSError, RuntimeError, ValueError) as e:
+            raise click.ClickException(str(e)) from None
 
         for target_dir in sync_result.skill_targets:
             if not target_dir.exists():
@@ -276,6 +343,25 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
         )
 
     # -----------------------------------------------------------------
+    # Phase 0.5: Keep hub managed-skill ignore list in sync
+    # -----------------------------------------------------------------
+    managed_skill_names = sorted(d.name for d in list_template_skills())
+    hub_gitignore_synced = sync_hub_skills_gitignore(
+        sspec_root=sspec_root,
+        managed_skill_names=managed_skill_names,
+        dry_run=dry_run,
+    )
+
+    if dry_run:
+        if hub_gitignore_synced:
+            console.print('[cyan]Would sync .sspec/skills/.gitignore managed skill list[/cyan]')
+    else:
+        if hub_gitignore_synced:
+            console.print('[green]+[/green] Synced .sspec/skills/.gitignore managed skill list')
+
+    gitignore_updated_count = int(bool(hub_gitignore_synced))
+
+    # -----------------------------------------------------------------
     # Phase 0: Migrate legacy per-skill spoke layout to directory-level
     # -----------------------------------------------------------------
     migrations = migrate_legacy_skill_layouts(
@@ -317,9 +403,22 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
         if not dry_run:
             for orphan in orphans:
                 if interactive:
-                    if not questionary.confirm(
-                        f'Remove orphaned skill "{orphan.skill_name}"?', default=True
-                    ).ask():
+                    try:
+                        confirmed = questionary.confirm(
+                            f'Remove orphaned skill "{orphan.skill_name}"?',
+                            default=True,
+                        ).ask()
+                    except Exception as e:
+                        hint = 'Re-run without --interactive.'
+                        if sys.platform == 'win32':
+                            hint += ' Or use cmd.exe/PowerShell.'
+                        else:
+                            hint += ' Ensure stdin is a TTY terminal.'
+                        raise click.ClickException(
+                            f'Interactive prompt failed in this console: {e}. {hint}'
+                        ) from None
+
+                    if not confirmed:
                         console.print(f'  [dim]Skipped {orphan.skill_name}[/dim]')
                         continue
 
@@ -380,6 +479,20 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
 
         table.add_row(path, status, action)
 
+    blockers = [upd for upd in updates if (upd.status in {'unknown', 'modified'}) and (not force)]
+
+    # If hashes are missing/incomplete, backfill verifiably-current candidates so future
+    # updates can be computed without getting stuck in 'unknown'.
+    hash_backfill: dict[str, str] = {}
+    for upd in updates:
+        if upd.status != 'current':
+            continue
+        if upd.is_symlink or not upd.new_hash:
+            continue
+        if old_hashes.get(upd.hash_key) == upd.new_hash:
+            continue
+        hash_backfill[upd.hash_key] = upd.new_hash
+
     console.print()
     console.print(table)
     console.print()
@@ -390,37 +503,75 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
         dry_run=True,
     )
 
-    if not actions and not agents_needs_update and not orphans and not migrations:
-        if meta_state.migration_needed and not dry_run:
+    if dry_run:
+        console.print(f'[cyan]Would update {len(actions) + gitignore_updated_count} item(s)[/cyan]')
+        if migrations:
+            console.print(f'[cyan]Would migrate {len(migrations)} legacy skill location(s)[/cyan]')
+        if agents_needs_update:
+            console.print('[cyan]Would update root AGENTS.md block[/cyan]')
+        if blockers:
+            console.print(
+                f'[yellow]Blocked:[/yellow] {len(blockers)} item(s) are modified/unknown; '
+                're-run with --force to overwrite.'
+            )
+        return
+
+    if (
+        not actions
+        and not agents_needs_update
+        and not orphans
+        and not migrations
+        and not gitignore_updated_count
+    ):
+        if meta_state.migration_needed or hash_backfill:
+            meta['file_hashes'] = {**old_hashes, **hash_backfill}
+            meta['managed_skills'] = sorted(d.name for d in list_template_skills())
             meta['meta_schema'] = META_SCHEMA
             meta['sspec_schema'] = SCHEMA_VERSION
             meta['updated_at'] = datetime.now().isoformat()
             meta['sspec_version'] = __version__
             save_meta(sspec_root, meta)
-            console.print('[green]+[/green] Migrated .meta.json to latest schema')
+            if meta_state.migration_needed:
+                console.print('[green]+[/green] Migrated .meta.json to latest schema')
+            if hash_backfill:
+                console.print(
+                    f'[green]+[/green] Backfilled {len(hash_backfill)} hash(es) into .meta.json'
+                )
+
+        if blockers:
+            console.print(
+                f'[yellow]![/yellow] No updates applied: {len(blockers)} item(s) '
+                'are modified/unknown. Re-run with --force to overwrite.'
+            )
+            return
 
         console.print('[green]+[/green] All files are up to date')
-        return
-
-    if dry_run:
-        console.print(f'[cyan]Would update {len(actions)} file(s)[/cyan]')
-        if migrations:
-            console.print(f'[cyan]Would migrate {len(migrations)} legacy skill location(s)[/cyan]')
-        if agents_needs_update:
-            console.print('[cyan]Would update root AGENTS.md block[/cyan]')
         return
 
     # Apply updates
     updated_count = 0
     skill_updated_count = 0
     new_hashes = old_hashes.copy()
+    new_hashes.update(hash_backfill)
 
     for upd in actions:
         path = upd.display_path
         dest_path = upd.dest_path
 
         if interactive:
-            if not questionary.confirm(f'Update {path}?', default=True).ask():
+            try:
+                confirmed = questionary.confirm(f'Update {path}?', default=True).ask()
+            except Exception as e:
+                hint = 'Re-run without --interactive.'
+                if sys.platform == 'win32':
+                    hint += ' Or use cmd.exe/PowerShell.'
+                else:
+                    hint += ' Ensure stdin is a TTY terminal.'
+                raise click.ClickException(
+                    f'Interactive prompt failed in this console: {e}. {hint}'
+                ) from None
+
+            if not confirmed:
                 console.print(f'  [dim]Skipped {path}[/dim]')
                 continue
 
@@ -463,6 +614,7 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
         or migrations
         or agents_needs_update
         or meta_state.migration_needed
+        or gitignore_updated_count
     ):
         meta['file_hashes'] = new_hashes
         meta['managed_skills'] = sorted(d.name for d in list_template_skills())
@@ -483,7 +635,7 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
         console.print('  [green]+[/green] Updated root AGENTS.md block')
 
     console.print()
-    total_updated = updated_count + skill_updated_count
+    total_updated = updated_count + skill_updated_count + gitignore_updated_count
     if agents_needs_update:
         total_updated += 1
     if migrations:

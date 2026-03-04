@@ -75,8 +75,6 @@ def get_skill_targets_from_locations(
 
 
 DEFAULT_GITIGNORE = """
-# Installed skills (managed by sspec, symlinks or copies — not for VCS)
-skills/**
 # Temporary workspace drafts
 tmp/**
 """.strip()
@@ -197,7 +195,7 @@ def initialize_project(
             rel_loc = target_dir.relative_to(project_root)
         except ValueError:
             continue
-        meta_data['skill_locations'].append(str(rel_loc))
+        meta_data['skill_locations'].append(rel_loc.as_posix())
 
     for file_path in UPDATABLE_FILES:
         dest_path = sspec_path / file_path

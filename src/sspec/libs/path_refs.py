@@ -2,7 +2,19 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+import os
+from pathlib import Path, PurePosixPath
+
+
+def _matches_rglob_pattern(rel_path: Path, file_pattern: str) -> bool:
+    """Match using semantics close to Path.rglob(file_pattern)."""
+    rel = PurePosixPath(rel_path.as_posix())
+    if rel.match(file_pattern):
+        return True
+    if file_pattern.startswith('**/'):
+        return False
+    # rglob() behaves like glob('**/<pattern>')
+    return rel.match(f'**/{file_pattern}')
 
 
 def update_file_references(
@@ -71,25 +83,51 @@ def update_references_in_dirs(
         if not base_dir.exists():
             continue
 
-        for file_path in base_dir.rglob(file_pattern):
-            if not include_archived and 'archive' in file_path.parts:
-                continue
+        # Use os.walk with followlinks=False to avoid traversing broken links/junctions.
+        def _ignore_walk_error(_err: OSError) -> None:
+            return
 
+        for dirpath, dirnames, filenames in os.walk(
+            base_dir,
+            topdown=True,
+            followlinks=False,
+            onerror=_ignore_walk_error,
+        ):
+            # Optionally skip archived trees
             try:
-                content = file_path.read_text(encoding='utf-8')
-            except Exception:
+                rel_dir_parts = Path(dirpath).relative_to(base_dir).parts
+            except ValueError:
+                rel_dir_parts = Path(dirpath).parts
+
+            if not include_archived and 'archive' in rel_dir_parts:
+                dirnames[:] = []
                 continue
 
-            updated_content = content
-            for old_patterns, new_path in normalized_replacements:
-                for pattern in old_patterns:
-                    if pattern in updated_content:
-                        updated_content = updated_content.replace(pattern, new_path)
+            for fname in filenames:
+                file_path = Path(dirpath) / fname
+                try:
+                    rel_path = file_path.relative_to(base_dir)
+                except ValueError:
+                    continue
 
-            if updated_content != content:
-                file_path.write_text(updated_content, encoding='utf-8')
-                modified_count += 1
-                gathered_files.append(file_path)
+                if not _matches_rglob_pattern(rel_path, file_pattern):
+                    continue
+
+                try:
+                    content = file_path.read_text(encoding='utf-8')
+                except Exception:
+                    continue
+
+                updated_content = content
+                for old_patterns, new_path in normalized_replacements:
+                    for pattern in old_patterns:
+                        if pattern in updated_content:
+                            updated_content = updated_content.replace(pattern, new_path)
+
+                if updated_content != content:
+                    file_path.write_text(updated_content, encoding='utf-8')
+                    modified_count += 1
+                    gathered_files.append(file_path)
 
     if verbose:
         from .echo import echo

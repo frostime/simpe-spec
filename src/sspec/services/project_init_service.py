@@ -75,6 +75,10 @@ def get_skill_targets_from_locations(
 
 
 DEFAULT_GITIGNORE = """
+# By default, only active requests/changes/asks are tracked
+requests/archive
+changes/archive
+asks/archive
 # Temporary workspace drafts
 tmp/**
 """.strip()

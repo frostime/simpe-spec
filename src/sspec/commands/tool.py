@@ -2,7 +2,7 @@
 
 import click
 
-from sspec.builtin_tools import apply_patch, mdtoc, pack_zip, prompt, view_tree
+from sspec.builtin_tools import apply_patch, mdtoc, pack_zip, view_tree
 
 
 @click.group()
@@ -13,7 +13,6 @@ def tool() -> None:
 
 # Register tools (manual for now, clear and explicit)
 apply_patch.register_command(tool)
-prompt.register_command(tool)
 pack_zip.register_command(tool)
 view_tree.register_command(tool)
 mdtoc.register_command(tool)

@@ -121,7 +121,7 @@ class TestInitializeProject:
         )
         gi = tmp_path / SSPEC_DIR / '.gitignore'
         assert gi.exists()
-        assert 'skills/**' in gi.read_text(encoding='utf-8')
+        assert 'tmp/**' in gi.read_text(encoding='utf-8')
 
     def test_raises_when_exists_without_force(self, tmp_path: Path):
         (tmp_path / SSPEC_DIR).mkdir()

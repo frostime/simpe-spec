@@ -35,6 +35,7 @@ from sspec.services.project_update_service import (
     migrate_legacy_skill_layouts,
     prepare_meta_for_project_update,
     remove_orphaned_skill,
+    sync_hub_skills_gitignore,
 )
 
 console = Console()
@@ -342,6 +343,25 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
         )
 
     # -----------------------------------------------------------------
+    # Phase 0.5: Keep hub managed-skill ignore list in sync
+    # -----------------------------------------------------------------
+    managed_skill_names = sorted(d.name for d in list_template_skills())
+    hub_gitignore_synced = sync_hub_skills_gitignore(
+        sspec_root=sspec_root,
+        managed_skill_names=managed_skill_names,
+        dry_run=dry_run,
+    )
+
+    if dry_run:
+        if hub_gitignore_synced:
+            console.print('[cyan]Would sync .sspec/skills/.gitignore managed skill list[/cyan]')
+    else:
+        if hub_gitignore_synced:
+            console.print('[green]+[/green] Synced .sspec/skills/.gitignore managed skill list')
+
+    gitignore_updated_count = int(bool(hub_gitignore_synced))
+
+    # -----------------------------------------------------------------
     # Phase 0: Migrate legacy per-skill spoke layout to directory-level
     # -----------------------------------------------------------------
     migrations = migrate_legacy_skill_layouts(
@@ -484,7 +504,7 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
     )
 
     if dry_run:
-        console.print(f'[cyan]Would update {len(actions)} file(s)[/cyan]')
+        console.print(f'[cyan]Would update {len(actions) + gitignore_updated_count} item(s)[/cyan]')
         if migrations:
             console.print(f'[cyan]Would migrate {len(migrations)} legacy skill location(s)[/cyan]')
         if agents_needs_update:
@@ -496,7 +516,13 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
             )
         return
 
-    if not actions and not agents_needs_update and not orphans and not migrations:
+    if (
+        not actions
+        and not agents_needs_update
+        and not orphans
+        and not migrations
+        and not gitignore_updated_count
+    ):
         if meta_state.migration_needed or hash_backfill:
             meta['file_hashes'] = {**old_hashes, **hash_backfill}
             meta['managed_skills'] = sorted(d.name for d in list_template_skills())
@@ -588,6 +614,7 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
         or migrations
         or agents_needs_update
         or meta_state.migration_needed
+        or gitignore_updated_count
     ):
         meta['file_hashes'] = new_hashes
         meta['managed_skills'] = sorted(d.name for d in list_template_skills())
@@ -608,7 +635,7 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
         console.print('  [green]+[/green] Updated root AGENTS.md block')
 
     console.print()
-    total_updated = updated_count + skill_updated_count
+    total_updated = updated_count + skill_updated_count + gitignore_updated_count
     if agents_needs_update:
         total_updated += 1
     if migrations:

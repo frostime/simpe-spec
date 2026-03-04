@@ -75,8 +75,6 @@ def get_skill_targets_from_locations(
 
 
 DEFAULT_GITIGNORE = """
-# Installed skills (managed by sspec, symlinks or copies — not for VCS)
-skills/**
 # Temporary workspace drafts
 tmp/**
 """.strip()

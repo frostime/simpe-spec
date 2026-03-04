@@ -10,13 +10,136 @@ sspec is a file-based workflow for AI-assisted development. It keeps planning, d
 
 AI coding sessions usually fail at continuity:
 
-- decisions get lost after context compression,
-- implementation intent drifts between sessions,
-- humans repeat the same project background.
+- in long sessions (and especially across sessions), context and decisions get lost,
+- agents can drift and keep changing things while the developer loses visibility,
+- humans repeat the same project background and constraints.
 
-sspec solves this by storing working state in `.sspec/` and defining agent behavior in `AGENTS.md`.
+sspec solves this by storing working state in `.sspec/` and defining the workflow in
+`AGENTS.md` plus step-specific instructions (skills) under `.sspec/skills/`.
+
+## What sspec is (and isn't)
+
+sspec is a lightweight, file-based workflow for controlling coding agents.
+
+It is for independent developers (or small teams) who:
+
+- want the agent to assist, not take over,
+- care about resumability and "what changed / why" across long sessions,
+- can write a decent request (context, constraints, success criteria).
+
+It is not for:
+
+- one-line "build me an app" style prompting,
+- people who don't want to write/maintain requests, tasks, or handovers.
+
+sspec is designed to be added to existing projects (from 1-N). You can introduce it
+incrementally and use it only where it helps.
+
+sspec does not depend on platform-specific "slash commands". The core contract is
+file-based: `AGENTS.md` + `.sspec/` files that an agent can read and update.
+
+## Core concepts and folder layout
+
+Minimal structure (created by `sspec project init`):
+
+```text
+project/
+├── AGENTS.md
+└── .sspec/
+    ├── project.md
+    ├── requests/
+    ├── changes/
+    ├── asks/
+    ├── skills/
+    ├── spec-docs/
+    └── tmp/
+```
+
+Core concepts:
+
+- `request`: the entry point you write (context, constraints, success criteria).
+  Stored under `.sspec/requests/`.
+- `change`: a tracked unit of work under `.sspec/changes/<id>/`.
+- `spec.md`: problem statement + proposed solution for a change.
+- `tasks.md`: executable checklist + progress (updated as work completes).
+- `handover.md`: session memory and next steps, so work can resume later.
+- Q&A record (`ask`): used when the agent needs a decision or missing information.
+  Stored under `.sspec/asks/` (created via `sspec ask`).
+
+Note: `sspec ask` is for persisting important questions/answers instead of leaving
+them only in chat history.
+
+Skills:
+
+- `.sspec/skills/` is the canonical (hub) copy of skills.
+- sspec can sync/link skills into tool-specific locations (spokes) like `.claude/`,
+  `.github/`, or `.agents/` so the same skill set works across different agent
+  hosts.
+
+## Design principles
+
+- **Request-first**: start from a written request, not a chat log.
+- **Explicit context**: link relevant files and constraints early.
+- **Tracked execution**: tasks are updated as work completes.
+- **Human checkpoints**: the agent must stop and confirm important decisions.
+- **Resumability**: `handover.md` is required, not optional.
+- **Developer-led**: the developer stays in control of direction and scope.
+
+## Minimal example
+
+1) Create a request:
+
+```bash
+sspec request new add-password-reset
+```
+
+2) Fill the request with context and constraints (example structure):
+
+```markdown
+# Request: add-password-reset
+
+## Background
+We currently support email+password login.
+
+## Problem
+Users cannot reset a forgotten password.
+
+## Initial Direction
+- Use email-based reset tokens (time-limited)
+- Do not add new external services
+
+## Success Criteria
+- User can request a reset email
+- Token expires and is single-use
+- Flow is covered by tests
+
+## Relational Context
+- Related code: `src/auth/*`
+- Existing emails: `src/notifications/email/*`
+```
+
+3) Hand it to your agent:
+
+```text
+Please implement this request:
+.sspec/requests/<your-request-file>.md
+
+Follow the sspec workflow described in `AGENTS.md` and the installed skills.
+Keep the change docs (`spec.md`, `tasks.md`, `handover.md`) up to date.
+Stop and ask me to confirm key decisions before proceeding.
+```
+
+The agent reads the request, produces `spec.md` + `tasks.md`, and keeps `handover.md` current so you can resume later.
 
 ## Quick Start
+
+If you are working with a coding agent, the commands you typically run yourself are:
+
+```bash
+sspec project init
+sspec request new <name>
+sspec change archive --with-request [name]
+```
 
 ### 1) Install
 
@@ -41,25 +164,36 @@ Then fill `.sspec/project.md` with your stack, conventions, and key paths.
 sspec request new add-password-reset
 ```
 
-Write the request in `.sspec/requests/...` (problem, initial direction, success criteria).
+Write the request in `.sspec/requests/...` (context, constraints, success criteria).
 
-### 4) Hand it to your agent
+Then, in chat, paste the request file path (printed by `sspec request new`) and tell
+your agent to follow `AGENTS.md`.
 
-In chat with your coding agent:
+When you're done, archive the change (and its linked request) with:
 
-```text
-@change add-password-reset
+```bash
+sspec change archive --with-request
 ```
 
-The agent should run the SSPEC lifecycle, update change files, and ask for human decisions at `@ask` gates.
+Tip: `sspec request new` can auto-open the file in your editor (see below).
 
-### 5) Resume later
+## Editor integration
 
-```text
-@resume
+When creating a request, sspec will try to open the file in your editor.
+
+Resolution order:
+
+1) `.env` in your project working directory: `SSPEC_EDITOR`
+2) environment variable: `SSPEC_EDITOR`
+3) environment variable: `EDITOR`
+
+The editor command can include `{file}` (it will be replaced with the new file path).
+
+Example for VS Code:
+
+```bash
+SSPEC_EDITOR='code {file}'
 ```
-
-The agent reloads `handover.md`, `tasks.md`, and `spec.md` to continue from the previous stopping point.
 
 ## Lifecycle
 
@@ -67,45 +201,23 @@ Each phase has a dedicated SKILL in `.sspec/skills/`.
 
 ```text
 [Request] -> [Research] -> [Design] -> [Plan] -> [Implement] -> [Review] -> [Handover]
-                     (ask)      (ask)         (ask)        (feedback loop)
+                (decision checkpoints)   (feedback loop)
 ```
 
 Core rules:
 
 - `Research` focuses on understanding problem space and code context.
-- `Design` and `Implement` are mandatory `@ask` checkpoints.
-- `Plan` uses a lightweight `@ask` confirmation.
+- `Design` and `Implement` include mandatory decision checkpoints.
+- `Plan` uses a lightweight confirmation.
 - `Implement` and `Review` form a feedback loop until user acceptance.
 - `Handover` is not optional cleanup; it is a lifecycle phase.
-
-## What sspec creates
-
-```text
-project/
-├── AGENTS.md
-└── .sspec/
-    ├── project.md
-    ├── changes/
-    ├── requests/
-    ├── asks/
-    ├── spec-docs/
-    ├── skills/
-    └── tmp/
-```
-
-- `project.md`: project identity, conventions, long-term notes.
-- `changes/<id>/spec.md`: problem and proposed solution.
-- `changes/<id>/tasks.md`: executable checklist and progress.
-- `changes/<id>/handover.md`: session memory and next steps.
-- `requests/`: user intents before formal change creation.
-- `asks/`: agent-to-user Q&A records.
 
 ## Human vs Agent
 
 **Human responsibilities**
 
 - create requests,
-- answer `@ask` questions,
+- answer decision questions (and record Q&A when needed),
 - approve design and review outcomes.
 
 **Agent responsibilities**
@@ -113,19 +225,7 @@ project/
 - assess scope (micro/single/multi-change),
 - create and maintain change files,
 - keep tasks and handover current,
-- drive the ask-feedback loop until accepted.
-
-## Chat Directives
-
-These directives are interpreted by agents that load your `AGENTS.md`.
-
-| Directive | Typical use |
-|-----------|-------------|
-| `@change <name>` | Start/resume work on a change |
-| `@resume` | Continue the active change |
-| `@handover` | Persist state for next session |
-| `@sync` | Reconcile docs (`tasks.md`, `handover.md`) with code reality |
-| `@argue` | Stop current approach and reassess scope |
+- drive a feedback loop until accepted, recording questions/decisions when needed.
 
 ## CLI Reference
 
@@ -160,7 +260,7 @@ sspec change validate <name>
 sspec change archive [name] --with-request
 ```
 
-### Asks
+### Q&A records (`ask`)
 
 ```bash
 sspec ask create <topic>
@@ -199,7 +299,7 @@ sspec works best with coding agents that can:
 - read and write repository files,
 - follow instructions from `AGENTS.md`,
 - execute local CLI commands.
-- use claude skills.
+- load and follow skill instructions.
 
 ## License
 

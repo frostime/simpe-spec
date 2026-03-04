@@ -286,6 +286,12 @@ def collect_orphaned_skills(
         paths: list[Path] = []
         for loc_str in skill_locations:
             location_root = project_root / loc_str
+
+            # Keep spoke behavior stable: if spoke root is missing, do not
+            # recreate per-skill copies during update.
+            if loc_str != '.sspec/skills' and not location_root.exists():
+                continue
+
             if check_path_link(location_root):
                 continue
             skill_dir = project_root / loc_str / name
@@ -395,6 +401,12 @@ def collect_update_candidates(
 
         for loc_str in skill_locations:
             location_root = project_root / loc_str
+
+            # Keep spoke behavior stable: if spoke root is missing, do not
+            # recreate per-skill copies during update.
+            if loc_str != '.sspec/skills' and not location_root.exists():
+                continue
+
             if check_path_link(location_root):
                 continue
 

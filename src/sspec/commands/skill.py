@@ -96,7 +96,6 @@ def list_skills_cmd() -> None:
     except SspecNotFoundError:
         raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
-    sspec_root = get_sspec_root()
     skills = list_skills(sspec_root)
 
     if not skills:

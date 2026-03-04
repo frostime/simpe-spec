@@ -222,6 +222,8 @@ def upgrade_meta(meta: Mapping[str, Any]) -> MetaUpgradeResult:
                 continue
             s = loc.replace('\\', '/').rstrip('/')
             if s:
+                if not s.endswith('/skills'):
+                    s = f'{s}/skills'
                 normalized.add(s)
         upgraded['skill_locations'] = sorted(normalized)
 

@@ -258,9 +258,7 @@ class SkillInstaller:
 
         if sys.platform == 'win32':
             if not self._try_create_junction(source, target):
-                if self._try_create_symlink(source, target):
-                    return
-                raise OSError(f'Failed to create junction/symlink for {target}')
+                raise OSError(f'Failed to create junction for {target}')
             return
 
         if not self._try_create_symlink(source, target):

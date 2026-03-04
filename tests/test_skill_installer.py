@@ -58,3 +58,30 @@ def test_install_batch_uses_junction_fallback(monkeypatch, tmp_path: Path):
 
     assert len(results) == 1
     assert results[0].strategy == 'link'
+
+
+def test_update_skill_link_recreates_with_junction_on_windows(monkeypatch, tmp_path: Path):
+    source = tmp_path / 'source-skills'
+    source.mkdir()
+    (source / 'SKILL.md').write_text('# demo', encoding='utf-8')
+    target = tmp_path / 'target-skills'
+
+    installer = SkillInstaller()
+    calls = {'junction': 0, 'symlink': 0}
+
+    def _junction(_s: Path, _t: Path) -> bool:
+        calls['junction'] += 1
+        return True
+
+    def _symlink(_s: Path, _t: Path) -> bool:
+        calls['symlink'] += 1
+        return False
+
+    monkeypatch.setattr(installer, '_try_create_junction', _junction)
+    monkeypatch.setattr(installer, '_try_create_symlink', _symlink)
+    monkeypatch.setattr(skill_installer.sys, 'platform', 'win32')
+
+    installer.update_skill(source, target, 'link')
+
+    assert calls['junction'] == 1
+    assert calls['symlink'] == 0

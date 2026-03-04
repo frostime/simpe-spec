@@ -52,4 +52,4 @@ Use this section for tasks added during review/feedback loop.
 **Recent**:
 - Completed installer refactor to platform-fixed link flow with public `link|copy` strategy.
 - Added `.meta.json` schema migration to `2.1` and removed `skill_install_strategies` persistence.
-- Updated docs and validated with `ruff check` + 57 targeted passing tests.
+- Updated docs and validated with `ruff check` + 59 targeted passing tests.

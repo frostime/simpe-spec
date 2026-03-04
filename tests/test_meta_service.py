@@ -67,8 +67,9 @@ class TestMetaSchemaVersion:
         """META_SCHEMA tracks meta.json structure, not AGENTS.md protocol."""
         from sspec.core import SCHEMA_VERSION
 
-        # They are separate versioning axes; no equality constraint required.
-        assert META_SCHEMA != SCHEMA_VERSION or True  # always passes; just documents intent
+        # They are separate versioning axes; both must be valid non-empty markers.
+        assert isinstance(META_SCHEMA, str) and META_SCHEMA
+        assert isinstance(SCHEMA_VERSION, str) and SCHEMA_VERSION
 
 
 class TestGetMetaWithDefaults:
@@ -120,10 +121,10 @@ class TestUpgradeMeta:
         raw = {
             'meta_schema_version': '1',
             'schema_version': '9.1',
-            'skill_locations': ['.claude\\skills', '.claude/skills/'],
+            'skill_locations': ['.claude\\skills', '.claude/skills/', '.github'],
         }
         res = upgrade_meta(raw)
-        assert res.meta.get('skill_locations') == ['.claude/skills']
+        assert res.meta.get('skill_locations') == ['.claude/skills', '.github/skills']
 
     def test_upgrade_drops_deprecated_skill_install_strategies(self):
         raw = {

@@ -3,7 +3,7 @@ name: sspec-plan
 description: "Break design into concrete tasks. Fill tasks.md with file-level execution plan. Use after design alignment."
 metadata:
   author: frostime
-  version: 2.1.0
+  version: 2.2.1
 ---
 
 # SSPEC Plan
@@ -15,69 +15,49 @@ Turn the approved design (spec.md B) into a concrete, file-level execution plan 
 ## Workflow
 
 ```
-1. Read spec.md B (approved design)
-2. Break into phases + file-level tasks
-3. Fill tasks.md
-4. @ask user for final review
+1. Read spec.md frontmatter + B (approved design)
+2. Choose planning mode: single/sub vs root
+3. Fill tasks.md (phases + tasks OR milestones)
+4. Update Progress section
+5. @ask user for final review
 ```
 
-## Task Standards
+## Step 1: Choose Planning Mode
 
-### tasks.md Frontmatter (MANDATORY)
+Determine mode from `spec.md` frontmatter `change-type`:
 
-Single/sub change:
+| change-type | tasks.md form | Example |
+|------------|---------------|---------|
+| `single` / `sub` | Phase-based, file-level tasks (<2h each) | See [examples.md - Medium tasks.md](./examples.md#medium-tasksmd) |
+| `root` | Milestone-based, one entry per sub-change (no file-level detail) | See [examples.md - Root tasks.md](./examples.md#root-tasksmd) |
 
-```yaml
----
-change: "<change-name>"
-updated: ""
----
-```
+Start by mimicking the closest example, then edit.
 
-Root change:
+| Situation | Copy from |
+|----------|-----------|
+| Single phase, few files | [examples.md - Simple tasks.md](./examples.md#simple-tasksmd) |
+| Multi-phase / cross-module | [examples.md - Medium tasks.md](./examples.md#medium-tasksmd) |
+| Root change | [examples.md - Root tasks.md](./examples.md#root-tasksmd) |
+| Unsure about B vs tasks boundary | [examples.md - Complete Flow: B -> tasks.md](./examples.md#complete-flow-b--tasksmd) |
 
-```yaml
----
-change: "<change-name>"
-change-type: root
-updated: ""
----
-```
+If your Markdown viewer doesn't jump to `#...` anchors, treat them as search keys:
+open `examples.md` and search for the heading text in the link label, or use `rg` to search for the `#...` fragment.
 
-Keep `change` exactly aligned with `spec.md` `name`.
+## Step 2A: Single/Sub Planning (Phases + File-Level Tasks)
 
-### Granularity
+Keep the generated `tasks.md` frontmatter as-is. `change` must match `spec.md` `name`.
 
-| Change Type | Task Level | Example |
-|-------------|-----------|---------|
-| Single / Sub | File-level, <2h each | `- [ ] Create src/auth/jwt.py — refresh_token()` |
-| Root | Milestone-level (one per sub-change) | `- [ ] Phase 1 sub-change completed` |
+### Standards
 
 Each task should be:
-- **Independently testable** — can verify without completing other tasks
-- **Specific** — mentions exact file path and what to do
-- **Small** — <2 hours of work
+- **Specific**: names exact file path + action
+- **Small**: <2 hours
+- **Independently testable**: has an obvious check
 
 ### Phase Structure
 
-```markdown
-### Phase 1: <name> ⏳
-- [ ] Task description `path/file.py`
-- [ ] Task description `path/file.py`
-**Verification**: <how to verify this phase>
-
-### Phase 2: <name> ⏳
-- [ ] Task description `path/file.py`
-**Verification**: <how to verify>
-```
-
-### Phase Emoji
-
-| Emoji | Meaning |
-|-------|---------|
-| ⏳ | Pending — not started |
-| 🚧 | In progress — actively working |
-| ✅ | Done — all tasks complete and verified |
+Follow the `tasks.md` template (`@RULE` block) and/or copy from [examples.md](./examples.md).
+Use: ⏳ pending | 🚧 in progress | ✅ done
 
 ### Verification
 
@@ -85,7 +65,7 @@ Each phase MUST have explicit verification criteria:
 - What to check (test commands, expected output, manual verification)
 - How to know it's done (not "it works" but specific criteria)
 
-## Reference Section B, Don't Repeat
+### Reference Section B, Don't Repeat
 
 tasks.md references spec.md B's design. Don't re-describe interfaces or algorithms.
 
@@ -102,34 +82,20 @@ tasks.md references spec.md B's design. Don't re-describe interfaces or algorith
 
 📚 Complete B → tasks.md flow example: [examples.md](./examples.md#complete-flow-b--tasksmd)
 
-## Root Change Planning
+## Step 2B: Root Planning (Milestones)
 
-For root changes, tasks.md contains milestones, not file-level tasks:
+Root tasks.md is milestone-level. Each phase maps to a sub-change.
+Use [examples.md](./examples.md#root-tasksmd) as the reference format.
 
-```markdown
-### Phase 1: Auth Backend ⏳
-- [ ] Sub-change created and linked
-- [ ] Sub-change completed and archived
-**Deliverable**: JWT auth with <1s response time
-**Sub-change**: (link when created)
-```
+Rules of thumb:
+- No file-level tasks in root tasks.md
+- Each phase must include **Deliverable** + **Sub-change** link placeholder
+- Root stays active until all sub-changes complete
 
-The active sub-change gets its own tasks.md with file-level detail.
+## Step 3: Progress Tracking
 
-## Progress Tracking
-
-Update the Progress section after filling tasks:
-
-```markdown
-## Progress
-
-**Overall**: 0%
-
-| Phase | Progress | Status |
-|-------|----------|--------|
-| Phase 1 | 0% | ⏳ |
-| Phase 2 | 0% | ⏳ |
-```
+After filling tasks, update the Progress section (overall + per-phase).
+Start at 0% unless work already began.
 
 ## Exit: @ask User Review (MANDATORY)
 

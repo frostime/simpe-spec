@@ -570,6 +570,8 @@ Agent 读 SKILL 时，不一定总是先读过 AGENTS.md（尤其在长对话后
 
 #### 建议 J：SKILL = Flow + Core Rules，不重复 AGENTS.md 内容
 
+✅ 已完成（2026-03-06）：`sspec-design` 已将 Scale assessment / CLI quick ref 等重复内容改为引用 `AGENTS.md`，并保留最小兜底提示以降低上下文缺失风险。
+
 将 sspec-design 中与 AGENTS.md 重复的部分替换为链接：
 
 ```markdown
@@ -597,6 +599,8 @@ openspec 中，spec 的 template 和 instruction 存在 `schema.yaml`，通过 C
 ---
 
 #### 建议 L：sspec-plan 的 Phase Structure template 可外链
+
+✅ 已完成（2026-03-06）：`sspec-plan` 已移除内嵌 Phase Structure 模板，改为指向 `examples.md` / `tasks.md` 模板 `@RULE`（按需查阅）。
 
 sspec-plan 里的 Phase Structure markdown（30行）本质是一个 reference template，和 sspec-design 里的 examples 一样适合外链处理：
 

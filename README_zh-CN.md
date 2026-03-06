@@ -271,15 +271,6 @@ sspec 在项目里安装 skills 时采用 hub-spoke 方案：
 
 ## 其他
 
-### 如果你用过 openspec
-
-sspec 和 openspec 解决的是相近的问题，但工作方式不同。
-
-- sspec 从人写的 `request` 开始，而不是让 Agent 先生成整套前置产物。
-- sspec 把长期状态保存在仓库文档里；`spec.md`、`tasks.md`、`handover.md` 是每个 `change` 的真实记录，CLI 主要负责创建和查看。
-- sspec 强调关键节点的人类确认，而不是让 Agent 一路自动推进。
-- sspec 以一个内聚、原子、可追踪的 `change` 作为基本工作单位。更复杂的工作应拆成 `root-change` / `sub-change`，或通过 `prev-change` 在已有变更之后继续演进，而不是把所有内容堆进一个庞大、不可追踪的变更里。
-
 ### 兼容性
 
 sspec 依赖 Agent 环境具备以下能力：

@@ -271,15 +271,6 @@ sspec installs skills with a hub-spoke layout:
 
 ## Other
 
-### If you have used openspec
-
-sspec and openspec solve similar problems, but they use different working models.
-
-- sspec starts from a user-written `request` instead of having the agent generate all upfront artifacts first.
-- sspec keeps long-lived state in repository docs; `spec.md`, `tasks.md`, and `handover.md` are the records for each `change`, while the CLI mainly creates and inspects files.
-- sspec uses explicit user confirmation at key checkpoints instead of letting the agent run straight through.
-- sspec treats each cohesive, atomic, trackable `change` as the basic unit of work. Larger work should be split into `root-change` and `sub-change`, or continued via `prev-change`, instead of being packed into one large, untrackable change.
-
 ### Compatibility
 
 sspec depends on an agent environment that can:

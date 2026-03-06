@@ -378,6 +378,8 @@ sspec 的 sspec-research 更像是"为 design 做准备"，目的性很强。建
 
 **建议 H：phase gate 的 @ask 用 `sspec ask` 还是 `question` 工具要更明确**
 
+✅ 已完成（以替代方案实现，2026-03-06）：参考 `change` `rename-ask` ；将 `@ask` 的概念提升为 `align`。
+
 sspec 的 AGENTS.md§3 已有说明（见 Consultation 表格），但实际上不同用途之间的选择规则有时容易混淆。
 
 openspec-propose SKILL 里有一个值得借鉴的模式，每次 AskUserQuestion 都有明确的  **scenario label**：

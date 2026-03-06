@@ -27,7 +27,7 @@ Update handover.md when:
 - Important decision just made with non-trivial reasoning
 - Key file discovered that future work depends on
 - Design tradeoff resolved after discussion
-- Any user interaction that changes direction (feedback, @ask gate, @argue)
+- Any user interaction that changes direction (feedback, @align gate, @argue)
 - About to switch between major phases (e.g. design -> plan)
 
 **Rule**: If you'd struggle to reconstruct info after context compression → write it NOW.
@@ -46,7 +46,7 @@ handover.md is the resume entry point.
 - Add a new Session Log entry (newest-first)
 - Each entry is an atomic batch (one cohesive work record)
 - Each entry MUST include both **Accomplished** and **Next**
-- Any user interaction (feedback, @ask gate, @argue) MUST start a new log entry with a clear tag (for example: `user-feedback`, `argue`)
+- Any user interaction (feedback, @align gate, @argue) MUST start a new log entry with a clear tag (for example: `user-feedback`, `argue`)
 
 **Working Memory (Stable)**:
 - **Key Files**: List critical file paths with a 1-line why
@@ -74,7 +74,7 @@ Two promotion targets:
 ### 4. Suggest spec-doc update (if applicable)
 
 If the change produced architectural knowledge (new interfaces, data models, patterns):
-- `@ask` user: "This change produced knowledge about X. Should I create/update a spec-doc?"
+- `@align` user: "This change produced knowledge about X. Should I create/update a spec-doc?"
 - If yes → use `write-spec-doc` SKILL
 
 ### 5. Quick Quality Check

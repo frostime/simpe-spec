@@ -22,14 +22,14 @@ This is a **user-in-the-loop** phase — like review, the user must confirm your
 3. Fill spec.md (choose one)
    Type A: Single/Sub change spec.md
    Type B: Root change spec.md
-4. @ask user for alignment (MANDATORY)
+4. @align user for alignment (MANDATORY)
 ```
 
 ## Step 1: Assess Scale
 
 Use the Scale Assessment rules in `AGENTS.md` (search: `Scale Assessment`) to split micro / single / multi.
 Fallback heuristic (only if `AGENTS.md` isn't available): Micro (≤3 files, ≤30min) | Multi/Root (>15 files OR >20 tasks OR >1 week) | else Single.
-If uncertain, default to **Single** and `@ask` whether to split.
+If uncertain, default to **Single** and `@align` whether to split.
 
 ## Step 2: Create Change
 
@@ -241,7 +241,7 @@ Root spec does NOT include file-level Scope Summary — that belongs in each sub
 
 📚 Root change examples: [examples-root.md](./examples-root.md)
 
-## Step 4: @ask for Alignment (MANDATORY)
+## Step 4: @align for Alignment (MANDATORY)
 
 **Never skip this step.** This is a user-in-the-loop confirmation — like review phase, the user must sign off.
 

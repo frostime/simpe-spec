@@ -32,7 +32,7 @@ Header format:
 ### 2026-03-06T20:39 [work-log] <short title>
 
 Tags are freeform but must be readable. Examples: work-log, user-feedback, argue, risk.
-Any user interaction (feedback, @ask, @argue) MUST start a new log entry. -->
+Any user interaction (feedback, @align, @argue) MUST start a new log entry. -->
 
 ### <ISO timestamp> [tag] <short title>
 

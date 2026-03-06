@@ -45,7 +45,7 @@ src/sspec/
     ├── change/         # spec.md, tasks.md, handover.md
     ├── change-root/    # Root change variants
     ├── requests/       # Request template
-    └── skills/         # SKILL templates (sspec, sspec-ask, etc.)
+    └── skills/         # SKILL templates (sspec-align, sspec-design, etc.)
 ```
 
 ---
@@ -126,14 +126,18 @@ uv run sspec <command>       # Test the command
 
 ---
 
-## 4. sspec-ask for Development
+## 4. sspec-align for Development
 
-Use `@ask` (via sspec-ask SKILL) when:
+Use `@align` (via sspec-align SKILL) when:
 - Direction choice needed (architecture, API design)
 - Unsure about backward compatibility impact
-- Work feels complete → confirm with user before ending turn
+- Design phase complete → present solution before planning
+- Implementation complete → request review before marking done
 
-> **End-of-turn rule**: Before ending a conversation turn, always `@ask` to confirm completion.
+> **`@force-end-align` directive**: In credit-based hosts (for example Copilot), treat this as a high-priority instruction when present.
+> When you believe the work is done and would otherwise stop, do one last user-facing alignment instead of silently ending the turn.
+> Prefer the built-in `question` tool; use `sspec ask` only if the final check also needs durable record or sign-off.
+> It is not a universal end-of-turn rule, but it is strongly recommended for credit-sensitive tasks.
 
 This saves cost in Copilot (tool calls don't consume turns).
 
@@ -164,9 +168,9 @@ SSPEC_SCHEMA::9.3
 
 ## 0. Overview
 
-SSPEC is a doc-driven collaboration workflow. Planning, tracking, and handover live in `.sspec/`.
+SSPEC is a doc-driven workflow. Planning, tracking, and handover live in `.sspec/`.
 
-**Goal**: Any Agent resumes work in 30 seconds from `.sspec/`.
+**Goal**: Any Agent resumes in 30 seconds from `.sspec/`.
 
 ```
 .sspec/
@@ -200,10 +204,10 @@ Resume tip: in `handover.md`, start from the newest entry in `Session Log`.
 
 **Background rules**:
 - Important discovery → write to `handover.md` immediately
-- Project-wide discovery (convention, gotcha, cross-cutting) → also append to `project.md` Notes
+- Project-wide discovery → also append to `project.md` Notes
 - Long session (>30 exchanges) → checkpoint `handover.md`
-- Uncertain → `@ask` (30s question < hours of rework)
-- User rejects tool call → STOP → `@ask` reason
+- Uncertain → `@align` (30s alignment < hours of rework)
+- User rejects tool call → STOP → `@align` reason
 
 ---
 
@@ -217,16 +221,16 @@ Each phase has a dedicated SKILL. Read it before starting.
 [Request]
    |
    v
-[Research]  (understand + clarify; @ask mid-research for ambiguities)
+[Research]  (understand + clarify; @align mid-research for ambiguities)
    |
    v
-[Design]    -- @ask gate (MANDATORY) + [Handover] --> "Align understanding + solution"
+[Design]    -- @align gate (MANDATORY) + [Handover] --> "Align understanding + solution"
    |
    v
-[Plan]      -- @ask gate (LIGHTWEIGHT) --> "Confirm task breakdown"
+[Plan]      -- @align gate (LIGHTWEIGHT) --> "Confirm task breakdown"
    |
    v
-[Implement] -- @ask gate (MANDATORY) --> "Done for this round, please review"
+[Implement] -- @align gate (MANDATORY) --> "Done for this round, please review"
    |
    v
 [Review]    -- user feedback + [Handover] --> (if not satisfied, return to Implement)
@@ -236,31 +240,31 @@ Each phase has a dedicated SKILL. Read it before starting.
 
 Flow rules:
 - Follow phase order from `Request` to `Handover`.
-- Any `@ask` gate is a hard checkpoint: ask user first (`question` if available, else `sspec ask`).
-- `@ask` is a closed loop: if not approved, return to the required phase, update, and ask again.
-- `Implement` and `Review` are coupled: deliver -> ask -> feedback -> implement -> ask again, until satisfied.
+- Any `@align` gate is a hard checkpoint: align with user first (`question` if available, else `sspec ask`).
+- `@align` is a closed loop: if not approved, return to the required phase, update, and align again.
+- `Implement` and `Review` are coupled: deliver -> align -> feedback -> implement -> align again, until satisfied.
 
 **Handover** is lifecycle-critical. Trigger it:
 - At session end (MANDATORY)
 - Mid-session when context is long (>30 exchanges)
 - When switching between major phases
-- Before any context-losing event (compression, interruption)
+- Before context-losing events (compression, interruption)
 
 ### Phase → SKILL → Files
 
 | Phase | SKILL | Reads | Writes | Checkpoint |
 |-------|-------|-------|--------|------------|
 | **Research** | `sspec-research` | code, project.md, spec-docs | reference/, handover.md | `question` for mid-research clarifications (no formal gate) |
-| **Design** | `sspec-design` | research findings, code | spec.md (A+B) | **@ask align** (MANDATORY) |
-| **Plan** | `sspec-plan` | spec.md B | tasks.md | @ask confirm breakdown (LIGHTWEIGHT) |
-| **Implement** | `sspec-implement` | spec.md B, tasks.md | code, tasks.md progress | **@ask "done for this round, please review"** (MANDATORY) |
+| **Design** | `sspec-design` | research findings, code | spec.md (A+B) | **@align** (MANDATORY) |
+| **Plan** | `sspec-plan` | spec.md B | tasks.md | @align confirm breakdown (LIGHTWEIGHT) |
+| **Implement** | `sspec-implement` | spec.md B, tasks.md | code, tasks.md progress | **@align "done for this round, please review"** (MANDATORY) |
 | **Review** | `sspec-review` | user feedback | tasks.md (feedback tasks) | feedback loop: not satisfied -> Implement; satisfied -> Handover |
 | **Handover** | `sspec-handover` | everything | handover.md, project.md | — |
 
 ### Scale Assessment (in Design phase)
 
 | Scale | Criteria | Path |
-|-------|----------|------|
+|---|---|---|
 | Micro | ≤3 files, ≤30min, trivially reversible | Do directly |
 | Single | ≤1 week, ≤15 files, ≤20 tasks | `sspec change new <name>` |
 | Multi | >1 week OR >15 files OR >20 tasks | `sspec change new <name> --root` → sub-changes |
@@ -280,9 +284,9 @@ Flow rules:
 
 ---
 
-## 3. Consultation (@ask)
+## 3. Alignment (@align)
 
-`@ask` means the Agent proactively asks the User a question, through:
+`@align` means the Agent proactively aligns with the User, through:
 - Built-in tools such as `AskUserQuestion` (e.g. `vscode/askQuestion`, `opencode/question`)
 - The `sspec ask` CLI tool
 
@@ -290,18 +294,21 @@ Flow rules:
 
 | Question type | Tool |
 |---|---|
-| Simple, bounded — yes/no, pick from options, quick confirm | `question` tool |
-| Complex, open-ended — requires context, involves tradeoffs, or worth recording | `sspec ask` |
-| Phase gates (Design align, Implement review) | `sspec ask` (mandatory) |
+| Simple, bounded — yes/no, quick confirm | `question` tool |
+| Complex/open-ended — context, tradeoffs, or worth recording | `sspec ask` |
+| Phase gates (Design, Implement review) | `sspec ask` (mandatory) |
+| Straightforward plan confirmation | `question` tool |
 | Mid-research in-flight clarification | `question` tool |
 
-If no `question`-like tool is available → use `sspec ask` for all cases.
+If no `question`-like tool is available → use `sspec ask`.
 
-**For complex context**: If the question references a large design draft, research findings, or analysis → write that content to `.sspec/tmp/` and link it from the question body. Confirmed valuable materials can be moved to `change/reference/` later.
+**For large context**: Write design/research analysis to `.sspec/tmp/` and link it from the question body. Move confirmed valuable materials to `change/reference/` later.
+
+**Directive: `@force-end-align`**: If a task explicitly requests it, and you believe the work is done, do one last user-facing alignment instead of silently ending the turn. Prefer `question`; use `sspec ask` only if the final check also needs durable record or sign-off.
 
 At phase gates: Design + Implement are mandatory, Plan is lightweight, Review loops until satisfied.
 
-📚 Full workflow, patterns, and content rules: `sspec-ask` SKILL
+📚 Full workflow, patterns, and content rules: `sspec-align` SKILL
 
 ---
 
@@ -318,7 +325,7 @@ Scenarios:
 
 | Scenario | Trigger | Action |
 |----------|---------|--------|
-| Post-change update | Change is DONE, with architecture impact | Agent proactively `@ask`: "Should I update/create spec-doc for X?" |
+| Post-change update | Change is DONE, with architecture impact | Agent proactively `@align`: "Should I update/create spec-doc for X?" |
 | User-initiated | User requests spec-doc creation | If small → do directly; if large → may need its own change |
 
 📚 Full guidelines: `write-spec-doc` SKILL
@@ -356,7 +363,7 @@ Run `sspec <command> --help` for full options.
 
 ### SKILL System
 
-Read the SKILL for the current phase (`sspec-research`, `sspec-design`, `sspec-plan`, `sspec-implement`, `sspec-review`, `sspec-handover`, `sspec-ask`, `sspec-mdtoc`, `write-spec-doc`).
+Read the SKILL for the current phase (`sspec-research`, `sspec-design`, `sspec-plan`, `sspec-implement`, `sspec-review`, `sspec-handover`, `sspec-align`, `sspec-mdtoc`, `write-spec-doc`).
 If a SKILL says "read [file](...)" -> **MUST** read it.
 
 ### Template Markers

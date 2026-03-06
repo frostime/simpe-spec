@@ -19,7 +19,7 @@ Turn the approved design (spec.md B) into a concrete, file-level execution plan 
 2. Choose planning mode: single/sub vs root
 3. Fill tasks.md (phases + tasks OR milestones)
 4. Update Progress section
-5. @ask user for final review
+5. @align user for final review
 ```
 
 ## Step 1: Choose Planning Mode
@@ -97,7 +97,7 @@ Rules of thumb:
 After filling tasks, update the Progress section (overall + per-phase).
 Start at 0% unless work already began.
 
-## Exit: @ask User Review (MANDATORY)
+## Exit: @align User Review (MANDATORY)
 
 Present the task breakdown to user:
 - Number of phases and total tasks

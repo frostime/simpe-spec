@@ -7,6 +7,7 @@
 ## Background
 <!-- Write once. What this root change coordinates (1-3 sentences). -->
 
+## Sub-Change Status (Volatile Snapshot)
 
 <!-- Snapshot of current coordination state. Update when it changes.-->
 | Phase | Sub-Change | Status | Notes |

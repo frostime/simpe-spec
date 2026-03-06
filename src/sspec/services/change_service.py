@@ -16,7 +16,9 @@ from sspec.core import (
     ChangeExistsError,
     ChangeInfo,
     ChangeStatus,
+    ChangeStatusSummary,
     InvalidChangeNameError,
+    SessionLogSummary,
     copy_template,
     get_template_dir,
     normalize_status,
@@ -107,6 +109,7 @@ def parse_change(change_path: Path, archived: bool = False) -> ChangeInfo:
 
     if tasks_file.exists():
         content = tasks_file.read_text(encoding='utf-8')
+        content = re.sub(r'<!--.*?-->', '', content, flags=re.DOTALL)
         # Exclude template examples (lines containing <Demo Task>)
         # See src/sspec/templates/change/tasks.md
         checkbox_pattern = r'- \[[ xX~\-]](?!\s*<Demo Task>)'
@@ -126,6 +129,170 @@ def parse_change(change_path: Path, archived: bool = False) -> ChangeInfo:
         has_blockers=has_blockers,
         archived=archived,
         frontmatter=meta,
+    )
+
+
+def _display_path(path: Path, base: Path) -> str:
+    """Render path relative to base when possible."""
+    try:
+        return path.relative_to(base).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _extract_updated(handover_content: str) -> str | None:
+    """Extract Updated field from handover content."""
+    match = re.search(r'^\*\*Updated\*\*:\s*(.+?)\s*$', handover_content, re.MULTILINE)
+    if not match:
+        return None
+
+    value = match.group(1).strip()
+    return None if value.startswith('<!--') else value
+
+
+def _extract_latest_session_log(handover_content: str) -> SessionLogSummary | None:
+    """Extract the newest session log entry summary from handover.md."""
+    lines = handover_content.splitlines()
+
+    try:
+        start = next(i for i, line in enumerate(lines) if line.startswith('## Session Log'))
+    except StopIteration:
+        return None
+
+    heading_index = None
+    heading_match = None
+    heading_pattern = re.compile(
+        r'^###\s+(?P<timestamp>\S+)(?:\s+\[(?P<tags>[^\]]+)\])?(?:\s+(?P<title>.+))?$'
+    )
+    in_comment = False
+    for idx in range(start + 1, len(lines)):
+        raw_line = lines[idx]
+        candidate = raw_line.strip()
+        if '<!--' in raw_line:
+            in_comment = True
+        if in_comment:
+            if '-->' in raw_line:
+                in_comment = False
+            continue
+        match = heading_pattern.match(candidate)
+        if match and not match.group('timestamp').startswith('<'):
+            heading_index = idx
+            heading_match = match
+            break
+
+    if heading_index is None or heading_match is None:
+        return None
+
+    next_items: list[str] = []
+    in_next_block = False
+    bullet_pattern = re.compile(r'^(-|\d+\.)\s+(.*\S)\s*$')
+    for idx in range(heading_index + 1, len(lines)):
+        stripped = lines[idx].strip()
+        if stripped.startswith('### ') or stripped.startswith('## '):
+            break
+        if stripped == '**Next**':
+            in_next_block = True
+            continue
+        if stripped.startswith('**') and stripped != '**Next**':
+            in_next_block = False
+            continue
+        if not in_next_block or not stripped:
+            continue
+        if match := bullet_pattern.match(stripped):
+            next_items.append(match.group(2))
+
+    tags_raw = heading_match.group('tags') or ''
+    tags = [tag.strip() for tag in tags_raw.split(',') if tag.strip()]
+    title = (heading_match.group('title') or '').strip() or None
+    return SessionLogSummary(
+        timestamp=heading_match.group('timestamp'),
+        tags=tags,
+        title=title,
+        next_items=next_items,
+    )
+
+
+def _extract_root_snapshot_rows(handover_content: str) -> list[dict[str, str]] | None:
+    """Extract rows from the root change volatile snapshot table."""
+    lines = handover_content.splitlines()
+
+    try:
+        start = next(i for i, line in enumerate(lines) if line.startswith('## Sub-Change Status'))
+    except StopIteration:
+        return None
+
+    table_lines: list[str] = []
+    for idx in range(start + 1, len(lines)):
+        stripped = lines[idx].strip()
+        if stripped.startswith('## '):
+            break
+        if stripped.startswith('|'):
+            table_lines.append(stripped)
+
+    if len(table_lines) < 3:
+        return None
+
+    def _split_row(row: str) -> list[str]:
+        return [cell.strip() for cell in row.strip('|').split('|')]
+
+    headers = _split_row(table_lines[0])
+    rows: list[dict[str, str]] = []
+    for row in table_lines[2:]:
+        cells = _split_row(row)
+        if len(cells) != len(headers):
+            continue
+        rows.append(dict(zip(headers, cells, strict=False)))
+
+    return rows or None
+
+
+def _extract_linked_request_paths(change: ChangeInfo) -> list[str]:
+    """Extract linked request source paths from frontmatter."""
+    references = change.frontmatter.get('reference', [])
+    if not isinstance(references, list):
+        return []
+
+    linked: list[str] = []
+    for ref in references:
+        if not isinstance(ref, dict) or ref.get('type') != 'request':
+            continue
+        source = ref.get('source')
+        if isinstance(source, str) and source:
+            linked.append(source)
+    return linked
+
+
+def summarize_change(change_path: Path, cwd: Path | None = None) -> ChangeStatusSummary:
+    """Build a read-only local dashboard summary for a change."""
+    base = cwd or Path.cwd()
+    change = parse_change(change_path)
+    raw_change_type = change.frontmatter.get('change-type', '')
+    change_type = raw_change_type if isinstance(raw_change_type, str) else ''
+
+    handover_file = change_path / 'handover.md'
+    handover_content = handover_file.read_text(encoding='utf-8') if handover_file.exists() else ''
+
+    source_links = {
+        'spec': _display_path(change_path / 'spec.md', base),
+        'tasks': _display_path(change_path / 'tasks.md', base),
+        'handover': _display_path(handover_file, base),
+    }
+    research_file = change_path / 'reference' / 'status-research.md'
+    if research_file.exists():
+        source_links['research'] = _display_path(research_file, base)
+
+    return ChangeStatusSummary(
+        name=change.name,
+        path=_display_path(change_path, base),
+        status=change.status,
+        change_type=change_type,
+        tasks_done=change.progress['done'],
+        tasks_total=change.progress['total'],
+        updated=_extract_updated(handover_content),
+        linked_requests=_extract_linked_request_paths(change),
+        latest_log=_extract_latest_session_log(handover_content),
+        root_snapshot_rows=_extract_root_snapshot_rows(handover_content),
+        source_links=source_links,
     )
 
 

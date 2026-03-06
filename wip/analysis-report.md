@@ -279,6 +279,8 @@ sspec 不是为所有人设计的。它的目标用户是：
 
 **建议 A：`sspec change status --json`（借鉴 openspec `status --json`）**
 
+✅ 已完成（以阶段化替代方案实现，2026-03-06）：先恢复/实现了人类可读的 `sspec change status <name>`，将其定位为 local change dashboard，而非 openspec 式 runtime orchestrator API。当前版本从 change 本地文档中的稳定锚点（frontmatter / tasks checkbox / handover `Updated` / 最新 `Session Log` / root snapshot 表）生成摘要，并显式给出原始 source links；`--json` 与 `.state.json/.yaml` 继续延后，等真实机器消费需求出现后再评估。
+
 openspec 的 `status --json` 返回结构化的 artifact 状态和依赖图，Agent 可以直接消费机器可读数据——而无需解析 markdown frontmatter。
 
 sspec 目前没有等价物。建议增加：

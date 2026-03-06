@@ -152,6 +152,33 @@ class ChangeInfo:
     frontmatter: dict[str, str | list | dict]
 
 
+@dataclass(frozen=True, slots=True)
+class SessionLogSummary:
+    """Latest session log summary extracted from handover.md."""
+
+    timestamp: str | None
+    tags: list[str]
+    title: str | None
+    next_items: list[str]
+
+
+@dataclass(frozen=True, slots=True)
+class ChangeStatusSummary:
+    """Read-only local dashboard summary for a change."""
+
+    name: str
+    path: str
+    status: str
+    change_type: str
+    tasks_done: int
+    tasks_total: int
+    updated: str | None
+    linked_requests: list[str]
+    latest_log: SessionLogSummary | None
+    root_snapshot_rows: list[dict[str, str]] | None
+    source_links: dict[str, str]
+
+
 class SkillInfo(TypedDict):
     """Structured skill information."""
 

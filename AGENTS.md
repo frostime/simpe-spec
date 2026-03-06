@@ -160,7 +160,7 @@ When User ask Agent to commit:
 <!-- SSPEC:START -->
 # .sspec Agent Protocol
 
-SSPEC_SCHEMA::9.2
+SSPEC_SCHEMA::9.3
 
 ## 0. Overview
 
@@ -195,6 +195,8 @@ SSPEC activation signals (enter Change Workflow §2 if any is true):
 | Request (attached or described) | Assess scale → Change Workflow §2 |
 | Resume existing change | `read(handover→tasks→spec)` → continue |
 | Micro task (≤3 files, ≤30min, obvious) | Do directly, no change needed |
+
+Resume tip: in `handover.md`, start from the newest entry in `Session Log`.
 
 **Background rules**:
 - Important discovery → write to `handover.md` immediately

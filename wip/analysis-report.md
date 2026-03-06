@@ -391,6 +391,8 @@ Use the AskUserQuestion tool (open-ended, no preset options) to ask:
 
 **建议 I：为 sspec-handover 增加"快速 resume card"**
 
+✅ 已完成（以替代方案实现，2026-03-06）：未采用独立 `30-second Resume` 卡片，改为以 `handover.md` 顶部最新 `Session Log` 条目作为唯一 resume 入口，并配合 `Working Memory (Stable)` / root `Sub-Change Status` 实现 30 秒恢复目标。该方案避免了 Resume Card 与日志双重状态漂移。
+
 当前 handover.md 模板很完整，但作为 resume 入口，Agent 需要从头读完。建议在 handover.md 顶部增加一个 30-second-card：
 
 ```markdown

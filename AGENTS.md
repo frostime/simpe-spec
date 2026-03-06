@@ -10,14 +10,18 @@ This project uses sspec to develop sspec. Two sets of rules coexist:
 | Audience | Agent working on this repo | Agent using sspec in any project |
 | Authority | **This file wins** on conflicts | Provides workflow structure |
 
-**Rule**: When developing templates, the **template source files** in `src/sspec/templates/` are ground truth — not the installed copies in `.sspec/`.
+**Rule**: When developing templates, the **template source files** in `src/sspec/templates/` are ground truth.
+
+**Hard rule**: If a change touches AGENTS, SKILLs, or any template content, edit only `src/sspec/templates/`. Do **not** hand-edit `.github/`, `.claude/`, or `.sspec/` copies; refresh them with `uv run sspec project update`.
+
+**Auto-managed rule**: The SSPEC block below `<!-- SSPEC:START -->` is generated from `src/sspec/templates/AGENTS.md`. If that block needs to change, update the template source and run `uv run sspec project update` instead of editing the block directly.
 
 ---
 
 ## 1. Cold Start (Development)
 
-1. Read `.sspec/project.md` — tech stack, conventions, project notes
-2. Determine action:
+1. Read `.sspec/project.md` — tech stack, conventions, project notes.
+2. Classify the request:
 
 | User Message | Action |
 |--------------|--------|
@@ -26,17 +30,13 @@ This project uses sspec to develop sspec. Two sets of rules coexist:
 | Python code change | Follow **Code Change Protocol** (Section 3) |
 | Bug report / feature idea | Follow SSPEC workflow in block below |
 
-3. If touching unfamiliar area → check `src/sspec/` structure:
+3. If touching an unfamiliar area, check `src/sspec/` structure:
 
 ```
 src/sspec/
 ├── cli.py              # Entry point
 ├── core.py             # Shared types, constants, utilities
-├── commands/           # CLI command implementations (click)
-│   ├── project.py      # init, update, status
-│   ├── change.py       # change new, status, archive
-│   ├── ask.py          # ask create, prompt, list
-│   └── skill.py        # skill list
+├── commands/           # CLI commands (project/change/ask/request/doc/tool/...)
 ├── services/           # Business logic (CLI-agnostic)
 ├── libs/               # Pure utilities (hashing, etc.)
 └── templates/          # Product: what users get on `sspec init`
@@ -45,7 +45,7 @@ src/sspec/
     ├── change/         # spec.md, tasks.md, handover.md
     ├── change-root/    # Root change variants
     ├── requests/       # Request template
-    └── skills/         # SKILL templates (sspec-align, sspec-design, etc.)
+    └── skills/         # User-facing SKILL templates
 ```
 
 ---
@@ -62,7 +62,8 @@ Changing templates = changing the product. Extra care required.
 
 1. Edit template source in `src/sspec/templates/`
 2. Reinstall: `uv pip install -e .`  ← **必须，否则模板缓存不更新**
-3. Test in sandbox:
+3. Sync self-hosted copies: `uv run sspec project update`
+4. Test in sandbox:
 
 ```powershell
 # Create clean test environment
@@ -78,8 +79,8 @@ uv run sspec project init
 uv run sspec project update --dry-run
 ```
 
-4. If template structure changed → check `UPDATABLE_FILES`, `USER_FILES` in `core.py`
-5. If skill added/renamed/removed → verify `managed_skills` flow in `project_init_service.py`
+5. If template structure changed → check `UPDATABLE_FILES`, `USER_FILES` in `core.py`
+6. If a skill was added/renamed/removed → verify both init/install flow in `project_init_service.py` and update/orphan flow in `project_update_service.py`
 
 ### Template editing rules
 
@@ -89,6 +90,8 @@ Templates use `{{VARIABLE}}` placeholders. Current variables:
 - `{{NAME}}`, `{{TIME}}`, `{{CHANGE_NAME}}` — CLI fills at creation
 
 **Never** put development-specific content in templates. Templates are for users.
+
+**Never** patch installed/generated copies under `.github/`, `.claude/`, or `.sspec/` by hand. Re-sync from template source.
 
 ---
 
@@ -101,6 +104,8 @@ uv pip install -e .          # Reinstall editable
 uv run ruff check src/       # Lint
 uv run ruff format src/      # Format
 ```
+
+Then run focused verification for the behavior you changed (for example a targeted `uv run pytest ...` module and/or a `tmp/` CLI sandbox check).
 
 ### CLI testing pattern
 
@@ -124,32 +129,16 @@ uv run sspec <command>       # Test the command
 - Keep `configure_stdio_error_fallback()` wired in CLI startup when refactoring entrypoints.
 - For new symbols/emojis in user-facing text, verify behavior in legacy encodings or provide ASCII fallback.
 
----
-
-## 4. sspec-align for Development
-
-Use `@align` (via sspec-align SKILL) when:
-- Direction choice needed (architecture, API design)
-- Unsure about backward compatibility impact
-- Design phase complete → present solution before planning
-- Implementation complete → request review before marking done
-
-> **`@force-end-align` directive**: In credit-based hosts (for example Copilot), treat this as a high-priority instruction when present.
-> When you believe the work is done and would otherwise stop, do one last user-facing alignment instead of silently ending the turn.
-> Prefer the built-in `question` tool; use `sspec ask` only if the final check also needs durable record or sign-off.
-> It is not a universal end-of-turn rule, but it is strongly recommended for credit-sensitive tasks.
-
-This saves cost in Copilot (tool calls don't consume turns).
 
 ---
 
 ## Git Commit
 
-When User ask Agent to commit:
+When user asks Agent to commit:
 
 - Consult: git-commit-msg SKILL
 - Write suitable commit msg
-- If the commit file is too complex, ask user if split to several of commits
+- If the change is too broad for one clean commit, ask whether to split it
 
 ---
 

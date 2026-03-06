@@ -14,7 +14,7 @@ This project uses sspec to develop sspec. Two sets of rules coexist:
 
 **Hard rule**: If a change touches AGENTS, SKILLs, or any template content, edit only `src/sspec/templates/`. Do **not** hand-edit `.github/`, `.claude/`, or `.sspec/` copies; refresh them with `uv run sspec project update`.
 
-**Auto-managed rule**: The SSPEC block below `<!-- SSPEC:START -->` is generated from `src/sspec/templates/AGENTS.md`. If that block needs to change, update the template source and run `uv run sspec project update` instead of editing the block directly.
+**Auto-managed rule**: The SSPEC block below `SSPEC:START` is generated from `src/sspec/templates/AGENTS.md`. If that block needs to change, update the template source and run `uv run sspec project update` instead of editing the block directly.
 
 ---
 

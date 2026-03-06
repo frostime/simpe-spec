@@ -37,6 +37,8 @@ SSPEC activation signals (enter Change Workflow §2 if any is true):
 | Resume existing change | `read(handover→tasks→spec)` → continue |
 | Micro task (≤3 files, ≤30min, obvious) | Do directly, no change needed |
 
+Resume tip: in `handover.md`, start from the newest entry in `Session Log`.
+
 **Background rules**:
 - Important discovery → write to `handover.md` immediately
 - Project-wide discovery (convention, gotcha, cross-cutting) → also append to `project.md` Notes

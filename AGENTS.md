@@ -240,17 +240,18 @@ Flow rules:
 - When switching between major phases
 - Before context-losing events (compression, interruption)
 
-### Phase → SKILL → Files
+### Phase Contracts
 
-| Phase | SKILL | Reads | Writes | Checkpoint |
-|-------|-------|-------|--------|------------|
-| **Research** | `sspec-research` | code, project.md, spec-docs | reference/, handover.md | `question` for mid-research clarifications (no formal gate) |
-| **Design** | `sspec-design` | research findings, code | spec.md (A+B) | **@align** (MANDATORY) |
-| **Plan** | `sspec-plan` | spec.md B | tasks.md | @align confirm breakdown (LIGHTWEIGHT) |
-| **Implement** | `sspec-implement` | spec.md B, tasks.md | code, tasks.md progress | **@align "done for this round, please review"** (MANDATORY) |
-| **Review** | `sspec-review` | user feedback | tasks.md (feedback tasks) | feedback loop: not satisfied -> Implement; satisfied -> Handover |
-| **Handover** | `sspec-handover` | everything | handover.md, project.md | — |
+Read the SKILL for the current phase. Unless the SKILL says otherwise, each phase reads prior outputs plus relevant code, `project.md`, and `spec-docs`.
 
+| Phase | SKILL | Main output | Gate |
+|-------|-------|-------------|------|
+| **Research** | `sspec-research` | `reference/`, `handover.md` notes | optional `question` |
+| **Design** | `sspec-design` | `spec.md` | **@align** mandatory |
+| **Plan** | `sspec-plan` | `tasks.md` | lightweight confirm |
+| **Implement** | `sspec-implement` | code, `tasks.md` progress | **@align** mandatory |
+| **Review** | `sspec-review` | feedback tasks / acceptance loop | rejected -> Implement |
+| **Handover** | `sspec-handover` | `handover.md`, `project.md` | session end required |
 ### Scale Assessment (in Design phase)
 
 | Scale | Criteria | Path |
@@ -259,21 +260,21 @@ Flow rules:
 | Single | ≤1 week, ≤15 files, ≤20 tasks | `sspec change new <name>` |
 | Multi | >1 week OR >15 files OR >20 tasks | `sspec change new <name> --root` → sub-changes |
 
-### Status Transitions
+### Status Guardrails
 
-| From | Trigger | To |
-|------|---------|-----|
-| PLANNING | user approves design+plan | DOING |
-| DOING | all tasks `[x]` | REVIEW |
-| DOING | missing info | BLOCKED |
-| DOING | scope changed | PLANNING |
-| REVIEW | accepted | DONE |
-| REVIEW | needs changes | DOING |
+- `PLANNING -> DOING` only after design + plan approval
+- `DOING -> REVIEW` when implementation/tasks are done
+- `REVIEW -> DONE` only after user acceptance
+- `DOING -> BLOCKED` when required info is missing
+- `DOING -> PLANNING` when scope changes
+- `REVIEW -> DOING` when feedback requires another implementation round
 
-**FORBIDDEN**: PLANNING→DONE, DOING→DONE — never skip REVIEW.
+**Forbidden**:
+- `PLANNING -> DONE`
+- `DOING -> DONE`
+- Never skip `REVIEW`
 
 ---
-
 ## 3. Alignment (@align)
 
 `@align` means the Agent proactively aligns with the User, through:
@@ -281,20 +282,15 @@ Flow rules:
 - The `sspec ask` CLI tool
 
 **Choose by question type**:
+- Simple, bounded confirmation -> `question` tool
+- Open-ended, tradeoff-heavy, or worth recording -> `sspec ask`
+- Design / Implement phase gates -> `sspec ask` (mandatory)
+- Plan confirmation or mid-research clarification -> `question` tool
+- If no `question`-like tool is available -> use `sspec ask`
 
-| Question type | Tool |
-|---|---|
-| Simple, bounded — yes/no, quick confirm | `question` tool |
-| Complex/open-ended — context, tradeoffs, or worth recording | `sspec ask` |
-| Phase gates (Design, Implement review) | `sspec ask` (mandatory) |
-| Straightforward plan confirmation | `question` tool |
-| Mid-research in-flight clarification | `question` tool |
+For large context, write analysis to `.sspec/tmp/` and link it from the question body. Move confirmed valuable materials to `change/reference/` later.
 
-If no `question`-like tool is available → use `sspec ask`.
-
-**For large context**: Write design/research analysis to `.sspec/tmp/` and link it from the question body. Move confirmed valuable materials to `change/reference/` later.
-
-**Directive: `@force-end-align`**: If a task explicitly requests it, and you believe the work is done, do one last user-facing alignment instead of silently ending the turn. Prefer `question`; use `sspec ask` only if the final check also needs durable record or sign-off.
+**Directive: `@force-end-align`**: If a task explicitly requests it and you believe the work is done, do one last user-facing alignment instead of silently ending the turn. Prefer `question`; use `sspec ask` only if the final check needs durable record or sign-off.
 
 At phase gates: Design + Implement are mandatory, Plan is lightweight, Review loops until satisfied.
 
@@ -336,18 +332,13 @@ Scenarios:
 
 ### CLI Quick Reference
 
-Run `sspec <command> --help` for full options.
+Run `sspec <command> --help` for full options. Keep this list minimal:
 
 | Command | Use |
 |---------|-----|
-| `sspec change new <name>` | Create a change |
-| `sspec change new <name> --root` | Create a root change |
-| `sspec change new --from <path>` | Create change from request file |
-| `sspec change status <name>` | Quick local dashboard; open linked source files for detail |
-| `sspec change list` / `find <name>` | Locate active changes |
-| `sspec change archive <path>` | Archive completed change |
+| `sspec change new <name> [--from <REQUEST>]` | Create a change |
+| `sspec change status <name>` | Inspect current change state |
 | `sspec ask create <topic>` + `sspec ask prompt <path>` | Create and ask |
-| `sspec request list` / `sspec ask list` | List requests/asks |
 | `sspec doc new "<name>"` | Create spec-doc |
 | `sspec tool mdtoc <file>` | Pre-scan Markdown |
 | `sspec tool now [--date|--utc|--json]` | Show current time when timestamps matter |
@@ -359,9 +350,6 @@ If a SKILL says "read [file](...)" -> **MUST** read it.
 
 ### Template Markers
 
-| Marker | Meaning | Action |
-|--------|---------|--------|
-| `<!-- @RULE: ... -->` | Standards reminder | Read and follow. |
-| `<!-- @REPLACE -->` | Anchor for first edit | Replace with content |
-| `[ ]` / `[x]` | Task todo / done | Update as work progresses |
-<!-- SSPEC:END -->
+- `<!-- @RULE: ... -->`: standards reminder — read and follow
+- `<!-- @REPLACE -->`: anchor for first edit — replace with content
+- `[ ]` / `[x]`: task todo / done — keep progress updated`r`n<!-- SSPEC:END -->

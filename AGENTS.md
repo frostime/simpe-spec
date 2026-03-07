@@ -153,7 +153,7 @@ When user asks Agent to commit:
 <!-- SSPEC:START -->
 # .sspec Agent Protocol
 
-SSPEC_SCHEMA::9.3
+SSPEC_SCHEMA::3.0
 
 ## 0. Overview
 

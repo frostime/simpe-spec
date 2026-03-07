@@ -8,6 +8,12 @@
 <!-- Write once on first session. What this change does and why (1-3 sentences).
 Update only if scope fundamentally changes. Details belong in spec.md. -->
 
+## Git Baseline (Immutable)
+<!-- Captured during `sspec change new` before any change files are written.
+This section records the change starting point in git and must not be edited or refreshed later. -->
+
+{{GIT}}
+
 ## Working Memory (Stable)
 <!-- Curated, long-lived context. Survives context compression and session boundaries.
 If something becomes obsolete, mark it as obsolete with a timestamp instead of deleting silently. -->

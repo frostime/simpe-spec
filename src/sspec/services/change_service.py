@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import shutil
+import subprocess
 from datetime import datetime
 from pathlib import Path
 
@@ -25,6 +26,72 @@ from sspec.core import (
 )
 from sspec.libs.md_yaml import parse_frontmatter, update_frontmatter
 from sspec.libs.path_refs import update_references_in_dirs
+
+
+def _run_git(project_root: Path, *args: str) -> subprocess.CompletedProcess[str] | None:
+    """Run a git command in the project root, returning None when git is unavailable."""
+
+    try:
+        return subprocess.run(
+            ['git', *args],
+            cwd=project_root,
+            capture_output=True,
+            text=True,
+            encoding='utf-8',
+            errors='replace',
+            check=False,
+        )
+    except OSError:
+        return None
+
+
+def _git_stdout(project_root: Path, *args: str) -> str | None:
+    """Return stripped git stdout on success, otherwise None."""
+
+    result = _run_git(project_root, *args)
+    if result is None or result.returncode != 0:
+        return None
+    return result.stdout.strip() or None
+
+
+def _render_git_snapshot(project_root: Path) -> str:
+    """Render the immutable git baseline section for handover templates."""
+
+    repo_root = _git_stdout(project_root, 'rev-parse', '--show-toplevel')
+    if repo_root is None:
+        return '\n'.join(
+            [
+                '- Captured: before change file creation',
+                '- Repository: unavailable',
+                '- Reason: current project root is not inside a git worktree, or `git` '
+                'is unavailable.',
+                '',
+                '```text',
+                'Not a git repository.',
+                '```',
+            ]
+        )
+
+    branch = _git_stdout(project_root, 'branch', '--show-current')
+    head_hash = _git_stdout(project_root, 'rev-parse', 'HEAD')
+    status_output = _git_stdout(project_root, 'status', '--short', '--branch')
+    status_lines = status_output.splitlines() if status_output else ['status unavailable']
+    worktree_state = 'dirty' if len(status_lines) > 1 else 'clean'
+
+    branch_label = branch or 'detached HEAD'
+    head_label = head_hash or '(no commits yet)'
+
+    lines = [
+        '- Captured: before change file creation',
+        f'- Repository: `{Path(repo_root).as_posix()}`',
+        f'- Branch: `{branch_label}`',
+        f'- HEAD: `{head_label}`',
+        f'- Worktree: `{worktree_state}`',
+        '- Status Snapshot: raw `git status --short --branch` output',
+    ]
+
+    lines.extend(['', '```text', *status_lines, '```'])
+    return '\n'.join(lines)
 
 
 def find_change_matches(changes_dir: Path, name: str, include_archived: bool = False) -> list[Path]:
@@ -320,12 +387,14 @@ def create_change(sspec_root: Path, change_name: str, *, is_root: bool = False) 
     if change_path.exists():
         raise ChangeExistsError(f"Change '{change_file_name}' already exists")
 
+    project_root = sspec_root.parent
     template_subdir = 'change-root' if is_root else 'change'
     template_dir = get_template_dir() / template_subdir
     template_files = CHANGE_ROOT_TEMPLATE_FILES if is_root else CHANGE_TEMPLATE_FILES
     replacements = {
         'CHANGE_NAME': change_name,
         'TIME': datetime.now().isoformat(timespec='seconds'),
+        'GIT': _render_git_snapshot(project_root),
     }
 
     change_path.mkdir(parents=True, exist_ok=True)

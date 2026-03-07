@@ -3,7 +3,7 @@ name: sspec-handover
 description: "Save session state. Update handover.md, project.md, and spec-docs index. MANDATORY at session end, recommended mid-session."
 metadata:
   author: frostime
-  version: 3.2.0
+  version: 3.2.1
 ---
 
 # SSPEC Handover
@@ -53,6 +53,7 @@ handover.md is the resume entry point.
 - **Decisions**: Timestamp every entry; include the "why"
 - **Notes**: Timestamp every entry; include risks/gotchas/verification shortcuts
 - If something becomes obsolete, mark it as obsolete with a timestamp (don't delete silently)
+- If handover has a `Git Baseline (Immutable)` section, treat it as **read-only** origin context from change creation; do not refresh, rewrite, or "fix" it during later handovers
 
 **Root change only**:
 - Update `Sub-Change Status (Volatile Snapshot)` when coordination state changes

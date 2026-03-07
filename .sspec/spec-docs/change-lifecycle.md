@@ -56,12 +56,19 @@ graph TD
 
 1. 规范化名称：小写、空格转 `-`、移除非 `[a-z0-9-]` 字符
 2. 生成目录名：`<yy-MM-ddTHH-mm>_<name>`
-3. 复制模板：
+3. 在任何 change 文件写入前，先尝试采集 git baseline 快照并作为模板变量 `{{GIT}}`
+4. 复制模板：
    - 单 change / sub-change 使用 `src/sspec/templates/change/`
    - root change 使用 `src/sspec/templates/change-root/`
-4. 总是创建 `reference/` 目录
+5. 总是创建 `reference/` 目录
 
 无效名称抛 `InvalidChangeNameError`；同分钟同名冲突抛 `ChangeExistsError`。
+
+git baseline 规则：
+- 快照必须在 `change_path.mkdir(...)` 之前采集，否则新建的 `.sspec/changes/<dir>/` 会污染 `git status`
+- 快照默认写入 `handover.md` 的 `Git Baseline (Immutable)` section，而不是 `spec.md`
+- 内容至少覆盖 repo 可用性、repo root、branch / detached HEAD、HEAD commit hash，以及原始 `git status --short --branch` 输出
+- 非 git 仓库或 `git` 不可用时必须降级写入说明文本，不能阻塞 change 创建
 
 ## Spec Frontmatter Contract
 

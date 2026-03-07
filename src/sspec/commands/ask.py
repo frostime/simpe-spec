@@ -9,11 +9,15 @@ import questionary
 from rich.console import Console
 
 from sspec.core import ARCHIVE_DIR, SspecNotFoundError, get_sspec_root
-from sspec.services.ask_service import (archive_ask, convert_ask_to_md,
-                                        create_ask_template,
-                                        execute_ask_prompt,
-                                        extract_ask_name_from_filename,
-                                        find_ask_matches, save_ask_answer)
+from sspec.services.ask_service import (
+    archive_ask,
+    convert_ask_to_md,
+    create_ask_template,
+    execute_ask_prompt,
+    extract_ask_name_from_filename,
+    find_ask_matches,
+    save_ask_answer,
+)
 from sspec.services.editor_service import open_in_editor
 
 console = Console()

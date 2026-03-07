@@ -7,6 +7,12 @@
 ## Background
 <!-- Write once. What this root change coordinates (1-3 sentences). -->
 
+## Git Baseline (Immutable)
+<!-- Captured during `sspec change new` before any change files are written.
+This section records the root change starting point in git and must not be edited or refreshed later. -->
+
+{{GIT}}
+
 ## Sub-Change Status (Volatile Snapshot)
 
 <!-- Snapshot of current coordination state. Update when it changes.-->

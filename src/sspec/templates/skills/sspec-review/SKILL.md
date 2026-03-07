@@ -3,7 +3,7 @@ name: sspec-review
 description: "User acceptance and feedback loop. Handle argue-improve cycles until user is satisfied."
 metadata:
   author: frostime
-  version: 2.0.0
+  version: 2.1.0
 ---
 
 # SSPEC Review
@@ -18,6 +18,10 @@ After `sspec-implement` completes and user begins reviewing:
 - User tests the implementation
 - User examines code changes
 - User provides feedback (approval, issues, or rejection)
+
+If handover includes a `Git Baseline (Immutable)` section, use it as the review anchor:
+- compare current work against that recorded branch / HEAD / status context
+- prefer `git diff`, `git log`, and related history checks that explain what changed since the recorded start point
 
 ## Feedback Loop
 
@@ -50,6 +54,14 @@ When fixes require non-trivial work, add them to tasks.md:
 ```
 
 Then implement these tasks following `sspec-implement` workflow.
+
+### Git-Aware Review
+
+When a change includes a recorded git baseline, use it to avoid shallow review:
+
+1. Read the baseline in `handover.md` to understand the starting branch / HEAD / dirty state.
+2. Compare current changes against that origin point rather than only glancing at the latest file state.
+3. If the baseline shows pre-existing dirty files, distinguish those from work introduced by the current change before giving feedback.
 
 ## Rejection Protocol
 

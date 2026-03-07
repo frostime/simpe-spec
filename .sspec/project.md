@@ -66,3 +66,4 @@ Prune entries that become outdated or graduate to Conventions/spec-docs. -->
 - 2026-02-24: 完全重构 SSPEC 的 SKILL 体系，将旧版本的 sspec-change 拆分，并构建了新的 research/design/plan/implement/review/handover/align 模块化流程，见已经归档的 change `.sspec\changes\archive\26-02-24T21-47_refactor-to-perf-workflow\spec.md`。
 - 2026-03-07: Windows skill sync currently prefers junction on `win32` and falls back to copy; 旧的 elevated symlink 流程说明已不再适用。
 - 2026-03-07: 当前 builtin tool 集合为 `patch`、`pack-zip`、`view-tree`、`mdtoc`；修改它们时要同步更新 spec-doc。
+- 2026-03-07: 新创建的 change handover 现在会记录创建前的 immutable Git Baseline，包含 repo/branch/HEAD 和原始 `git status --short --branch` 快照；Agent 无需改 SKILL/AGENTS 即可在 resume 时看到它。

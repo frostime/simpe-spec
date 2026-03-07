@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -17,6 +19,8 @@ from sspec.services.change_service import (
     parse_change,
     validate_change,
 )
+
+GIT_AVAILABLE = shutil.which('git') is not None
 
 # ---------------------------------------------------------------------------
 # Helper
@@ -38,6 +42,37 @@ def _write_tasks(change_path: Path, done: int, total: int) -> None:
         marker = 'x' if i < done else ' '
         lines.append(f'- [{marker}] Task {i + 1}')
     (change_path / 'tasks.md').write_text('\n'.join(lines), encoding='utf-8')
+
+
+def _git(project_root: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    """Run a git command in tests with stdout captured."""
+
+    return subprocess.run(
+        ['git', *args],
+        cwd=project_root,
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding='utf-8',
+    )
+
+
+def _init_git_repo(project_root: Path) -> None:
+    """Initialize a clean git repo for change creation tests."""
+
+    _git(project_root, 'init')
+    (project_root / 'tracked.txt').write_text('initial\n', encoding='utf-8')
+    _git(project_root, 'add', '.')
+    _git(
+        project_root,
+        '-c',
+        'user.name=Test User',
+        '-c',
+        'user.email=test@example.com',
+        'commit',
+        '-m',
+        'init',
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -92,6 +127,61 @@ class TestCreateChange:
         create_change(sspec_root, 'duplicate')
         with pytest.raises(ChangeExistsError):
             create_change(sspec_root, 'duplicate')
+
+    @pytest.mark.skipif(not GIT_AVAILABLE, reason='git is required for snapshot tests')
+    def test_records_clean_git_baseline_in_handover(self, sspec_root: Path):
+        project_root = sspec_root.parent
+        _init_git_repo(project_root)
+
+        branch = _git(project_root, 'branch', '--show-current').stdout.strip()
+        head_hash = _git(project_root, 'rev-parse', 'HEAD').stdout.strip()
+
+        change_path = create_change(sspec_root, 'git-clean')
+        handover = (change_path / 'handover.md').read_text(encoding='utf-8')
+
+        assert '## Git Baseline (Immutable)' in handover
+        assert f'- Branch: `{branch}`' in handover
+        assert f'- HEAD: `{head_hash}`' in handover
+        assert '- Worktree: `clean`' in handover
+        assert '```text' in handover
+
+    @pytest.mark.skipif(not GIT_AVAILABLE, reason='git is required for snapshot tests')
+    def test_records_dirty_git_baseline_before_change_files_exist(self, sspec_root: Path):
+        project_root = sspec_root.parent
+        _init_git_repo(project_root)
+
+        (project_root / 'tracked.txt').write_text('modified\n', encoding='utf-8')
+        (project_root / 'staged.txt').write_text('staged\n', encoding='utf-8')
+        (project_root / 'untracked.txt').write_text('untracked\n', encoding='utf-8')
+        _git(project_root, 'add', 'staged.txt')
+
+        change_path = create_change(sspec_root, 'git-dirty')
+        handover = (change_path / 'handover.md').read_text(encoding='utf-8')
+
+        assert '- Worktree: `dirty`' in handover
+        assert 'tracked.txt' in handover
+        assert 'staged.txt' in handover
+        assert 'untracked.txt' in handover
+        assert change_path.name not in handover
+
+    def test_non_repo_gets_fallback_git_baseline(self, sspec_root: Path):
+        change_path = create_change(sspec_root, 'git-fallback')
+        handover = (change_path / 'handover.md').read_text(encoding='utf-8')
+
+        assert '## Git Baseline (Immutable)' in handover
+        assert '- Repository: unavailable' in handover
+        assert 'Not a git repository.' in handover
+
+    @pytest.mark.skipif(not GIT_AVAILABLE, reason='git is required for snapshot tests')
+    def test_root_change_handover_also_includes_git_baseline(self, sspec_root: Path):
+        project_root = sspec_root.parent
+        _init_git_repo(project_root)
+
+        change_path = create_change(sspec_root, 'git-root', is_root=True)
+        handover = (change_path / 'handover.md').read_text(encoding='utf-8')
+
+        assert '## Git Baseline (Immutable)' in handover
+        assert '- Branch: `' in handover
 
 
 # ---------------------------------------------------------------------------

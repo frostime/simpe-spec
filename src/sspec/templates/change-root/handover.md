@@ -1,42 +1,64 @@
 # Handover: {{CHANGE_NAME}}
 
-**Updated**: <!-- Update during work AND at session end -->
+**Updated**: <!-- ISO timestamp (minute precision), e.g. 2026-03-06T20:39 -->
 
 ---
 
 ## Background
 <!-- Write once. What this root change coordinates (1-3 sentences). -->
 
-## Sub-Change Status
-<!-- Update each session.
-| Phase | Sub-Change | Status |
-|-------|------------|--------|
-| Phase 1 | <name> | DOING / DONE |
--->
+## Git Baseline (Immutable)
+<!-- Captured during `sspec change new` before any change files are written.
+This section records the root change starting point in git and must not be edited or refreshed later. -->
 
-## This Session
+{{GIT}}
 
-### Accomplished
-<!-- Work done across sub-changes this session -->
+## Sub-Change Status (Volatile Snapshot)
 
-### Next Steps
-<!-- Which sub-change to work on next, coordination needed.
-1. Continue sub-change <n>: <specific next action>
-2. Create sub-change for Phase N -->
+<!-- Snapshot of current coordination state. Update when it changes.-->
+| Phase | Sub-Change | Status | Notes |
+|-------|------------|--------|------|
+| Phase 1 | `changes/<sub-name>/` | DOING | ... |
 
-## Working Memory
 
-### Key Files & Sub-Changes
-<!-- Critical files and sub-change locations.
-- `changes/<sub-name>/` — what this sub-change covers
-- `path/file` — key implementation file -->
+## Working Memory (Stable)
+<!-- Curated, long-lived coordination context.
+If something becomes obsolete, mark it as obsolete with a timestamp instead of deleting silently. -->
 
-### Cross-Phase Decisions
-<!-- Decisions affecting multiple sub-changes.
-- **Decision**: <what>
+### Key Sub-Changes
+<!-- Critical sub-change locations.
+- `changes/<sub-name>/` - what this sub-change covers -->
+
+### Key Files
+<!-- Cross-phase files/docs that matter for coordination.
+- `path/file` - what it contains, why it matters -->
+
+### Cross-Phase Decisions (Timestamped)
+<!-- Timestamp every entry (minute precision).
+- [2026-03-06T20:39] **Decision** - <what>
   **Why**: <rationale>
   **Affects**: <which phases> -->
 
-### Notes
-<!-- Cross-phase issues, integration gotchas, risk warnings.
-Project-wide items → ALSO append to project.md Notes. -->
+### Notes (Timestamped)
+<!-- Cross-phase issues, integration gotchas, risk warnings. Timestamp every entry.
+Project-wide items -> ALSO append to project.md Notes. -->
+
+## Session Log (Append-Only)
+<!-- Newest entry first. Each entry is an atomic batch (one cohesive work record).
+
+Header format:
+### 2026-03-06T20:39 [coordination] <short title>
+
+Tags are freeform but must be readable. Examples: coordination, user-feedback, argue, risk.
+Any user interaction (feedback, @align, @argue) MUST start a new log entry. -->
+
+### <ISO timestamp> [tag] <short title>
+
+**Accomplished**
+- ...
+
+**Next**
+- ...
+
+**Notes** (optional)
+- ...

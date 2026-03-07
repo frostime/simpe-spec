@@ -3,7 +3,7 @@ name: sspec-design
 description: "Assess scale, create change, fill spec.md, align with user. Use after research when ready to define the solution."
 metadata:
   author: frostime
-  version: 3.2.0
+  version: 3.3.1
 ---
 
 # SSPEC Design
@@ -22,80 +22,39 @@ This is a **user-in-the-loop** phase — like review, the user must confirm your
 3. Fill spec.md (choose one)
    Type A: Single/Sub change spec.md
    Type B: Root change spec.md
-4. @ask user for alignment (MANDATORY)
+4. @align user for alignment (MANDATORY)
 ```
 
 ## Step 1: Assess Scale
 
-| Scale | Criteria | Action |
-|-------|----------|--------|
-| **Micro** | ≤3 files, ≤30min, no design decisions, trivially reversible | Do directly. No change needed. Track in request if useful. |
-| **Single** | ≤1 week, ≤15 files, one subsystem, ≤20 tasks | Standard change → Step 2 Single |
-| **Multi** | >1 week OR >15 files across subsystems OR >20 tasks OR high risk | Root change → Step 2 Root |
-
-**Uncertain?** → `@ask` user about scope/splitting.
+Use the Scale Assessment rules in `AGENTS.md` (search: `Scale Assessment`) to split micro / single / multi.
+Fallback heuristic (only if `AGENTS.md` isn't available): Micro (≤3 files, ≤30min) | Multi/Root (>15 files OR >20 tasks OR >1 week) | else Single.
+If uncertain, default to **Single** and `@align` whether to split.
 
 ## Step 2: Create Change
 
-### Single Path
+Create the change directory first, then fill the generated `spec.md`.
 
 ```bash
-sspec change new <name>                        # standalone
-sspec change new --from <request>              # from request (auto-link)
-sspec change new <name> --from <request>       # explicit name + request link
+sspec change new <name>            # standard single/sub change
+sspec change new --from <request>  # create + link request file
+sspec change new <name> --root     # root coordinator for multi-change
 ```
 
-### Root Path (Multi-Change)
+Full CLI quick reference lives in `AGENTS.md` under "CLI Quick Reference".
 
-```bash
-sspec change new <name> --root                 # creates root coordinator
-sspec change new <name> --root --from <req>    # root from request
-```
+If you can't jump to sections, open `AGENTS.md` and search for that heading.
 
-Root change creates a coordinator with different templates:
-- Root `spec.md`: Phase overview, not file-level detail
-- Root `tasks.md`: Milestones, not individual tasks
+Sanity check: confirm the generated `spec.md` frontmatter (especially `change-type` and `reference`) follows the template `@RULE` (don't invent new keys).
 
-## Step 2.5: Normalize spec.md Frontmatter (MANDATORY)
-
-Use this schema exactly:
-
-```yaml
----
-name: <change-name>
-status: PLANNING
-type: ""
-change-type: single|sub|root
-created: <iso-timestamp>
-reference: null|[]
----
-```
-
-### Sub-Change Must Link Root (Required)
-
-```yaml
-change-type: sub
-reference:
-  - source: "changes/<root-change-dir>"
-    type: "root-change"
-    note: "Phase <n>: <phase-name>"
-```
-
-### Root Should Link Request + Sub-Changes (Bidirectional Tracking)
-
-```yaml
-change-type: root
-reference:
-  - source: "requests/<request-file>.md"
-    type: "request"
-  - source: "changes/<sub-change-dir>"
-    type: "sub-change"
-    note: "Phase <n>: <phase-name>"
-```
-
-Use workspace-relative paths without `./` prefix.
+Quick checks:
+- `status` starts as `PLANNING`
+- `change-type` is one of: `single` | `sub` | `root`
+- `reference` entries use workspace-relative `source` paths (no leading `./`) and a `type` listed in the `spec.md` template `@RULE` (for example: `request`, `root-change`, `sub-change`, `prev-change`, `doc`)
 
 ## Step 3A: Fill Single/Sub Change spec.md (Type A)
+
+Follow the guidance below and the `@RULE` blocks in the generated `spec.md` template.
 
 ### What Users Care About Most
 
@@ -164,15 +123,14 @@ using `│ ├── └──` notation. A diagram + short explanatory text is 
 
 ```
 # ✅ Good — tree + companion text
-sspec change new --from <req>
+HTTP Request
   │
-  ├── parse_request(req_path)    → reads frontmatter, validates status
-  ├── create_change_dir(name)    → mkdir .sspec/changes/<ts>_<name>/
-  ├── copy_templates()           → spec.md, tasks.md, handover.md from templates/
-  └── link_request(req, change)  → writes reference in BOTH directions
+  ├── validate_input()  → reject malformed data early
+  ├── load_user()       → fetch from DB/cache
+  ├── apply_change()    → pure business logic
+  └── persist_result()  → write side effects
 
-`link_request` is bidirectional: request frontmatter gets `attach-change` updated;
-spec.md `reference` array gets a `type: request` entry appended.
+**Note**: Keep `apply_change()` pure so it can be unit-tested without I/O.
 ```
 
 ```
@@ -190,9 +148,9 @@ This provides reviewers and implementers a fast orientation map.
 ### Scope Summary
 | File | Change |
 |------|--------|
-| `src/sspec/services/change_service.py` | Add `--from-request` linking logic |
-| `src/sspec/templates/change/spec.md`   | Update Key Design comment |
-| `src/sspec/commands/change.py`         | Wire `--from` option to service |
+| `src/api/users.py` | Add new handler `GET /users/{id}` |
+| `src/services/cache.py` | Add `get_cached_user()` + TTL jitter |
+| `tests/test_users_api.py` | Add tests for cache hit/miss |
 ```
 
 **Rule 4 — Change Item Labeling**
@@ -204,8 +162,8 @@ cross-references for tasks.md.
 ```markdown
 # ✅ Good — labeled, addressable in tasks.md
 **Fix A: Request linking** — `link_request()` must write bidirectional references.
-**Feat B: Dry-run mode** — Add `--dry-run` to `change new`, print plan without writing.
-**Refactor C: Name normalization** — Extract slug sanitization to `core.normalize_name()`.
+**Feat B: Cache TTL jitter** — Add ±10% jitter to reduce stampede risk.
+**Refactor C: Extract cache interface** — isolate I/O behind `CacheClient`.
 
 # In tasks.md:
 - [ ] Implement Fix A per spec §B
@@ -222,25 +180,10 @@ Add bidirectional linking to change creation. Add dry-run flag. Refactor name no
 
 **B vs tasks.md boundary**: B defines *how it should work* (interfaces, data model, logic). tasks.md defines *what to do* (file-level steps, verification). Tasks reference B — e.g. "implement interface per spec.md B" — never copy.
 
-### Section B Skeleton (Key Design Sub-sections)
+### Key Design Sub-sections (Recommended)
 
-```markdown
-### Key Design
-
-#### Interface Design
-...typed code block per Rule 1...
-
-#### Data Flow
-...ASCII tree per Rule 2...
-
-#### Key Logic
-...decision rules / algorithm...
-
-#### Scope Summary
-| File | Change |
-|------|--------|
-| ... | ... |
-```
+Prefer explicit sub-sections: `Interface Design` / `Data Flow` / `Key Logic` / `Scope Summary`.
+If in doubt, mimic the structure from [examples-single.md](./examples-single.md).
 
 📚 Full examples with all four rules applied: [examples-single.md](./examples-single.md)
 
@@ -248,6 +191,8 @@ Add bidirectional linking to change creation. Add dry-run flag. Refactor name no
 
 Root spec.md describes the **overall problem scope and phase decomposition**.
 It does NOT contain file-level interface or data-model details — those belong in sub-change specs.
+
+Follow the guidance below and the `@RULE` blocks in the generated root `spec.md` template.
 
 **Section A**: Overall problem — full scope across all phases, not a single module.
 
@@ -257,36 +202,13 @@ It does NOT contain file-level interface or data-model details — those belong 
 
 ### Phase Overview Format
 
-Use a dependency-annotated list. For complex dependency graphs, follow with an ASCII tree:
-
-```markdown
-### Phase Overview
-
-- **Phase 1: Auth Backend** — JWT + Redis cache. Goal: <1s auth latency. Scope: `src/auth/`, `src/services/`.
-- **Phase 2: Auth Frontend** — Login/signup UI. Depends on Phase 1.
-- **Phase 3: RBAC** — Role-permission matrix, tenant-scoped. Depends on Phase 1 (independent of Phase 2).
-
-Dependency tree:
-Phase 1: Auth Backend
-  ├── Phase 2: Auth Frontend
-  └── Phase 3: RBAC
-```
-
-For ≥4 phases, use a dependency table:
-
-```markdown
-| Phase | Depends On | Scope |
-|-------|-----------|-------|
-| Phase 1: Auth Backend | — | `src/auth/`, `src/services/` |
-| Phase 2: Auth Frontend | Phase 1 | `src/frontend/auth/` |
-| Phase 3: RBAC | Phase 1 | `src/models/`, `src/middleware/` |
-```
+Follow the root `spec.md` template `@RULE` block and/or [examples-root.md](./examples-root.md).
 
 ### Creating Sub-Changes
 
 After defining phases → create sub-changes:
 ```bash
-sspec change new <phase-name>    # for each phase, link to root via reference
+sspec change new <phase-name>
 ```
 
 For each sub-change, ensure two-way references:
@@ -319,7 +241,7 @@ Root spec does NOT include file-level Scope Summary — that belongs in each sub
 
 📚 Root change examples: [examples-root.md](./examples-root.md)
 
-## Step 4: @ask for Alignment (MANDATORY)
+## Step 4: @align for Alignment (MANDATORY)
 
 **Never skip this step.** This is a user-in-the-loop confirmation — like review phase, the user must sign off.
 

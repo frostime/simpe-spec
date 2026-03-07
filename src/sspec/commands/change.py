@@ -7,6 +7,7 @@ import click
 import questionary
 from rich.console import Console
 from rich.panel import Panel
+from rich.table import Table
 
 from sspec.core import (
     ARCHIVE_DIR,
@@ -24,6 +25,7 @@ from sspec.services.change_service import (
     find_change_matches,
     list_changes,
     parse_change,
+    summarize_change,
     validate_change,
 )
 
@@ -330,78 +332,84 @@ def _print_changes_list(changes: list[ChangeInfo], dim: bool = False) -> None:
 # ============================================================================
 
 
-# @change.command()
-# @click.argument('name', required=False)
-# def status(name: str | None = None) -> None:
-#     """Show detailed status of a change."""
-#     try:
-#         sspec_root = get_sspec_root()
-#     except SspecNotFoundError:
-#         raise click.ClickException(
-#             "Not a sspec project. Run 'sspec project init' first."
-#         ) from None
+@change.command()
+@click.argument('name')
+def status(name: str) -> None:
+    """Show a local dashboard summary for one change."""
+    try:
+        sspec_root = get_sspec_root()
+    except SspecNotFoundError:
+        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
-#     if not name:
-#         _list_changes(sspec_root, include_all=False)
-#         return
+    changes_dir = sspec_root / 'changes'
+    matches = find_change_matches(changes_dir, name)
 
-#     # Fuzzy lookup
-#     changes_dir = sspec_root / 'changes'
-#     matches = find_change_matches(changes_dir, name)
+    if not matches:
+        raise click.ClickException(f"Change '{name}' not found")
 
-#     if not matches:
-#         raise click.ClickException(f"Change '{name}' not found")
-
-#     if len(matches) > 1:
-#         change_path = _interactive_select_change(matches, name)
-#     else:
-#         change_path = matches[0]
-
-#     _show_change_detail(change_path)
+    change_path = _interactive_select_change(matches, name) if len(matches) > 1 else matches[0]
+    _show_change_detail(change_path)
 
 
 def _show_change_detail(change_path: Path) -> None:
     """Show detailed status of a single change."""
-    from sspec.libs.md_yaml import parse_frontmatter
-
-    change = parse_change(change_path)
-
-    spec_file = change_path / 'spec.md'
-    summary = ''
-    status = 'PLANNING'
-
-    if spec_file.exists():
-        content = spec_file.read_text(encoding='utf-8')
-        meta, body = parse_frontmatter(content)
-        status = meta.get('status', 'PLANNING')
-        in_why = False
-        for line in body.split('\n'):
-            if line.startswith('## A.'):
-                in_why = True
-                continue
-            if in_why and line.strip() and not line.startswith('<!--'):
-                summary = line.strip()[:100]
-                break
-            if line.startswith('## ') and in_why:
-                break
+    summary = summarize_change(change_path, cwd=Path.cwd())
+    color, _ = STATUS_STYLES.get(summary.status, ('white', '?'))
 
     console.print()
     console.print(
         Panel(
-            f'[bold]{change.name}[/bold]\n'
-            f'Status: {change.status}\n'
-            f'Progress: {change.progress["done"]}/{change.progress["total"]}\n'
-            f'{summary}',
-            title='Change Details',
+            f'[bold]{summary.name}[/bold]\n'
+            f'Status: [{color}]{summary.status}[/]\n'
+            f'Progress: {summary.tasks_done}/{summary.tasks_total}\n'
+            f'Updated: {summary.updated or "(not set)"}',
+            title='Change Status',
         )
     )
 
-    if status == 'PLANNING':
-        console.print('\n[dim]Next: Fill spec.md sections A/B/C, then transition to DOING[/dim]')
-    elif status == 'DOING':
-        console.print("\n[dim]Next: Continue tasks. Run 'sspec change status' for progress[/dim]")
-    elif status == 'REVIEW':
-        console.print('\n[dim]Next: Awaiting user review. After approval -> DONE -> archive[/dim]')
+    console.print(f'[dim]Change:[/dim] {summary.path}')
+    if summary.change_type:
+        console.print(f'[dim]Change Type:[/dim] {summary.change_type}')
+
+    if summary.linked_requests:
+        console.print('[dim]Linked Requests:[/dim]')
+        for request_path in summary.linked_requests:
+            console.print(f'  - {request_path}')
+
+    console.print('[dim]Source Files:[/dim]')
+    for label, path in summary.source_links.items():
+        console.print(f'  - {label}: {path}')
+
+    console.print()
+    if summary.latest_log:
+        tag_str = f' [{", ".join(summary.latest_log.tags)}]' if summary.latest_log.tags else ''
+        title = f' {summary.latest_log.title}' if summary.latest_log.title else ''
+        console.print('[bold]Latest Session Log[/bold]')
+        console.print(f'- {summary.latest_log.timestamp or "(no timestamp)"}{tag_str}{title}')
+        if summary.latest_log.next_items:
+            console.print('[dim]Next:[/dim]')
+            for item in summary.latest_log.next_items:
+                console.print(f'  - {item}')
+        else:
+            console.print('[dim]Next:[/dim] (not recorded)')
+    else:
+        console.print('[dim]Latest Session Log:[/dim] not available')
+
+    if summary.root_snapshot_rows:
+        table = Table(title='Sub-Change Snapshot')
+        table.add_column('Phase')
+        table.add_column('Sub-Change')
+        table.add_column('Status')
+        table.add_column('Notes')
+        for row in summary.root_snapshot_rows:
+            table.add_row(
+                row.get('Phase', ''),
+                row.get('Sub-Change', ''),
+                row.get('Status', ''),
+                row.get('Notes', ''),
+            )
+        console.print()
+        console.print(table)
 
 
 @change.command()

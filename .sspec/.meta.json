@@ -1,24 +1,24 @@
 {
   "meta_schema": "2.1",
-  "sspec_schema": "9.2",
-  "sspec_version": "1.2.4.dev0+g15450cdf2.d20260304",
+  "sspec_schema": "9.3",
+  "sspec_version": "1.2.5.dev17+g24f1def34.d20260307",
   "created_at": "2026-02-07T18:42:39.297150",
-  "updated_at": "2026-03-04T20:16:12.050146",
+  "updated_at": "2026-03-07T17:03:49.502026",
   "file_hashes": {
     "skills/use-powershell": "c14a032ce16697b8",
     "skills/write-patch": "53a7cb880be7ee69",
     "skills/write-spec-doc": "e82f5bb62b549e30",
-    "skills/sspec-ask": "99529f9c053d5cdc",
     "skills/sspec-mdtoc": "b9fdfc4a23d816e0",
-    "skills/sspec-design": "fb46cce9f946f26d",
-    "skills/sspec-handover": "67aaa4ce2b6e2c53",
-    "skills/sspec-implement": "7f868ed6c15dd8e7",
-    "skills/sspec-plan": "116f80ec4fa59dd0",
-    "skills/sspec-research": "d74fc3081a08f89d",
-    "skills/sspec-review": "c70ea452cbc7f078"
+    "skills/sspec-design": "25e36b463386bc55",
+    "skills/sspec-handover": "4e5e6269de639d2e",
+    "skills/sspec-implement": "21bb727f80082ac0",
+    "skills/sspec-plan": "0626bc86971e96a5",
+    "skills/sspec-research": "01be17667cd29079",
+    "skills/sspec-review": "dc424817f0ea17c4",
+    "skills/sspec-align": "de64039b5a2872eb"
   },
   "managed_skills": [
-    "sspec-ask",
+    "sspec-align",
     "sspec-design",
     "sspec-handover",
     "sspec-implement",
@@ -31,6 +31,7 @@
     "write-spec-doc"
   ],
   "skill_locations": [
+    ".agents/skills",
     ".claude/skills",
     ".github/skills",
     ".sspec/skills"

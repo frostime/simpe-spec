@@ -18,7 +18,7 @@ Execute the approved plan. Work through tasks.md systematically.
 1. Read spec.md B (design context) + tasks.md (execution plan)
 2. For each pending task: implement → verify → mark done
 3. Update progress after EACH task
-4. @ask user when all tasks complete
+4. @align user when all tasks complete
 ```
 
 ## Execution Rules
@@ -39,13 +39,13 @@ For each pending task:
 
 | Situation | Action |
 |-----------|--------|
-| Task is ambiguous | → `@ask` for clarification |
+| Task is ambiguous | → `@align` for clarification |
 | Implementation reveals design issue | → Suggest returning to `sspec-design` |
-| Blocker encountered | → Record in `handover.md` Notes, `@ask` user |
+| Blocker encountered | → Record in `handover.md` Notes, `@align` user |
 | Multiple valid approaches for a task | → Pick the simpler one, note in handover |
-| Design assumption was wrong | → `@ask` user: "Design says X but I found Y. Revise?" |
+| Design assumption was wrong | → `@align` user: "Design says X but I found Y. Revise?" |
 
-**Don't guess on blockers.** One `@ask` < one rework cycle.
+**Don't guess on blockers.** One `@align` < one rework cycle.
 
 ### Keep Changes Focused
 
@@ -80,12 +80,12 @@ For long implementation sessions (>30 exchanges or multi-file work):
 
 **Test**: "Would I struggle to continue if context was compressed right now?" → Write to handover.
 
-## Exit: @ask User (MANDATORY)
+## Exit: @align User (MANDATORY)
 
 When all tasks are complete:
 
 1. Update Progress to show 100%
 2. Summarize what was implemented
-3. `@ask` user: "Implementation complete. Please review. Any issues or feedback?"
+3. `@align` user: "Implementation complete. Please review. Any issues or feedback?"
 
 → Transition to `sspec-review` phase.

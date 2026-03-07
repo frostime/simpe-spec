@@ -2,6 +2,8 @@
 # 动态生成, 所以不要自动更新
 src/sspec/_version.py
 sspec.zip
+.env
+!.env.template
 
 # Python
 __pycache__/

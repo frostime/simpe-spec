@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import shutil
+import subprocess
 from datetime import datetime
 from pathlib import Path
 
@@ -16,13 +17,81 @@ from sspec.core import (
     ChangeExistsError,
     ChangeInfo,
     ChangeStatus,
+    ChangeStatusSummary,
     InvalidChangeNameError,
+    SessionLogSummary,
     copy_template,
     get_template_dir,
     normalize_status,
 )
 from sspec.libs.md_yaml import parse_frontmatter, update_frontmatter
 from sspec.libs.path_refs import update_references_in_dirs
+
+
+def _run_git(project_root: Path, *args: str) -> subprocess.CompletedProcess[str] | None:
+    """Run a git command in the project root, returning None when git is unavailable."""
+
+    try:
+        return subprocess.run(
+            ['git', *args],
+            cwd=project_root,
+            capture_output=True,
+            text=True,
+            encoding='utf-8',
+            errors='replace',
+            check=False,
+        )
+    except OSError:
+        return None
+
+
+def _git_stdout(project_root: Path, *args: str) -> str | None:
+    """Return stripped git stdout on success, otherwise None."""
+
+    result = _run_git(project_root, *args)
+    if result is None or result.returncode != 0:
+        return None
+    return result.stdout.strip() or None
+
+
+def _render_git_snapshot(project_root: Path) -> str:
+    """Render the immutable git baseline section for handover templates."""
+
+    repo_root = _git_stdout(project_root, 'rev-parse', '--show-toplevel')
+    if repo_root is None:
+        return '\n'.join(
+            [
+                '- Captured: before change file creation',
+                '- Repository: unavailable',
+                '- Reason: current project root is not inside a git worktree, or `git` '
+                'is unavailable.',
+                '',
+                '```text',
+                'Not a git repository.',
+                '```',
+            ]
+        )
+
+    branch = _git_stdout(project_root, 'branch', '--show-current')
+    head_hash = _git_stdout(project_root, 'rev-parse', 'HEAD')
+    status_output = _git_stdout(project_root, 'status', '--short', '--branch')
+    status_lines = status_output.splitlines() if status_output else ['status unavailable']
+    worktree_state = 'dirty' if len(status_lines) > 1 else 'clean'
+
+    branch_label = branch or 'detached HEAD'
+    head_label = head_hash or '(no commits yet)'
+
+    lines = [
+        '- Captured: before change file creation',
+        f'- Repository: `{Path(repo_root).as_posix()}`',
+        f'- Branch: `{branch_label}`',
+        f'- HEAD: `{head_label}`',
+        f'- Worktree: `{worktree_state}`',
+        '- Status Snapshot: raw `git status --short --branch` output',
+    ]
+
+    lines.extend(['', '```text', *status_lines, '```'])
+    return '\n'.join(lines)
 
 
 def find_change_matches(changes_dir: Path, name: str, include_archived: bool = False) -> list[Path]:
@@ -107,6 +176,7 @@ def parse_change(change_path: Path, archived: bool = False) -> ChangeInfo:
 
     if tasks_file.exists():
         content = tasks_file.read_text(encoding='utf-8')
+        content = re.sub(r'<!--.*?-->', '', content, flags=re.DOTALL)
         # Exclude template examples (lines containing <Demo Task>)
         # See src/sspec/templates/change/tasks.md
         checkbox_pattern = r'- \[[ xX~\-]](?!\s*<Demo Task>)'
@@ -126,6 +196,170 @@ def parse_change(change_path: Path, archived: bool = False) -> ChangeInfo:
         has_blockers=has_blockers,
         archived=archived,
         frontmatter=meta,
+    )
+
+
+def _display_path(path: Path, base: Path) -> str:
+    """Render path relative to base when possible."""
+    try:
+        return path.relative_to(base).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _extract_updated(handover_content: str) -> str | None:
+    """Extract Updated field from handover content."""
+    match = re.search(r'^\*\*Updated\*\*:\s*(.+?)\s*$', handover_content, re.MULTILINE)
+    if not match:
+        return None
+
+    value = match.group(1).strip()
+    return None if value.startswith('<!--') else value
+
+
+def _extract_latest_session_log(handover_content: str) -> SessionLogSummary | None:
+    """Extract the newest session log entry summary from handover.md."""
+    lines = handover_content.splitlines()
+
+    try:
+        start = next(i for i, line in enumerate(lines) if line.startswith('## Session Log'))
+    except StopIteration:
+        return None
+
+    heading_index = None
+    heading_match = None
+    heading_pattern = re.compile(
+        r'^###\s+(?P<timestamp>\S+)(?:\s+\[(?P<tags>[^\]]+)\])?(?:\s+(?P<title>.+))?$'
+    )
+    in_comment = False
+    for idx in range(start + 1, len(lines)):
+        raw_line = lines[idx]
+        candidate = raw_line.strip()
+        if '<!--' in raw_line:
+            in_comment = True
+        if in_comment:
+            if '-->' in raw_line:
+                in_comment = False
+            continue
+        match = heading_pattern.match(candidate)
+        if match and not match.group('timestamp').startswith('<'):
+            heading_index = idx
+            heading_match = match
+            break
+
+    if heading_index is None or heading_match is None:
+        return None
+
+    next_items: list[str] = []
+    in_next_block = False
+    bullet_pattern = re.compile(r'^(-|\d+\.)\s+(.*\S)\s*$')
+    for idx in range(heading_index + 1, len(lines)):
+        stripped = lines[idx].strip()
+        if stripped.startswith('### ') or stripped.startswith('## '):
+            break
+        if stripped == '**Next**':
+            in_next_block = True
+            continue
+        if stripped.startswith('**') and stripped != '**Next**':
+            in_next_block = False
+            continue
+        if not in_next_block or not stripped:
+            continue
+        if match := bullet_pattern.match(stripped):
+            next_items.append(match.group(2))
+
+    tags_raw = heading_match.group('tags') or ''
+    tags = [tag.strip() for tag in tags_raw.split(',') if tag.strip()]
+    title = (heading_match.group('title') or '').strip() or None
+    return SessionLogSummary(
+        timestamp=heading_match.group('timestamp'),
+        tags=tags,
+        title=title,
+        next_items=next_items,
+    )
+
+
+def _extract_root_snapshot_rows(handover_content: str) -> list[dict[str, str]] | None:
+    """Extract rows from the root change volatile snapshot table."""
+    lines = handover_content.splitlines()
+
+    try:
+        start = next(i for i, line in enumerate(lines) if line.startswith('## Sub-Change Status'))
+    except StopIteration:
+        return None
+
+    table_lines: list[str] = []
+    for idx in range(start + 1, len(lines)):
+        stripped = lines[idx].strip()
+        if stripped.startswith('## '):
+            break
+        if stripped.startswith('|'):
+            table_lines.append(stripped)
+
+    if len(table_lines) < 3:
+        return None
+
+    def _split_row(row: str) -> list[str]:
+        return [cell.strip() for cell in row.strip('|').split('|')]
+
+    headers = _split_row(table_lines[0])
+    rows: list[dict[str, str]] = []
+    for row in table_lines[2:]:
+        cells = _split_row(row)
+        if len(cells) != len(headers):
+            continue
+        rows.append(dict(zip(headers, cells, strict=False)))
+
+    return rows or None
+
+
+def _extract_linked_request_paths(change: ChangeInfo) -> list[str]:
+    """Extract linked request source paths from frontmatter."""
+    references = change.frontmatter.get('reference', [])
+    if not isinstance(references, list):
+        return []
+
+    linked: list[str] = []
+    for ref in references:
+        if not isinstance(ref, dict) or ref.get('type') != 'request':
+            continue
+        source = ref.get('source')
+        if isinstance(source, str) and source:
+            linked.append(source)
+    return linked
+
+
+def summarize_change(change_path: Path, cwd: Path | None = None) -> ChangeStatusSummary:
+    """Build a read-only local dashboard summary for a change."""
+    base = cwd or Path.cwd()
+    change = parse_change(change_path)
+    raw_change_type = change.frontmatter.get('change-type', '')
+    change_type = raw_change_type if isinstance(raw_change_type, str) else ''
+
+    handover_file = change_path / 'handover.md'
+    handover_content = handover_file.read_text(encoding='utf-8') if handover_file.exists() else ''
+
+    source_links = {
+        'spec': _display_path(change_path / 'spec.md', base),
+        'tasks': _display_path(change_path / 'tasks.md', base),
+        'handover': _display_path(handover_file, base),
+    }
+    research_file = change_path / 'reference' / 'status-research.md'
+    if research_file.exists():
+        source_links['research'] = _display_path(research_file, base)
+
+    return ChangeStatusSummary(
+        name=change.name,
+        path=_display_path(change_path, base),
+        status=change.status,
+        change_type=change_type,
+        tasks_done=change.progress['done'],
+        tasks_total=change.progress['total'],
+        updated=_extract_updated(handover_content),
+        linked_requests=_extract_linked_request_paths(change),
+        latest_log=_extract_latest_session_log(handover_content),
+        root_snapshot_rows=_extract_root_snapshot_rows(handover_content),
+        source_links=source_links,
     )
 
 
@@ -153,12 +387,14 @@ def create_change(sspec_root: Path, change_name: str, *, is_root: bool = False) 
     if change_path.exists():
         raise ChangeExistsError(f"Change '{change_file_name}' already exists")
 
+    project_root = sspec_root.parent
     template_subdir = 'change-root' if is_root else 'change'
     template_dir = get_template_dir() / template_subdir
     template_files = CHANGE_ROOT_TEMPLATE_FILES if is_root else CHANGE_TEMPLATE_FILES
     replacements = {
         'CHANGE_NAME': change_name,
         'TIME': datetime.now().isoformat(timespec='seconds'),
+        'GIT': _render_git_snapshot(project_root),
     }
 
     change_path.mkdir(parents=True, exist_ok=True)

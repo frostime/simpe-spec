@@ -2,45 +2,66 @@
 
 [English](README.md)
 
-**S**spec **S**ynthesizes **P**rograms from **E**xplicit **C**ontext.
+> **S**spec **S**ynthesizes **P**rograms from **E**xplicit **C**ontext.
 
-sspec 是一个面向 AI 辅助开发的文档驱动工作流。它把规划、决策与交接写入仓库文件，让 Agent 可以跨会话延续工作，而不是每次从零开始。
+## sspec 是什么
+
+sspec 是一套给编码 Agent 使用的文档驱动协作工作流。
+
+它把任务入口、设计、任务清单和交接记录保存在仓库里，而不是只留在聊天记录中。聊天用来推进工作，仓库文件用来保存长期状态。你负责目标、约束和关键决策；Agent 负责执行工作，并持续更新这些文件，让任务可以跨会话继续。
 
 ## sspec 解决什么问题
 
-AI 编程在连续性上常见三类问题：
+如果只靠聊天推进 AI 编程，常见问题有：
 
-- 长会话（尤其跨会话）后，上下文与关键决策容易丢失；
-- Agent 在“vibe coding”式的狂飙中不断改动，开发者很难掌控它在做什么；
-- 人工反复解释项目背景与约束，成本高。
+- 会话一长，尤其跨会话之后，上下文和关键决策容易丢失；
+- Agent 持续改动代码，但开发者很难快速看清它为什么这么做、已经做到哪里；
+- 项目背景、约定和限制要一遍又一遍重复解释；
+- 复杂任务容易在聊天里不断膨胀，最后变成一个难以追踪的大变更。
 
-sspec 的做法是：把工作状态放进 `.sspec/`，用 `AGENTS.md` + `.sspec/skills/`
-把工作流和阶段规范固定下来，让 Agent 按流程推进。
+sspec 会把长期工作状态明确写进仓库：
 
-## sspec 适合谁（也不适合谁）
+- `AGENTS.md` 定义协作协议；
+- `.sspec/project.md` 记录项目身份、技术栈、关键路径和约定；
+- `.sspec/requests/` 保存任务入口；
+- `.sspec/changes/` 保存每次变更的规格、任务和交接；
+- `.sspec/asks/` 保存关键问题与答案。
 
-sspec 是一个轻量、文件化的 Agent 协作工作流，目标是帮助你“控制 Agent”，而不是被 Agent 牵着走。
+继续工作时，Agent 读取的是仓库里的显式上下文，而不是从上一段聊天里重建状态。
 
-sspec 适合：
+## 这套方法对使用者的要求
 
-- 较为独立的开发者或小团队
-- 希望 Agent 辅助开发而不是替你做决策
-- 对可恢复性、可追踪性有要求（长会话、跨会话）
-- 有能力写好 request 需求入口（上下文/约束/成功标准）
+sspec 的使用前提是：开发者负责定义需求和审查结果，Agent 负责调研、设计、实现和文档更新。
 
-sspec 不适合：
+使用它通常要求：
 
-- 随便玩玩、只想一句话就让 Agent 生成 App 的用法
-- 不愿意写/维护 request、tasks、handover 的用法
+- 能把需求写成清晰的 `request`；
+- 能在设计对齐和实现审查时给出明确反馈；
+- 具备基本开发能力，能判断实现是否正确，并指出 Agent 的错误。
 
-sspec 特别适合从 1 到 N 的项目：你可以把它增量引入到已有项目中，只在需要的时候用。
+所以，sspec 更适合希望自己驾驭 Agent、而不是被 Agent 牵着走的开发者。对于完全没有编程能力、也不打算审查代码的人，它通常不是一个合适的起点。
 
-sspec 不依赖平台特定的 slash prompt / slash command 机制。它的核心契约是文件：
-`AGENTS.md` + `.sspec/` 目录（Agent 读写这些文件即可）。
+## 核心概念与目录
 
-## 核心概念与目录结构
+理解两个核心概念：`request` 和 `change`。
 
-`sspec project init` 会创建最小目录结构：
+- `request`：由开发者写的任务入口。它说明背景、约束、方向和成功标准，是整个工作流的起点。
+- `change`：一次内聚、原子化、可追踪的变更提案。一个 `change` 应保持在可审阅、可跟踪的范围内。
+
+围绕一个 `change`，最重要的三份文件是：
+
+- `spec.md`：这次变更准备怎么做，以及为什么这样做；
+- `tasks.md`：执行事项和当前进度；
+- `handover.md`：会话状态、关键发现和下次继续所需的信息。
+
+如果工作超出单个 `change` 的可追踪范围，应改为：
+
+- 用 `root-change` 协调多个 `sub-change`，把复杂工作拆成几个可独立推进的部分；
+- 或在已有变更之后，新建一个引用 `prev-change` 的后续 `change`，而不是把旧变更扩张成一个庞大、不可追踪的容器。
+
+更多概念和进阶用法，见后文的“进阶说明”。
+
+`sspec project init` 会创建最小结构：
 
 ```text
 project/
@@ -49,92 +70,41 @@ project/
     ├── project.md
     ├── requests/
     ├── changes/
+    │   └── <ts>_<name>/
+    │       ├── spec.md
+    │       ├── tasks.md
+    │       ├── handover.md
+    │       └── reference/
     ├── asks/
     ├── skills/
     ├── spec-docs/
     └── tmp/
 ```
 
-核心概念：
+主要目录：
 
-- `request`：由开发者写的入口（上下文/约束/成功标准），位于 `.sspec/requests/`。
-- `change`：一个被追踪的工作单元，位于 `.sspec/changes/<id>/`。
-- `spec.md`：该 change 的问题定义与方案。
-- `tasks.md`：可执行任务清单与进度（完成即更新）。
-- `handover.md`：会话记忆与下一步（用于跨会话恢复）。
-- 问答记录（`ask`）：当 Agent 需要关键决策或缺失信息时的问答记录，位于 `.sspec/asks/`（通过 `sspec ask` 创建）。
+- `project.md`：项目身份层。写清技术栈、关键路径、约定和项目级笔记。
+- `requests/`：你写的 `request` 入口文件。
+- `changes/`：每次变更的文档目录；每个变更包含 `spec.md`、`tasks.md`、`handover.md`。
+- `asks/`：关键问题与答案的记录，避免决策只存在于聊天里。
+- `spec-docs/`：超出单次变更范围的长期架构知识。
+- `skills/`：按阶段拆分的技能说明，可同步到不同 Agent 宿主需要的位置。
 
-注：`sspec ask` 用于把关键问题与答案落盘，避免只存在于聊天记录里。
+## 最小工作流
 
-Skills（技能）：
+一次典型流程如下：
 
-- `.sspec/skills/` 是技能的“中心副本”（hub）。
-- sspec 会把技能以 link/sync 的方式分发到不同宿主需要的位置（spoke），比如
-  `.claude/`、`.github/`、`.agents/`，从而让同一套技能在不同 Agent 工具里复用。
+1. 你运行 `sspec project init`，然后补全 `.sspec/project.md`。
+2. 你运行 `sspec request new <name>`，写好 `request`。
+3. 你把 request 文件路径发给 Agent，并要求它遵循 `AGENTS.md` 工作。
+4. Agent 先调研背景和代码，再给出设计与计划，并在关键节点停下来和你对齐。
+5. 对齐之后，Agent 开始实现；你负责 review，并给出反馈。
+6. Agent 根据反馈继续修改，直到你满意。
+7. 会话结束时，Agent 会更新 `handover.md`；工作完成后，再归档这个 `change`。
 
-## 设计原则
-
-- **Request-first**：从 request 文件开始，而不是从聊天记录开始。
-- **显式上下文**：尽早写清约束，并链接相关文件。
-- **可追踪执行**：任务完成即更新 tasks。
-- **人工关卡**：关键决策必须停下来向人确认。
-- **可恢复性**：`handover.md` 是必须项，不是装饰。
-- **开发者主导**：方向与范围由开发者掌控。
-
-## 最小示例
-
-1) 创建 request：
-
-```bash
-sspec request new add-password-reset
-```
-
-2) 在 request 里写清上下文与约束（示例结构）：
-
-```markdown
-# Request: add-password-reset
-
-## Background
-当前仅支持邮箱+密码登录。
-
-## Problem
-用户忘记密码后无法重置。
-
-## Initial Direction
-- 使用邮箱重置 token（限时、一次性）
-- 不引入新的外部服务
-
-## Success Criteria
-- 用户可触发重置邮件
-- token 过期且不可重复使用
-- 有测试覆盖核心流程
-
-## Relational Context
-- 相关代码：`src/auth/*`
-- 现有邮件：`src/notifications/email/*`
-```
-
-3) 交给 Agent 执行：
-
-```text
-请基于 sspec 规范完成这个 request：
-.sspec/requests/<your-request-file>.md
-
-请遵循 `AGENTS.md` 和已安装的 skills，保持 `spec.md` / `tasks.md` / `handover.md` 持续更新。
-遇到关键决策先停下来问我确认。
-```
-
-Agent 会读取 request，产出 `spec.md` + `tasks.md`，并持续维护 `handover.md`，方便后续恢复。
+这个流程包含文档更新和用户确认步骤，不依赖单次聊天上下文。
 
 ## 快速开始
-
-如果你是配合编码 Agent 使用，通常需要你手动运行的命令只有：
-
-```bash
-sspec project init
-sspec request new <name>
-sspec change archive --with-request [name]
-```
 
 ### 1) 安装
 
@@ -144,85 +114,99 @@ pip install sspec
 uv tool install sspec
 ```
 
-### 2) 在项目中初始化
+### 2) 在项目里初始化
 
 ```bash
 cd your-project
 sspec project init
 ```
 
-初始化后先补全 `.sspec/project.md`：技术栈、约定、关键路径。
+然后补全 `.sspec/project.md`，写清：
 
-### 3) 创建请求
+- 技术栈；
+- 关键路径；
+- 代码约定；
+- 项目级注意事项。
+
+### 3) 创建一个 request
 
 ```bash
 sspec request new add-password-reset
 ```
 
-在 `.sspec/requests/...` 中写清上下文、约束、成功标准。
+在生成的 request 文件里写清背景、问题、方向和成功标准。一个最小示例如下：
 
-然后在对话里直接粘贴 request 文件路径（`sspec request new` 会输出），并要求 Agent
-遵循 `AGENTS.md`。
+```markdown
+# Request: add-password-reset
 
-完成后可以用下面的命令归档 change，并一并归档关联的 request：
+## Background
+当前仅支持邮箱加密码登录。
 
-```bash
-sspec change archive --with-request
+## Problem
+用户忘记密码后无法自助重置。
+
+## Initial Direction
+- 使用邮箱重置 token
+- token 必须限时且一次性
+- 不引入新的外部服务
+
+## Success Criteria
+- 用户可以请求重置邮件
+- token 会过期且不可重复使用
+- 核心流程有测试覆盖
+
+## Relational Context
+- 相关代码：`src/auth/*`
+- 现有邮件：`src/notifications/email/*`
 ```
 
-提示：`sspec request new` 可以自动用编辑器打开新建文件（见下文）。
+### 4) 把 request 交给 Agent
 
-## 编辑器集成
-
-创建 request 时，sspec 会尝试用你的编辑器打开该文件。
-
-查找顺序：
-
-1) 当前工作目录下的 `.env`：`SSPEC_EDITOR`
-2) 环境变量：`SSPEC_EDITOR`
-3) 环境变量：`EDITOR`
-
-编辑器命令可以包含 `{file}`（会替换为新建文件路径）。
-
-VS Code 示例：
-
-```bash
-SSPEC_EDITOR='code {file}'
-```
-
-## 生命周期
-
-每个阶段都有对应 SKILL（位于 `.sspec/skills/`）。
+可以直接在聊天里给出 request 文件路径，并要求 Agent 遵循 `AGENTS.md`：
 
 ```text
-[Request] -> [Research] -> [Design] -> [Plan] -> [Implement] -> [Review] -> [Handover]
-                (decision checkpoints)   (feedback loop)
+请基于这个 request 工作：
+.sspec/requests/<your-request-file>.md
+
+请遵循 `AGENTS.md` 和 `.sspec/skills/`。
+为这项工作创建并维护对应的 change 文档。
+遇到关键决策先停下来问我。
 ```
 
-核心规则：
+### 5) 完成后归档
 
-- `Research` 重点是理解问题空间和代码上下文。
-- `Design` 与 `Implement` 包含强制的关键决策确认。
-- `Plan` 采用轻量确认。
-- `Implement` 与 `Review` 构成反馈闭环，直到用户满意。
-- `Handover` 不是收尾装饰，而是生命周期中的正式阶段。
+确认工作完成后，归档变更及其关联 request：
 
-## 人与 Agent 的分工
+```bash
+sspec change archive --with-request [name]
+```
 
-**人工负责**
+## 关键规则与职责边界
 
-- 创建请求；
-- 回答关键决策问题（必要时沉淀为问答记录）；
-- 批准设计与 Review 结果。
+**开发者负责**
+
+- 写 `request`，把背景、约束和成功标准说清楚；
+- 回答关键决策问题；
+- 批准设计方向和实现结果；
+- 判断是否需要拆分 `change`，避免范围失控。
 
 **Agent 负责**
 
-- 评估规模（micro/single/multi-change）；
-- 创建并维护变更文件；
-- 持续更新任务和交接；
-- 驱动反馈闭环直到验收通过，并在需要时记录问题/决策。
+- 调研代码、背景和约束，先理解问题，再进入设计；
+- 为这次工作创建并维护 `change` 文档；
+- 给出方案，与用户对齐，再开始实现；
+- 随执行进度更新 `tasks.md` 和 `handover.md`，并在 review 反馈后继续迭代。
 
-## CLI 参考
+**工作流规则**
+
+- 从 `request` 开始，而不是从一段聊天历史开始；
+- `Design` 和 `Implement` 阶段都包含强制确认点；
+- `Handover` 不是收尾装饰，而是正式生命周期的一部分；
+- 长期状态以 `change` 文档为准，而不是只以聊天记录为准。
+
+## 常用命令
+
+常用命令通常只有这些；更完整的列表请看 `sspec --help`。
 
 ### Project
 
@@ -237,9 +221,6 @@ sspec project update --dry-run
 ```bash
 sspec request new <name>
 sspec request list
-sspec request show <name>
-sspec request find <query>
-sspec request link <request> <change>
 sspec request archive [name] --with-change
 ```
 
@@ -250,12 +231,16 @@ sspec change new <name>
 sspec change new --from <request>
 sspec change new <name> --root
 sspec change list --all
-sspec change find <query>
-sspec change validate <name>
 sspec change archive [name] --with-request
 ```
 
-### 问答记录（`ask`）
+## 进阶说明
+
+### `ask`：把关键问答落盘
+
+当 Agent 需要关键决策、发现需求有歧义、或者需要把重要问题正式记录下来时，可以使用 `ask`。
+
+常用命令：
 
 ```bash
 sspec ask create <topic>
@@ -264,37 +249,36 @@ sspec ask list --all
 sspec ask archive [name]
 ```
 
-### 规范文档
+### `spec-docs/`：保存跨变更的长期知识
+
+`spec-docs/` 用于记录跨变更长期保留的知识，例如架构接口、数据模型、设计模式或约定。
+
+常用命令：
 
 ```bash
 sspec doc list
 sspec doc new "<name>"
-sspec doc new "<name>" --dir
 ```
 
-### 可选工具
+### `skills/`：`.sspec/skills/` 是源目录
 
-```bash
-sspec skill list
-sspec skill new <name>
-sspec cmd add
-sspec cmd list
-sspec cmd run <name>
-sspec tmp new <name>
-sspec tool mdtoc <file>
-sspec tool view-tree
-sspec tool pack-zip --dry-run
-sspec tool patch --prompt
-```
+sspec 在项目里安装 skills 时采用 hub-spoke 方案：
 
-## 兼容性
+- `.sspec/skills/` 是 hub，是 SKILL 的源目录
+- `.agents/skills/`、`.claude/skills/`、`.github/skills/` 等外部位置属于 spoke
+- spoke 默认使用符号链接或者Junction链接引用 .sspec/skills
+- `sspec project init` 和 `sspec project update` 会负责这套 hub-spoke 同步，无需用户自行更改
 
-sspec 适合能完成以下能力的 Agent 环境：
+## 其他
+
+### 兼容性
+
+sspec 依赖 Agent 环境具备以下能力：
 
 - 可读写本地仓库文件；
 - 能遵循 `AGENTS.md` 指令；
-- 可执行本地 CLI 命令；
-- 能加载并遵循 skills。
+- 可执行本地命令行命令；
+- 能加载并遵循 `.sspec/skills/` 中的技能说明。
 
 ## License
 

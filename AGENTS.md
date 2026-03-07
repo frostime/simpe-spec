@@ -197,6 +197,7 @@ Resume tip: in `handover.md`, start from the newest entry in `Session Log`.
 - Long session (>30 exchanges) → checkpoint `handover.md`
 - Uncertain → `@align` (30s alignment < hours of rework)
 - User rejects tool call → STOP → `@align` reason
+- Current date/time uncertain → use sspec tool now instead of guessing
 
 ---
 
@@ -349,6 +350,7 @@ Run `sspec <command> --help` for full options.
 | `sspec request list` / `sspec ask list` | List requests/asks |
 | `sspec doc new "<name>"` | Create spec-doc |
 | `sspec tool mdtoc <file>` | Pre-scan Markdown |
+| `sspec tool now [--date|--utc|--json]` | Show current time when timestamps matter |
 
 ### SKILL System
 

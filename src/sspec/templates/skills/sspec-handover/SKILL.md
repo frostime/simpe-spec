@@ -38,7 +38,7 @@ Update handover.md when:
 
 handover.md is the resume entry point.
 
-**Timestamp rule**: Use ISO timestamps with at least minute precision (example: `2026-03-06T20:39`).
+**Timestamp rule**: Use ISO timestamps with at least minute precision (example: `2026-03-06T20:39`). If current time is uncertain, use `sspec tool now` instead of guessing.
 
 **Updated field**: Set `**Updated**:` to the current timestamp (should match your newest Session Log entry).
 

@@ -163,8 +163,11 @@ CLI Input
 **Output model**
 - Default output should be agent-friendly plain text.
 - `--format rich` should enable prettier terminal rendering for humans.
-- `--list` and `list` should emit compact plain-text records by default, with rich table output only when formatting is requested.
-- `sspec howto <name>` and `sspec howto read <name>` should emit plain-text metadata + markdown body by default, with rich panel rendering only when formatting is requested.
+- `--list` and `list` should emit compact YAML-like records by default, with rich table output only when formatting is requested.
+- Plain-text list output should omit implementation-only fields like `file`.
+- `sspec howto <name>` and `sspec howto read <name...>` should emit markdown body only in plain mode, without frontmatter-like metadata.
+- Plain read mode may prepend a lightweight separator such as `=== name ===` before each rendered HOWTO.
+- `--format` should work both before and after subcommands so `sspec howto list --format rich` and `sspec howto read foo --format rich` both work.
 - Missing name without `--list` should raise a clear usage error.
 - Unknown HOWTO name should raise a `ClickException` that nudges users toward `--list`.
 - Duplicate-skip warnings should be surfaced before successful output so users notice conflicts.
@@ -172,6 +175,7 @@ CLI Input
 **Authoring scaffold and packaging boundary**
 - `sspec howto new <name>` should create `.sspec/howto/<name>.md` with minimal HOWTO frontmatter and body placeholder.
 - The first version only scaffolds project HOWTOs; it does not manage builtin HOWTO creation.
+- HOWTO markdown source files themselves should not begin with a top-level `#` heading; display code can prepend one automatically when rendering.
 - Official HOWTO docs belong in `src/sspec/howto/`, not `src/sspec/templates/`, because they are runtime package resources rather than project-scaffold templates.
 - Project-local HOWTOs are read directly from `.sspec/howto/`; no install/sync pipeline is needed for the first version.
 

@@ -3,8 +3,6 @@ name: read-long-mdfile
 desc: Use `sspec tool mdtoc` before reading long markdown files.
 ---
 
-# read-long-mdfile
-
 When a Markdown file is long, do not read it blindly.
 
 Use this sequence:

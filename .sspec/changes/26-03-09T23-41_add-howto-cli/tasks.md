@@ -30,6 +30,11 @@ updated: ""
 - [x] Switch `src/sspec/commands/howto.py` to plain-text default output with optional rich formatting
 - [x] Update HOWTO help text in `src/sspec/commands/howto.py` to document implicit `sspec howto <name>` reads
 - [x] Rewrite `tests/test_howto_command.py` so it does not rely on specific builtin HOWTO content
+- [x] Accept `--format` after `list` and `read` subcommands in `src/sspec/commands/howto.py`
+- [x] Change plain `list` output in `src/sspec/commands/howto.py` to YAML-like records without `file`
+- [x] Remove top-level headings from HOWTO source docs and scaffolds in `src/sspec/howto/*.md` and `src/sspec/services/howto_service.py`
+- [x] Allow `src/sspec/commands/howto.py` to read multiple HOWTO names in one invocation
+- [x] Remove plain read metadata output in `src/sspec/commands/howto.py` and replace it with lightweight separators between documents
 **Verification**: `sspec howto --help` documents the shorthand, default output is plain text, and targeted tests still pass.
 
 <!-- @RULE: Organize by phases. Each task <2h, independently testable.
@@ -67,3 +72,7 @@ Use this section for tasks added during review/feedback loop.
 - Added: review feedback tasks for plain-text default output, help text, and less brittle tests
 - Completed: Switch HOWTO list/read defaults to plain text and document rich formatting opt-in
 - Completed: Remove brittle test dependence on specific builtin HOWTO documents
+- Added: second-round feedback tasks for YAML-like plain output, post-subcommand `--format`, headerless HOWTO docs, and multi-read support
+- Completed: Support `--format` after subcommands, YAML-like plain output, headerless source docs, and multi-read
+- Added: final read-output cleanup task to drop plain frontmatter-style metadata
+- Completed: Switch plain read output to `=== name ===` separators with larger gaps between multiple docs

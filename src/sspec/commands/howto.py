@@ -51,8 +51,14 @@ def _get_sspec_root_or_fail() -> Path:
         raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
 
 
-def _get_output_format(ctx: click.Context) -> OutputFormat:
-    """Get current HOWTO output format from the root command context."""
+def _resolve_output_format(
+    ctx: click.Context,
+    local_output_format: str | None = None,
+) -> OutputFormat:
+    """Resolve effective HOWTO output format from local option or parent contexts."""
+
+    if local_output_format in {'plain', 'rich'}:
+        return local_output_format # type: ignore[return-value]
 
     current: click.Context | None = ctx
     while current is not None:
@@ -75,25 +81,34 @@ def _print_warnings(warnings: tuple[str, ...], *, output_format: OutputFormat) -
 
 
 def _render_plain_list(catalog) -> None:
-    """Render HOWTO list in compact plain text."""
+    """Render HOWTO list in YAML-like plain text."""
 
-    click.echo('name\tsource\tdescription\tfile')
-    for item in catalog.items:
-        description = item.description.replace('\t', ' ').replace('\n', ' ')
-        click.echo(f'{item.name}\t{item.source}\t{description}\t{item.file}')
+    for index, item in enumerate(catalog.items):
+        description = item.description.replace('\n', ' ').strip()
+        click.echo(f'- name: {item.name}')
+        click.echo(f'  source: {item.source}')
+        if description:
+            click.echo(f'  desc: {description}')
+        if index < len(catalog.items) - 1:
+            click.echo('')
 
 
-def _render_plain_howto(*, name: str, source: str, file: str, description: str, body: str) -> None:
+def _compose_display_body(name: str, body: str) -> str:
+    """Add a display header when the stored HOWTO body has none."""
+
+    stripped = body.strip()
+    if stripped.startswith('#'):
+        return stripped
+    if not stripped:
+        return f'# {name}'
+    return f'# {name}\n\n{stripped}'
+
+
+def _render_plain_howto(*, name: str, body: str) -> None:
     """Render a HOWTO body in agent-friendly plain text."""
 
-    click.echo(f'name: {name}')
-    click.echo(f'source: {source}')
-    click.echo(f'file: {file}')
-    if description:
-        click.echo(f'desc: {description}')
-    click.echo('---')
-    if body:
-        click.echo(body)
+    click.echo(f'=== {name} ===')
+    click.echo(_compose_display_body(name, body))
 
 
 @click.group(cls=ImplicitReadGroup, invoke_without_command=True)
@@ -102,12 +117,11 @@ def _render_plain_howto(*, name: str, source: str, file: str, description: str, 
     '--format',
     'output_format',
     type=click.Choice(['plain', 'rich']),
-    default='plain',
-    show_default=True,
+    default=None,
     help='Output format for `list` and `read`.',
 )
 @click.pass_context
-def howto(ctx: click.Context, list_only: bool, output_format: OutputFormat) -> None:
+def howto(ctx: click.Context, list_only: bool, output_format: str | None) -> None:
     """Read, list, and scaffold HOWTO documents.
 
     `sspec howto <name>` is shorthand for `sspec howto read <name>`.
@@ -125,23 +139,30 @@ def howto(ctx: click.Context, list_only: bool, output_format: OutputFormat) -> N
 
 
 @howto.command(name='list')
+@click.option(
+    '--format',
+    'output_format',
+    type=click.Choice(['plain', 'rich']),
+    default=None,
+    help='Override output format for this command.',
+)
 @click.pass_context
-def list_cmd(ctx: click.Context) -> None:
+def list_cmd(ctx: click.Context, output_format: str | None) -> None:
     """List all available HOWTO documents."""
 
     sspec_root = _get_sspec_root_or_fail()
     catalog = collect_howtos(sspec_root)
-    output_format = _get_output_format(ctx)
-    _print_warnings(catalog.warnings, output_format=output_format)
+    effective_format = _resolve_output_format(ctx, output_format)
+    _print_warnings(catalog.warnings, output_format=effective_format)
 
     if not catalog.items:
-        if output_format == 'rich':
+        if effective_format == 'rich':
             console.print('[dim]No HOWTO documents found.[/dim]')
         else:
             click.echo('No HOWTO documents found.')
         return
 
-    if output_format == 'plain':
+    if effective_format == 'plain':
         _render_plain_list(catalog)
         return
 
@@ -158,44 +179,63 @@ def list_cmd(ctx: click.Context) -> None:
 
 
 @howto.command(name='read')
-@click.argument('name')
+@click.argument('names', nargs=-1, required=True)
+@click.option(
+    '--format',
+    'output_format',
+    type=click.Choice(['plain', 'rich']),
+    default=None,
+    help='Override output format for this command.',
+)
 @click.pass_context
-def read_cmd(ctx: click.Context, name: str) -> None:
-    """Read a HOWTO document by name."""
+def read_cmd(ctx: click.Context, names: tuple[str, ...], output_format: str | None) -> None:
+    """Read one or more HOWTO documents by name."""
 
     sspec_root = _get_sspec_root_or_fail()
-    howto_info, warnings = resolve_howto(sspec_root, name)
-    output_format = _get_output_format(ctx)
-    _print_warnings(warnings, output_format=output_format)
+    effective_format = _resolve_output_format(ctx, output_format)
+    rendered_items: list[tuple[str, str, str, str]] = []
+    warning_list: list[str] = []
 
-    if howto_info is None:
-        raise click.ClickException(f"HOWTO '{name}' not found. Use 'sspec howto --list' to browse.")
+    for name in names:
+        howto_info, warnings = resolve_howto(sspec_root, name)
+        warning_list.extend(warnings)
 
-    body = read_howto_body(howto_info.path)
-    if output_format == 'plain':
-        _render_plain_howto(
-            name=howto_info.name,
-            source=howto_info.source,
-            file=howto_info.file,
-            description=howto_info.description,
-            body=body,
+        if howto_info is None:
+            raise click.ClickException(
+                f"HOWTO '{name}' not found. Use 'sspec howto --list' to browse."
+            )
+
+        rendered_items.append(
+            (
+                howto_info.name,
+                howto_info.source,
+                howto_info.description,
+                read_howto_body(howto_info.path),
+            )
         )
-        return
 
-    subtitle = f'{howto_info.source} • {howto_info.file}'
-    title = f'HOWTO: {howto_info.name}'
-    if howto_info.description:
-        console.print(f'[dim]{howto_info.description}[/dim]')
-        console.print()
+    _print_warnings(tuple(dict.fromkeys(warning_list)), output_format=effective_format)
 
-    console.print(
-        Panel(
-            Markdown(body),
-            title=title,
-            subtitle=subtitle,
-            border_style='cyan',
-        )
-    )
+    for index, (name, source, _description, body) in enumerate(rendered_items):
+        if effective_format == 'plain':
+            _render_plain_howto(name=name, body=body)
+        else:
+            # if description:
+            #     console.print(f'[dim]{description}[/dim]')
+            #     console.print()
+
+            console.print(
+                Panel(
+                    Markdown(_compose_display_body(name, body)),
+                    title=f'HOWTO: {name}',
+                    subtitle=source,
+                    border_style='cyan',
+                )
+            )
+
+        if index < len(rendered_items) - 1:
+            console.print()
+            console.print()
 
 
 @howto.command(name='new')

@@ -1,6 +1,6 @@
 # Handover: add-howto-cli
 
-**Updated**: 2026-03-10T00:48
+**Updated**: 2026-03-10T01:29
 
 ---
 
@@ -62,6 +62,10 @@ If something becomes obsolete, mark it as obsolete with a timestamp instead of d
   **Why**: This matches the user's request to avoid dangerous override behavior while keeping duplicate handling deterministic.
 - [2026-03-10T00:48] **Decision** - Default HOWTO `list` and `read` output to plain text, with `--format rich` as the human-friendly opt-in.
   **Why**: The user wants HOWTO to be agent-first by default, so pretty rendering must be optional rather than the baseline.
+- [2026-03-10T01:24] **Decision** - Plain `list` output uses YAML-like records and `read` can accept multiple HOWTO names.
+  **Why**: The user wants agent-friendly structure plus batch retrieval without requiring repeated CLI calls.
+- [2026-03-10T01:29] **Decision** - Plain read mode prints only lightweight separators plus rendered body, with no metadata block.
+  **Why**: The user wants agent-facing output to avoid frontmatter-like noise while still keeping multi-document boundaries obvious.
 
 ### Notes (Timestamped)
 <!-- Gotchas, edge cases, risks, verification shortcuts. Timestamp every entry.
@@ -75,6 +79,9 @@ Project-wide items -> ALSO append to project.md Notes. -->
 - [2026-03-10T00:48] Updated HOWTO tests to rely on project-local sample files rather than the exact body text of builtin HOWTO documents.
 - [2026-03-10T00:48] Smoke check passed for `uv run sspec howto --help` and `uv run sspec howto --list` after the plain-text output change.
 - [2026-03-10T00:48] Final builtin HOWTO batch is `write-howto`, `use-sspec-ask`, and `read-long-mdfile`.
+- [2026-03-10T01:24] Final validation passed with `uv run ruff check src tests/test_howto_command.py tests/test_project_init_service.py` and `uv run pytest tests/test_howto_command.py tests/test_project_init_service.py` after the second review round.
+- [2026-03-10T01:24] Manual smoke checks passed for `sspec howto list --format rich`, `sspec howto write-howto --format rich`, and multi-read plain output.
+- [2026-03-10T01:29] Final validation re-passed after removing plain read metadata output.
 
 ## Session Log (Append-Only)
 <!-- Newest entry first. Each entry is an atomic batch (one cohesive work record).
@@ -145,3 +152,32 @@ Any user interaction (feedback, @align, @argue) MUST start a new log entry. -->
 
 **Notes** (optional)
 - Plain-text list output is tab-separated logically; terminal tab expansion may display it as aligned columns.
+
+### 2026-03-10T01:24 [user-feedback] review round 2 fixes
+
+**Accomplished**
+- Added `--format` handling after `list` and `read` subcommands.
+- Switched plain `list` output from tabular text to YAML-like records without `file`.
+- Removed top-level headings from builtin HOWTO source docs and new HOWTO scaffolds.
+- Added multi-name `howto read` support and kept auto-added display headers at render time.
+- Re-ran lint, tests, and manual smoke checks.
+
+**Next**
+- Ask the user to review the third round.
+
+**Notes** (optional)
+- `sspec howto write-howto --format rich` now works as requested because `read` accepts local `--format` overrides.
+
+### 2026-03-10T01:29 [user-feedback] review round 3 fixes
+
+**Accomplished**
+- Removed plain read metadata blocks.
+- Switched plain read output to `=== name ===` separators.
+- Kept auto-added display headers and widened multi-doc separation.
+- Re-ran lint, tests, and multi-read smoke checks.
+
+**Next**
+- Ask the user for final review.
+
+**Notes** (optional)
+- Plain read output now shows only separators plus rendered markdown body, which is closer to the intended agent-facing UX.

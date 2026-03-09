@@ -3,8 +3,6 @@ name: write-howto
 desc: Write HOWTO docs as short, directive, highly focused operating guides.
 ---
 
-# write-howto
-
 A HOWTO should solve one concrete action.
 
 Do this when writing one:

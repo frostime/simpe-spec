@@ -166,7 +166,6 @@ def create_project_howto(sspec_root: Path, name: str, description: str = '') -> 
 
     template = (
         f'---\nname: {lookup_key}\ndesc: {description}\n---\n\n'
-        f'# {lookup_key}\n\n'
         '<!-- Add a short, focused operational guide here. -->\n'
     )
     howto_path.write_text(template, encoding='utf-8')

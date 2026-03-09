@@ -3,8 +3,6 @@ name: use-sspec-ask
 desc: Record decisions with `sspec ask` when the answer must survive the current turn.
 ---
 
-# use-sspec-ask
-
 Use `sspec ask` when the answer must still be available next session.
 
 - Design approval gates

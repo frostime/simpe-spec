@@ -10,6 +10,7 @@ from typing import TypedDict
 
 SSPEC_DIR = '.sspec'
 SKILLS_DIR = 'skills'
+HOWTO_DIR = 'howto'
 WORKSPACE_DIRS = ['.github', '.claude', '.agents']
 SKILL_SUBDIR = 'skills'
 CHANGES_DIR = 'changes'
@@ -213,6 +214,18 @@ def get_sspec_root() -> Path:
 def get_template_dir() -> Path:
     """Get templates directory from package."""
     return Path(__file__).parent / 'templates'
+
+
+def get_builtin_howto_dir() -> Path:
+    """Get builtin HOWTO directory from package."""
+
+    return Path(__file__).parent / HOWTO_DIR
+
+
+def get_project_howto_dir(sspec_root: Path) -> Path:
+    """Get project-local HOWTO directory under `.sspec/`."""
+
+    return sspec_root / HOWTO_DIR
 
 
 def copy_template(src: Path, dest: Path, replacements: dict | None = None) -> None:

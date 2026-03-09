@@ -13,6 +13,7 @@ from typing import Any
 
 from sspec import __version__
 from sspec.core import (
+    HOWTO_DIR,
     SCHEMA_VERSION,
     SSPEC_DIR,
     UPDATABLE_FILES,
@@ -113,6 +114,7 @@ def initialize_project(
     (sspec_path / 'requests').mkdir(exist_ok=True)
     (sspec_path / 'asks').mkdir(exist_ok=True)
     (sspec_path / 'skills').mkdir(exist_ok=True)
+    (sspec_path / HOWTO_DIR).mkdir(exist_ok=True)
     (sspec_path / 'spec-docs').mkdir(exist_ok=True)
     (sspec_path / 'tmp').mkdir(exist_ok=True)
 

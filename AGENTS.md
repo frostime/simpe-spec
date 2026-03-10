@@ -273,7 +273,7 @@ Read the SKILL for the current phase. Unless the SKILL says otherwise, each phas
 
 For large context, write analysis to `.sspec/tmp/` and link it from the question body. Move confirmed valuable materials to `change/reference/` later.
 
-→ `@force-end-align` directive: Do one last user-facing alignment instead of silently ending the turn when Agent believe the work is done, see `sspec howto force-end-align`. !IMPORTANT
+→ `@force-end-align` directive: Do one last user-facing alignment instead of silently ending the turn when the agent believes the work is done, see `sspec howto force-end-align`. !IMPORTANT
 
 At phase gates: Design + Implement are mandatory, Plan is lightweight, Review loops until satisfied.
 
@@ -330,7 +330,7 @@ Targeted operational micro-guides — shorter than SKILLs, more specific than AG
 Read the SKILL for the current phase (`sspec-research`, `sspec-design`, `sspec-plan`, `sspec-implement`, `sspec-review`, `sspec-handover`, `sspec-align`, `sspec-mdtoc`, `write-spec-doc`).
 If a SKILL says "read [file](...)" -> **MUST** read it.
 
-Some rules in SKILL are distributed to HOWTOs, if see `sspec howto xxx` in SKILL content → read them by `sspec howto <name>` OR in batch `sspec howto read <n1> <n2>...`.
+Some rules in SKILL are distributed to HOWTOs. If you see `sspec howto xxx` in SKILL content, read it with `sspec howto <name>` or batch-read with `sspec howto read <n1> <n2>...`.
 
 ### Template Markers
 

@@ -1,6 +1,6 @@
 ---
 name: force-end-align
-desc: Handle `@force-end-align` — do one final user-facing alignment before ending the turn.
+desc: Handle `@force-end-align` - do one final user-facing alignment before ending the turn.
 ---
 
 `@force-end-align` is set per-task. When present and work is done, do **not** end silently.

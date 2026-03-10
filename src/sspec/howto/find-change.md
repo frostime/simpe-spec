@@ -27,4 +27,4 @@ This means the suffix usually carries the human topic, while the prefix tells yo
 
 ## Failure rule
 
-If two candidates still look plausible, stop and disambiguate. Question user about which change he/she is talking about.
+If two candidates still look plausible, stop and disambiguate. Ask the user which change they mean.

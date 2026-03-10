@@ -12,8 +12,8 @@ If syntax is uncertain, use `sspec --help` or `sspec <command> --help`, then cho
 | `sspec change new <name>` | Create a change |
 | `sspec change new <name> --root` | Create a root change |
 | `sspec change new --from <path>` | Create change from request file |
-| `sspec change list` / `find <name>` | Locate active changes |
-| `sspec change archive <path>` | Archive completed change |
+| `sspec change list` / `sspec change find <name>` | Locate active changes |
+| `sspec change archive [<name>]` | Archive one change or open the selector |
 | `sspec ask create <topic>` + `sspec ask prompt <path>` | Create and ask |
 | `sspec request list` / `sspec ask list` | List requests/asks |
 | `sspec doc new "<name>"` | Create spec-doc |

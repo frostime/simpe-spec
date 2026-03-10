@@ -3,7 +3,7 @@ name: sspec-align
 description: "Agent-user alignment via persistent Q&A. USE ACTIVELY — guessing wastes more tokens than aligning."
 metadata:
   author: frostime
-  version: 9.1.0
+  version: 9.2.0
 ---
 
 # SSPEC Align
@@ -62,11 +62,37 @@ Alignment without record = information lost on next session.
 
 ---
 
-## Use of sspec ask
+## 4. Use of sspec ask
 
-- Procedure of calling `sspec ask`: 📚 `sspec howto use-sspec-ask`, include the create → edit → prompt atomic flow
-- Write ASK file: 📚 `sspec howto write-sspec-ask`, include skeleton (reason + question format)
+Treat `sspec ask` as one atomic flow:
 
+1. `sspec ask create <topic>`
+2. Fill `reason`
+3. Fill `question`
+4. `sspec ask prompt <path>`
+
+Do not stop halfway unless you intentionally want to leave a draft for later refinement.
+
+**Minimum content**:
+- `reason`: why alignment is needed now, and what risk exists if you proceed without it
+- `question`: current state, decision needed, and the exact ask to the user
+- long analysis: write it to `.sspec/tmp/` and link it instead of pasting everything into the ask body
+
+Minimal skeleton:
+
+```yaml
+reason: |
+  <why alignment is needed now>
+question: |
+  <current state>
+  <decision needed>
+  See: <path if useful>
+
+  <explicit ask>
+```
+
+For the exact CLI procedure, read: `sspec howto use-sspec-ask`
+For a tighter writing template, read: `sspec howto write-sspec-ask`
 
 ---
 

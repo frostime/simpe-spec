@@ -36,15 +36,22 @@ User feedback ─→ Assess scope ─→ Act ─→ @align "Fixed. Check again?"
 
 When user provides feedback or disagrees:
 
-| Scope | Signal | Action |
+| Class | Signal | Action |
 |-------|--------|--------|
-| **Implementation detail** | "This variable name", "Move this function", "Fix this edge case" | Fix directly, update tasks.md |
-| **Design decision** | "I don't want Redis, use SQLite", "Wrong approach for this module" | Revise spec.md B → regenerate affected tasks → re-implement |
-| **Requirement itself** | "Actually I don't need this feature", "The real problem is different" | Revise spec.md A, mark scope change in handover.md, return to `sspec-design` |
+| **Minor fix** | "This variable name", "Move this function", "Fix this edge case" | Keep current change; fix directly or add `Feedback Tasks` if non-trivial |
+| **Current-change amend** | "This still needs extra validation", "The same feature needs one more acceptance condition" | Revise `spec.md` A/B as needed → update `tasks.md` → return to `DOING` or `PLANNING` depending on redesign impact |
+| **Follow-up change** | "After this, also add export", "The original change is fine; now I want another capability" | `@align` user before opening a new change; if approved, create a new change with `prev-change` reference |
+| **Supersede change** | "This whole approach is wrong", "Stop this direction and restart from a different goal" | `@align` user before marking current change `BLOCKED` and opening a replacement change |
 
-### Adding Feedback Tasks
+📚 `sspec howto handle-review-scope-change`
 
-When fixes require non-trivial work, add them to tasks.md:
+### Using Feedback Tasks
+
+Use `Feedback Tasks` only for execution work that still belongs to the current change.
+
+When accepted feedback changes the design or scope of the current change, update `spec.md` first, then add or refresh the relevant tasks in `tasks.md`.
+
+When non-trivial fixes stay in the current change, add them to tasks.md:
 
 ```markdown
 ### Feedback Tasks 🚧
@@ -55,6 +62,8 @@ When fixes require non-trivial work, add them to tasks.md:
 
 Then implement these tasks following `sspec-implement` workflow.
 
+Do **not** use `Feedback Tasks` as a dumping ground for work that should become a follow-up or replacement change.
+
 ### Git-Aware Review
 
 When a change has a `Git Baseline (Immutable)` section in `handover.md`, use it as the review anchor:
@@ -62,6 +71,8 @@ When a change has a `Git Baseline (Immutable)` section in `handover.md`, use it 
 📚 `sspec howto review-git-baseline`
 
 It is recommended to use subagents to avoid potential context contamination (such as persistent blind spots or misunderstandings in the context) for independent and objective review.
+
+Directive shortcut: `@subagent-audits`
 
 📚 `sspec howto make-subagent-audit`
 
@@ -73,9 +84,10 @@ If user strongly disagrees (`@argue`):
 2. **Assess scope** using the table above
 3. **Acknowledge** the disagreement explicitly
 4. **Act** based on scope:
-   - Implementation: fix and continue
-   - Design: return to `sspec-design`, `@align` for new direction
-   - Requirement: return to `sspec-design`, reassess from problem statement
+   - Minor fix: fix and continue
+   - Current-change amend: revise `spec.md` / `tasks.md`, then continue in the current change
+   - Follow-up change: `@align` before creating a new linked change
+   - Supersede change: `@align` before `BLOCKED` + replacement-change flow
 
 ## Close Loop
 
@@ -95,6 +107,7 @@ When user is satisfied:
 ```
 DOING (implement complete) → REVIEW (user reviewing)
   → DONE (user satisfied)
-  → DOING (needs more work → implement feedback tasks → REVIEW again)
-  → PLANNING (requirement/design changed → back to design)
+  → DOING (needs more work in the same change → implement feedback tasks → REVIEW again)
+  → PLANNING (accepted redesign inside the same change → back to design/plan)
+  → BLOCKED (user chooses replacement change or an external blocker stops the current change)
 ```

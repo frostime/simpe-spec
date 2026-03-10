@@ -38,6 +38,11 @@ Simple: single paragraph. Complex: split "Current Situation" + "User Requirement
 ## B. Proposed Solution
 <!-- @REPLACE -->
 
+<!-- @RULE: Accepted review-stage changes belong here as formal design.
+If user feedback changes the current change's scope/design and the work still belongs to this change,
+update A/B directly instead of leaving the accepted change only in handover.md.
+If review history matters, add `### Review Amendments` under B as part of the design. -->
+
 ### Approach
 <!-- Core idea (1-3 paragraphs) + why this over alternatives -->
 

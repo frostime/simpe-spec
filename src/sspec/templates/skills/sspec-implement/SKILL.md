@@ -40,10 +40,10 @@ For each pending task:
 | Situation | Action |
 |-----------|--------|
 | Task is ambiguous | → `@align` for clarification |
-| Implementation reveals design issue | → Suggest returning to `sspec-design` |
-| Blocker encountered | → Record in `handover.md` Notes, `@align` user |
+| Implementation reveals design issue | → Sync `spec.md` / `tasks.md` before continuing; if the work no longer belongs to the current change, `@align` before split / replacement |
+| Blocker encountered | → Record in `handover.md` Durable Memory / Session Log, `@align` user |
 | Multiple valid approaches for a task | → Pick the simpler one, note in handover |
-| Design assumption was wrong | → `@align` user: "Design says X but I found Y. Revise?" |
+| Design assumption was wrong | → `@align` user: "Design says X but I found Y. Revise?" Update `spec.md` / `tasks.md` after the decision |
 
 **Don't guess on blockers.** One `@align` < one rework cycle.
 
@@ -52,7 +52,8 @@ For each pending task:
 - Only modify files relevant to the current task
 - Preserve existing code style, comments, and structure
 - Don't refactor unrelated code
-- If a task grows beyond scope → split it, add new tasks to tasks.md
+- If a task grows but still belongs to the current change → split it, add new tasks to tasks.md
+- If the work now belongs in a follow-up or replacement change → `@align` user before creating a new change or marking the current one `BLOCKED`
 
 ## Progress Updates
 
@@ -76,8 +77,8 @@ After completing each task, update the Progress section:
 ## Handover During Implementation
 
 For long implementation sessions (>30 exchanges or multi-file work):
-- Write key decisions to `handover.md` Working Memory → Decisions
-- Record discovered gotchas to → Notes
+- Promote durable decisions / constraints to `handover.md` Working Memory → Durable Memory
+- Record batch-local blockers, discoveries, or user feedback in `handover.md` Session Log
 - Update Key Files as you discover important files
 
 **Test**: "Would I struggle to continue if context was compressed right now?" → Write to handover.

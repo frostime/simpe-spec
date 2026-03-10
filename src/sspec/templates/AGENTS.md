@@ -114,6 +114,7 @@ Read the SKILL for the current phase. Unless the SKILL says otherwise, each phas
 - Simple, bounded confirmation -> `question` tool
 - Open-ended, tradeoff-heavy, or worth recording -> `sspec ask`
 - Design / Implement phase gates -> `sspec ask` (mandatory)
+- Split current work into a follow-up / replacement change -> `sspec ask` (mandatory)
 - Plan confirmation or mid-research clarification -> `question` tool
 - If no `question`-like tool is available -> use `sspec ask`
 
@@ -149,7 +150,8 @@ When change is DONE with architecture impact → proactively `@align` user: "Sho
 | `@change <n>` | Load `handover→tasks→spec`, continue; OR create if not exists `<n>` |
 | `@resume` | Same as `@change` for active change |
 | `@handover` | Execute `sspec-handover` |
-| `@sync` | Update tasks.md/handover.md to match reality |
+| `@sync` | Update spec.md/tasks.md/handover.md to match reality; never split or replace a change without `@align` |
+| `@subagent-audits` | Run independent subagent reviews for the current diff; see `sspec howto make-subagent-audit` |
 | `@argue` | **STOP** -> assess scope (§2 Review) |
 
 ### CLI Quick Reference

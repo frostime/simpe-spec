@@ -20,7 +20,9 @@ Phase emoji: ⏳ pending | 🚧 in progress | ✅ done
 **Verification**: <how to verify this phase>
 
 ### Feedback Tasks
-Use this section for tasks added during review/feedback loop.
+Use this section for review/feedback tasks that still belong to the current change.
+If accepted feedback changes scope/design, update `spec.md` first, then add the execution work here.
+If the work should become a new follow-up or replacement change, do not put it here unless the user has first approved that direction via `@align`.
 -->
 
 ---

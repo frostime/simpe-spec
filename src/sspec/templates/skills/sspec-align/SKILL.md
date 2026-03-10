@@ -23,6 +23,7 @@ Before continuing execution, eliminate critical uncertainty and obtain explicit 
 | **Mandatory** | Blocker, wrong assumption, rejected tool call |
 | **Mandatory** | Scope or direction change |
 | **Mandatory** | Irreversible action |
+| **Mandatory** | Split current work into a new change or replace a change with a `BLOCKED` successor |
 | **Optional** | Straightforward plan confirmation |
 | **Optional** | Minor preference or low-risk mode switch |
 | **Optional/Mandatory** | Session-end acknowledgement after all mandatory gates cleared; Mandatory if @force-end-align specified |
@@ -40,6 +41,7 @@ Before continuing execution, eliminate critical uncertainty and obtain explicit 
 | Situation | Tool |
 |---|---|
 | Design approval, implement review, blocker resolution, anything future agents may need to trace | `sspec ask` |
+| Change split / replacement decision (`follow-up-change`, `supersede-change`) | `sspec ask` |
 | Quick yes/no, light preference, temporary confirmation | `question` tool |
 
 **Plan rule**: Treat plan confirmation as lightweight by default. Upgrade it to `sspec ask` only when the plan introduces meaningful tradeoffs, scope changes, or decisions worth tracing later.
@@ -56,7 +58,7 @@ Alignment without record = information lost on next session.
 |---|---|
 | Design confirmed/revised | `spec.md` B |
 | Plan confirmed/revised | `tasks.md` |
-| Direction changed, key decision made | `handover.md` Decisions |
+| Direction changed, key decision made | `handover.md` Durable Memory |
 | User feedback received | `handover.md` Session Log (new `user-feedback` entry) |
 | Needs standalone Q&A record | `.sspec/asks/` via `sspec ask` |
 

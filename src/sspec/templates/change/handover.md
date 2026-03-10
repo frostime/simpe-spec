@@ -22,13 +22,12 @@ If something becomes obsolete, mark it as obsolete with a timestamp instead of d
 <!-- Files critical to understanding/continuing this change.
 - `path/file` - what it contains, why it matters -->
 
-### Decisions (Timestamped)
-<!-- Timestamp every entry (minute precision).
-- [2026-03-06T20:39] **Decision** - Redis over Memcached
-  **Why**: Need per-key TTL + persistence -->
-
-### Notes (Timestamped)
-<!-- Gotchas, edge cases, risks, verification shortcuts. Timestamp every entry.
+### Durable Memory (Typed, Timestamped)
+<!-- Promote only facts still useful after the current batch ends.
+Single/sub change preferred types: Alignment, Decision, VitalFinding, Constraint, Risk, VerificationShortcut.
+Use a custom type only when none fit well; keep it short and clear.
+- [2026-03-06T20:39] [Decision] Redis over Memcached because per-key TTL + persistence matter.
+- [2026-03-06T20:39] [Constraint] Session Log stays append-only; real next action lives there.
 Project-wide items -> ALSO append to project.md Notes. -->
 
 ## Session Log (Append-Only)

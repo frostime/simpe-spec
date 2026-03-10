@@ -33,14 +33,14 @@ If something becomes obsolete, mark it as obsolete with a timestamp instead of d
 <!-- Cross-phase files/docs that matter for coordination.
 - `path/file` - what it contains, why it matters -->
 
-### Cross-Phase Decisions (Timestamped)
-<!-- Timestamp every entry (minute precision).
-- [2026-03-06T20:39] **Decision** - <what>
-  **Why**: <rationale>
-  **Affects**: <which phases> -->
-
-### Notes (Timestamped)
-<!-- Cross-phase issues, integration gotchas, risk warnings. Timestamp every entry.
+### Durable Memory (Typed, Timestamped)
+<!-- Promote only facts still useful across coordination sessions.
+Root change preferred types: Alignment, CoordinationDecision, Dependency, CrossChangeFinding, Constraint, Risk, VerificationShortcut.
+Use a custom type only when none fit well; keep it short and clear.
+- [2026-03-06T20:39] [Alignment] User approved the current phase split.
+- [2026-03-06T20:39] [CoordinationDecision] Phase 2 depends on Phase 1 stabilization.
+- [2026-03-06T20:39] [CrossChangeFinding] Both sub-changes depend on the same config migration rule.
+- [2026-03-06T20:39] [Constraint] Sub-Change Status remains the volatile coordination snapshot.
 Project-wide items -> ALSO append to project.md Notes. -->
 
 ## Session Log (Append-Only)

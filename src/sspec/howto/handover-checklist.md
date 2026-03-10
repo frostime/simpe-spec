@@ -9,9 +9,9 @@ Any failed item → fix before marking the session complete.
 |------|-------|
 | New agent reads only `handover.md` — can resume in <30s? | |
 | If context compressed right now — could you continue from `handover.md` alone? | |
-| For each major decision — is the "why" captured in Working Memory? | |
+| For each durable cross-session fact — is it captured in Working Memory? | |
 | Newest Session Log entry has a concrete **Next** action (not vague)? | |
-| Every new Decisions/Notes entry is timestamped (minute precision)? | |
+| Every new Durable Memory entry is typed and timestamped (minute precision)? | |
 | Every user interaction (feedback, @align, @argue) has its own log entry with a tag? | |
 
 ## Scale the depth

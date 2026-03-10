@@ -3,7 +3,7 @@ name: sspec-handover
 description: "Save session state. Update handover.md, project.md, and spec-docs index. MANDATORY at session end, recommended mid-session."
 metadata:
   author: frostime
-  version: 3.2.1
+  version: 3.3.0
 ---
 
 # SSPEC Handover
@@ -47,16 +47,24 @@ handover.md is the resume entry point.
 - Each entry is an atomic batch (one cohesive work record)
 - Each entry MUST include both **Accomplished** and **Next**
 - Any user interaction (feedback, @align gate, @argue) MUST start a new log entry with a clear tag (for example: `user-feedback`, `argue`)
+- Need concrete log-writing rules? → `sspec howto write-handover-log`
 
 **Working Memory (Stable)**:
 - **Key Files**: List critical file paths with a 1-line why
-- **Decisions**: Timestamp every entry; include the "why"
-- **Notes**: Timestamp every entry; include risks/gotchas/verification shortcuts
-- If something becomes obsolete, mark it as obsolete with a timestamp (don't delete silently)
+- **Durable Memory**: Use typed entries in the form `[YYYY-MM-DDTHH:MM] [Type] <content>`
+- For single/sub changes, prefer: `Alignment`, `Decision`, `VitalFinding`, `Constraint`, `Risk`, `VerificationShortcut`
+- For root changes, prefer: `Alignment`, `CoordinationDecision`, `Dependency`, `CrossChangeFinding`, `Constraint`, `Risk`, `VerificationShortcut`
+- Use a custom type only when none of the canonical types fit; keep custom labels short and rare
+- Promote only facts still useful after the current batch ends; keep batch-local progress, review outcomes, and reminders in `Session Log`
+- If something becomes obsolete, default to marking it obsolete with a timestamp; delete only pure noise or obvious duplicates with no lasting value
 - If handover has a `Git Baseline (Immutable)` section, treat it as **read-only** origin context from change creation; do not refresh, rewrite, or "fix" it during later handovers
+- Need durable-memory type choice or examples? → `sspec howto write-handover-memory`
+- Need obsolete-memory cleanup rules? → `sspec howto handle-obsolete-memory`
 
 **Root change only**:
 - Update `Sub-Change Status (Volatile Snapshot)` when coordination state changes
+- Record durable coordination knowledge with root-oriented types such as `CoordinationDecision`, `Dependency`, or `CrossChangeFinding`
+- Quick chooser: `CoordinationDecision` = durable orchestration choice, `Dependency` = ordering/coupling rule, `CrossChangeFinding` = one finding that matters to multiple sub-changes
 
 ### 2. Sync tasks.md
 
@@ -84,9 +92,9 @@ If the change produced architectural knowledge (new interfaces, data models, pat
 |------|-------|
 | New agent reads only handover.md — can resume in <30s? | |
 | If context compressed right now — could you continue from handover.md alone? | |
-| For each major decision — can you find the "why" in handover? | |
+| For each durable cross-session fact — can you find it in typed Durable Memory? | |
 | Newest Session Log entry includes the real Next action (and is a single atomic batch)? | |
-| New Decisions/Notes entries are timestamped (minute precision)? | |
+| New Durable Memory entries are typed and timestamped (minute precision)? | |
 
 If any test fails → update handover before ending.
 
@@ -95,7 +103,7 @@ If any test fails → update handover before ending.
 **Thin** (simple change, ≤5 files): 3-5 bullet points across Working Memory sections.
 **Rich** (complex change, many decisions): Numbered items with sub-structure, evidence, tradeoff analysis.
 
-Use the template structure. Keep Session Log entries short and cohesive.
+Use the template structure. Keep Durable Memory compact and keep Session Log entries short and cohesive.
 
 ### Anti-Patterns
 
@@ -103,8 +111,9 @@ Use the template structure. Keep Session Log entries short and cohesive.
 |-----|------|
 | Skip handover at session end | ALWAYS handover — no exceptions |
 | Only update at session end | Update Working Memory DURING work |
-| Record decision without reasoning | Capture full chain: problem → alternatives → conclusion |
+| Promote batch-local status into Durable Memory | Keep transient progress, review outcomes, and reminders in Session Log |
 | No file paths in Key Files | List files you'd need to re-find after compression |
 | Put architecture docs in project.md | project.md ≤10s scan; use spec-docs for detailed content |
+| Split one durable fact across multiple memory buckets | Use one typed Durable Memory section and choose the clearest type |
 | Mix unrelated work in one Session Log entry | Keep each entry as one cohesive atomic batch |
 | User feedback not recorded as its own entry | New log entry with `user-feedback` / `argue` tag |

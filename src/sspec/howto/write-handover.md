@@ -1,37 +1,14 @@
 ---
 name: write-handover
-desc: Write effective handover entries so any agent can resume in 30 seconds.
+desc: Route to the focused HOWTO for the exact handover job you need.
 ---
 
-## Session Log rules (append-only, newest-first)
+Use this as the entry point, not as the full rulebook.
 
-Each entry MUST have:
-- **Header**: `### <ISO-timestamp> [tag] <title>` — tag examples: `work-log`, `user-feedback`, `argue`, `risk`
-- **Accomplished**: bullet list of what was done this batch
-- **Next**: concrete next action(s) — enough to start work without re-reading everything
-- **Notes** (optional): gotchas, edge cases, risks discovered this batch
+- Need to write a new `Session Log` batch? -> `sspec howto write-handover-log`
+- Need to add or update `Durable Memory`? -> `sspec howto write-handover-memory`
+- Need to clean up stale/invalid durable memory? -> `sspec howto handle-obsolete-memory`
+- Need a final quality pass after editing? -> `sspec howto handover-checklist`
 
-**Immutable rule**: Never edit or delete old entries. Mark obsolete items with a timestamp note instead.
-
-**New entry triggers**: any user feedback, @align gate, @argue event, or major phase switch — each MUST start a new log entry.
-
-## Working Memory rules
-
-**Key Files** — list only files that future work directly depends on, one line per file: `path/file — why it matters`.
-
-**Decisions** — timestamp every entry. Format: `[YYYY-MM-DDTHH:MM] **Decision** — what. **Why**: reason.`
-If a decision is superseded, mark old entry `(superseded at <timestamp>)` — do not delete.
-
-**Notes** — timestamp every entry. Capture gotchas, edge cases, verification shortcuts. If something caused a surprise or wasted time, write it here.
-
-## When to promote to project.md
-
-Write to `project.md` Notes when the discovery applies to the whole codebase, not just this change.
-Format: `- YYYY-MM-DD: <learning>`
-
-## Anti-patterns
-
-- Writing future tense in Accomplished ("will do X") — Accomplished is past tense only
-- Leaving Next empty or vague ("continue work") — Next must be a concrete starting action
-- Deleting or rewriting old Session Log entries — append only, always
-- Skipping handover at session end — it is mandatory, no exceptions
+For the full lifecycle contract (when handover is mandatory, how it interacts with `tasks.md`,
+`project.md`, and spec-doc prompts), read the `sspec-handover` SKILL instead of relying on HOWTOs.

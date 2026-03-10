@@ -83,14 +83,16 @@ def _print_warnings(warnings: tuple[str, ...], *, output_format: OutputFormat) -
 def _render_plain_list(catalog) -> None:
     """Render HOWTO list in YAML-like plain text."""
 
-    for index, item in enumerate(catalog.items):
+    for _, item in enumerate(catalog.items):
         description = item.description.replace('\n', ' ').strip()
         click.echo(f'- name: {item.name}')
         click.echo(f'  source: {item.source}')
         if description:
             click.echo(f'  desc: {description}')
-        if index < len(catalog.items) - 1:
-            click.echo('')
+        # if index < len(catalog.items) - 1:
+        #     click.echo('')
+    click.echo('')
+    click.echo('Run `sspec howto [<name>...]` to read HOWTO. Multi-names are supported.')
 
 
 def _compose_display_body(name: str, body: str) -> str:
@@ -107,7 +109,7 @@ def _compose_display_body(name: str, body: str) -> str:
 def _render_plain_howto(*, name: str, body: str) -> None:
     """Render a HOWTO body in agent-friendly plain text."""
 
-    click.echo(f'=== {name} ===')
+    click.echo(f'===== HOWTO/{name} =====')
     click.echo(_compose_display_body(name, body))
 
 

@@ -35,6 +35,8 @@ updated: ""
 - [x] Remove top-level headings from HOWTO source docs and scaffolds in `src/sspec/howto/*.md` and `src/sspec/services/howto_service.py`
 - [x] Allow `src/sspec/commands/howto.py` to read multiple HOWTO names in one invocation
 - [x] Remove plain read metadata output in `src/sspec/commands/howto.py` and replace it with lightweight separators between documents
+- [x] Rewrite builtin HOWTO docs in `src/sspec/howto/*.md` with a more directive, agent-facing style
+- [x] Add new builtin HOWTO docs in `src/sspec/howto/find-change.md`, `get-current-time.md`, and `use-sspec-cli.md`
 **Verification**: `sspec howto --help` documents the shorthand, default output is plain text, and targeted tests still pass.
 
 <!-- @RULE: Organize by phases. Each task <2h, independently testable.
@@ -76,3 +78,6 @@ Use this section for tasks added during review/feedback loop.
 - Completed: Support `--format` after subcommands, YAML-like plain output, headerless source docs, and multi-read
 - Added: final read-output cleanup task to drop plain frontmatter-style metadata
 - Completed: Switch plain read output to `=== name ===` separators with larger gaps between multiple docs
+- Completed: Rewrite builtin HOWTO docs around directive agent-facing procedures and 2K guidance
+- Completed: Compress builtin HOWTO docs to high-density forms within the new line-count guidance
+- Completed: Add `find-change`, `get-current-time`, and `use-sspec-cli` builtin HOWTOs

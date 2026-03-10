@@ -1,9 +1,9 @@
 ---
 name: add-howto-cli
 created: 2026-03-09 23:23:10
-status: DOING
+status: DONE
 attach-change: .sspec/changes/26-03-09T23-41_add-howto-cli/spec.md
-tldr: ''
+tldr: 'Added a HOWTO CLI plus a first batch of concise agent-facing HOWTO documents.'
 ---
 <!-- @RULE: Frontmatter Type
 status: OPEN | DOING | DONE | CLOSED;

@@ -1,6 +1,6 @@
 ---
 name: add-howto-cli
-status: REVIEW
+status: DONE
 type: ''
 change-type: single
 created: 2026-03-09 23:41:08

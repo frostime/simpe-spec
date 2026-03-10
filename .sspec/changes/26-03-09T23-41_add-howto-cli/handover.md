@@ -1,6 +1,6 @@
 # Handover: add-howto-cli
 
-**Updated**: 2026-03-10T01:29
+**Updated**: 2026-03-10T02:13
 
 ---
 
@@ -66,6 +66,8 @@ If something becomes obsolete, mark it as obsolete with a timestamp instead of d
   **Why**: The user wants agent-friendly structure plus batch retrieval without requiring repeated CLI calls.
 - [2026-03-10T01:29] **Decision** - Plain read mode prints only lightweight separators plus rendered body, with no metadata block.
   **Why**: The user wants agent-facing output to avoid frontmatter-like noise while still keeping multi-document boundaries obvious.
+- [2026-03-10T01:36] **Decision** - Rewrite builtin HOWTO docs toward a more directive, extraction-oriented, agent-facing style.
+  **Why**: The user wants HOWTO content to behave more like operational guidance than lightweight human notes.
 
 ### Notes (Timestamped)
 <!-- Gotchas, edge cases, risks, verification shortcuts. Timestamp every entry.
@@ -82,6 +84,9 @@ Project-wide items -> ALSO append to project.md Notes. -->
 - [2026-03-10T01:24] Final validation passed with `uv run ruff check src tests/test_howto_command.py tests/test_project_init_service.py` and `uv run pytest tests/test_howto_command.py tests/test_project_init_service.py` after the second review round.
 - [2026-03-10T01:24] Manual smoke checks passed for `sspec howto list --format rich`, `sspec howto write-howto --format rich`, and multi-read plain output.
 - [2026-03-10T01:29] Final validation re-passed after removing plain read metadata output.
+- [2026-03-10T01:36] Rewrote builtin HOWTO docs to emphasize direct action, extraction from larger rules, and the relaxed 2K default guidance.
+- [2026-03-10T01:36] Compressed builtin HOWTO docs to 17-21 lines each while keeping the new density and agent-facing style.
+- [2026-03-10T01:36] Added three more builtin HOWTO docs: `find-change`, `get-current-time`, and `use-sspec-cli`.
 
 ## Session Log (Append-Only)
 <!-- Newest entry first. Each entry is an atomic batch (one cohesive work record).
@@ -181,3 +186,57 @@ Any user interaction (feedback, @align, @argue) MUST start a new log entry. -->
 
 **Notes** (optional)
 - Plain read output now shows only separators plus rendered markdown body, which is closer to the intended agent-facing UX.
+
+### 2026-03-10T01:36 [user-feedback] review round 4 builtin rewrite
+
+**Accomplished**
+- Rewrote `write-howto`, `use-sspec-ask`, and `read-long-mdfile` in a more directive, agent-facing style.
+- Updated `write-howto` to recommend roughly 2K words by default instead of 1K.
+- Added stronger extraction guidance for turning important AGENTS / SKILL fragments into standalone HOWTOs.
+- Smoke-checked the rewritten `write-howto` output.
+
+**Next**
+- Ask the user for another content review pass.
+
+**Notes** (optional)
+- The external `write-agents` skill path from the prompt could not be located on disk, so the rewrite leaned on user guidance plus sspec's own alignment / mdtoc practices.
+
+### 2026-03-10T01:36 [user-feedback] review round 5 density trim
+
+**Accomplished**
+- Compressed the three builtin HOWTO docs into shorter, denser forms.
+- Updated `write-howto` with the new guidance: hard cap around 2K, recommended within 1.5K, hard cap 60 lines, recommended within 50.
+- Verified current line counts: `write-howto` 21, `use-sspec-ask` 19, `read-long-mdfile` 17.
+
+**Next**
+- Ask the user for another content review pass.
+
+**Notes** (optional)
+- This round focused on information density rather than changing CLI behavior.
+
+### 2026-03-10T01:36 [user-feedback] review round 6 add more howto docs
+
+**Accomplished**
+- Added `find-change` for locating the change the user actually means.
+- Added `get-current-time` for `sspec tool now` usage.
+- Added `use-sspec-cli` as a denser, more detailed CLI quick-reference HOWTO.
+- Verified line counts: 19, 16, and 24 respectively.
+
+**Next**
+- Ask the user to review the expanded HOWTO set.
+
+**Notes** (optional)
+- This round extended builtin coverage without changing command behavior.
+
+### 2026-03-10T02:13 [user-feedback] final acceptance
+
+**Accomplished**
+- Reworked `find-change` around actual CLI and filesystem checks.
+- Received final approval that the current HOWTO batch can be wrapped up.
+- Marked the change `DONE` and updated the linked request to `DONE`.
+
+**Next**
+- Archive the change if no further follow-up is needed.
+
+**Notes** (optional)
+- Final accepted builtin HOWTO set includes the compressed originals plus `find-change`, `get-current-time`, and `use-sspec-cli`.

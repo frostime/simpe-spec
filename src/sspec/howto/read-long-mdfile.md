@@ -3,19 +3,11 @@ name: read-long-mdfile
 desc: Use `sspec tool mdtoc` before reading long markdown files.
 ---
 
-When a Markdown file is long, do not read it blindly.
+When a Markdown file is long, do not read it blindly from line 1.
 
-Use this sequence:
-1. Run `sspec tool mdtoc <file>` first.
-2. Check file size and heading structure.
-3. Jump only to the sections you actually need.
-4. Read the relevant ranges instead of the whole file.
+- Default sequence: run `sspec tool mdtoc <file-pattern>` -> inspect size and heading tree -> pick the exact section -> read only that range -> expand only if needed.
+- Use this by default for long SKILL files, `AGENTS.md`, spec-docs, and large request / change files.
+- Pay attention to total lines / chars, the main heading tree, where the relevant section starts, and where the next heading starts.
+- `mdtoc` can handle multiple files by input with dir or globs.
 
-Use this especially for:
-- long SKILL files
-- spec-docs
-- large request or change documents
-- any markdown with many sections
-
-Reason:
-`mdtoc` gives a fast map of the document, which reduces blind reads and keeps context focused.
+Rule of thumb: if you hesitate before reading the whole file, run `mdtoc` first.

@@ -1,22 +1,21 @@
 ---
 name: write-howto
-desc: Write HOWTO docs as short, directive, highly focused operating guides.
+desc: Write HOWTO docs as directive, agent-facing operating guides for one concrete job.
 ---
 
-A HOWTO should solve one concrete action.
+HOWTO is a micro SKILL/RULE for agent system.
+The reader of HOWTO is AGENT/LLM Model, it collect rules by execute `sspec howto <name>`.
+A HOWTO must be concret, focused, directive, and actionable without human interpretation.
 
-Do this when writing one:
-- Keep the whole document within about 1K words.
-- Start with a verb-led `name` in frontmatter.
-- Keep the body highly cohesive: one topic, one job.
-- Use at most third-level headings.
-- Prefer directive wording over explanation-heavy prose.
-- Strip anything that belongs in a broader spec, SKILL, or AGENTS rule.
+**Do this**
+- Solve one job only. If the draft answers multiple questions, split it.
+- Good targets: one document-writing rule, one reading procedure, one alignment pattern, one review / handover action.
+- Bad targets: a whole lifecycle, a broad role description, or a mixed style guide.
+- Use a verb-led `name`; keep `desc` short.
+- Hard limit: about 2K words and 60 lines. Recommended: within 1.5K words and 50 lines.
+- If header sections are needed, top level starts at `##`; keep hierarchy shallow.
+- Clear action is recommended, like `Read file at xxx`, `Run shell command xxx`.
 
-Body expectations:
-- Tell the reader what to do.
-- Keep examples minimal and only when they remove ambiguity.
-- End early once the task is clear.
-
-Smell check:
-If the HOWTO is teaching a whole workflow or mixing multiple topics, split it.
+**Not that**
+- Do not copy large background blocks; keep only the part that specific action.
+- Avoid wording like "it may help" or "you may want to consider".

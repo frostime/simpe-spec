@@ -57,11 +57,13 @@ Then implement these tasks following `sspec-implement` workflow.
 
 ### Git-Aware Review
 
-When a change includes a recorded git baseline, use it to avoid shallow review:
+When a change has a `Git Baseline (Immutable)` section in `handover.md`, use it as the review anchor:
 
-1. Read the baseline in `handover.md` to understand the starting branch / HEAD / dirty state.
-2. Compare current changes against that origin point rather than only glancing at the latest file state.
-3. If the baseline shows pre-existing dirty files, distinguish those from work introduced by the current change before giving feedback.
+📚 `sspec howto review-git-baseline`
+
+It is recommended to use subagents to avoid potential context contamination (such as persistent blind spots or misunderstandings in the context) for independent and objective review.
+
+📚 `sspec howto make-subagent-audit`
 
 ## Rejection Protocol
 

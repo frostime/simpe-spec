@@ -39,6 +39,8 @@ Explore and investigate before designing. This phase is about **understanding**,
 - Find integration points, patterns already in use
 - Surface hidden complexity or edge cases
 - Read `project.md`, `spec-docs/`, existing change handovers
+- To locate relative change to resume: `sspec change list|find`
+- To read long Markdown files efficiently: `sspec howto read-long-mdfile`
 
 **Compare approaches** (if multiple paths visible):
 - Brainstorm options, build comparison tables

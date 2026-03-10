@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from sspec.core import (
@@ -197,6 +197,55 @@ def parse_change(change_path: Path, archived: bool = False) -> ChangeInfo:
         archived=archived,
         frontmatter=meta,
     )
+
+
+def _parse_change_datetime(value: object) -> datetime | None:
+    """Parse a change frontmatter timestamp when present."""
+
+    if not isinstance(value, str) or not value:
+        return None
+
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def _parse_change_dir_timestamp(change_path: Path) -> datetime | None:
+    """Parse the timestamp prefix from a change directory name."""
+
+    prefix = change_path.name.split('_', 1)[0]
+    try:
+        return datetime.strptime(prefix, '%y-%m-%dT%H-%M')
+    except ValueError:
+        return None
+
+
+def _get_change_sort_time(change: ChangeInfo) -> datetime | None:
+    """Return the most relevant timestamp for list ordering."""
+
+    meta = change.frontmatter
+    primary_key = 'archived' if change.archived else 'created'
+    fallback_key = 'created' if change.archived else None
+
+    primary = _parse_change_datetime(meta.get(primary_key))
+    if primary is not None:
+        return primary
+
+    if fallback_key is not None:
+        fallback = _parse_change_datetime(meta.get(fallback_key))
+        if fallback is not None:
+            return fallback
+
+    return _parse_change_dir_timestamp(change.path)
+
+
+def _change_sort_key(change: ChangeInfo) -> tuple[bool, timedelta, str]:
+    """Sort active changes first, then newest-first within each group."""
+
+    sort_time = _get_change_sort_time(change)
+    age = datetime.max - sort_time if sort_time is not None else timedelta.max
+    return (change.archived, age, change.name)
 
 
 def _display_path(path: Path, base: Path) -> str:
@@ -429,7 +478,7 @@ def list_changes(sspec_root: Path, include_archived: bool = False) -> list[Chang
 
         changes.append(parse_change(change_path, archived=False))
 
-    return sorted(changes, key=lambda x: (x.archived, x.name))
+    return sorted(changes, key=_change_sort_key)
 
 
 def archive_change(sspec_root: Path, change_info: ChangeInfo) -> Path:

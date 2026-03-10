@@ -10,6 +10,7 @@ from typing import TypedDict
 
 SSPEC_DIR = '.sspec'
 SKILLS_DIR = 'skills'
+HOWTO_DIR = 'howto'
 WORKSPACE_DIRS = ['.github', '.claude', '.agents']
 SKILL_SUBDIR = 'skills'
 CHANGES_DIR = 'changes'
@@ -201,6 +202,22 @@ def find_sspec_root(start: Path | None = None) -> Path | None:
     return None
 
 
+def find_sspec_dir(start: Path | None = None) -> Path | None:
+    """Find a `.sspec/` directory by walking up from start path.
+
+    Unlike `find_sspec_root()`, this does not require project markers (like
+    `.sspec/project.md`). It exists for optional sub-features that can be used
+    in a standalone way (for example `.sspec/howto/`).
+    """
+
+    path = start or Path.cwd()
+    for parent in [path] + list(path.parents):
+        sspec_path = parent / SSPEC_DIR
+        if sspec_path.is_dir():
+            return sspec_path
+    return None
+
+
 def get_sspec_root() -> Path:
     """Get .sspec directory or raise error."""
 
@@ -213,6 +230,18 @@ def get_sspec_root() -> Path:
 def get_template_dir() -> Path:
     """Get templates directory from package."""
     return Path(__file__).parent / 'templates'
+
+
+def get_builtin_howto_dir() -> Path:
+    """Get builtin HOWTO directory from package."""
+
+    return Path(__file__).parent / HOWTO_DIR
+
+
+def get_project_howto_dir(sspec_root: Path) -> Path:
+    """Get project-local HOWTO directory under `.sspec/`."""
+
+    return sspec_root / HOWTO_DIR
 
 
 def copy_template(src: Path, dest: Path, replacements: dict | None = None) -> None:

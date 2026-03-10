@@ -3,7 +3,7 @@ name: sspec-align
 description: "Agent-user alignment via persistent Q&A. USE ACTIVELY — guessing wastes more tokens than aligning."
 metadata:
   author: frostime
-  version: 9.1.0
+  version: 9.2.0
 ---
 
 # SSPEC Align
@@ -62,31 +62,37 @@ Alignment without record = information lost on next session.
 
 ---
 
-## 4. Phase Gate Patterns
+## 4. Use of sspec ask
 
-These are structure guides for `sspec ask`, not literal presets. For built-in `question` tools, ask the same decision in plain language and keep it short.
+Treat `sspec ask` as one atomic flow:
 
-### `sspec ask` skeleton
+1. `sspec ask create <topic>`
+2. Fill `reason`
+3. Fill `question`
+4. `sspec ask prompt <path>`
+
+Do not stop halfway unless you intentionally want to leave a draft for later refinement.
+
+**Minimum content**:
+- `reason`: why alignment is needed now, and what risk exists if you proceed without it
+- `question`: current state, decision needed, and the exact ask to the user
+- long analysis: write it to `.sspec/tmp/` and link it instead of pasting everything into the ask body
+
+Minimal skeleton:
 
 ```yaml
 reason: |
   <why alignment is needed now>
 question: |
-  <change-name>:
-  **Context**: <problem / state>
-  **Decision**: <what user needs to approve>
-  **See**: <file path if needed>
+  <current state>
+  <decision needed>
+  See: <path if useful>
 
   <explicit ask>
 ```
 
-### What to include by phase
-
-- **Design**: Problem, Approach, key design decisions, Scope, `spec.md`
-- **Plan**: Phases, total tasks, key files, verification, `tasks.md`; default to `question` unless durable approval is needed
-- **Implement review**: What was done, tasks completed, what to review
-- **Blocker / wrong assumption**: Briefly state `design says X, found Y`, then ask for direction
-- **Mid-research clarification**: Present interpretation A/B and ask which is correct
+For the exact CLI procedure, read: `sspec howto use-sspec-ask`
+For a tighter writing template, read: `sspec howto write-sspec-ask`
 
 ---
 
@@ -95,46 +101,5 @@ question: |
 If a task explicitly requests `@force-end-align`, treat it as a high-priority end-of-turn instruction.
 
 Meaning: when you believe the work is done and would normally stop, do one last user-facing alignment instead of silently ending the turn. Prefer the built-in `question` tool. Use `sspec ask` only if that final check also needs durable record, approval, or sign-off.
-
-This is especially useful in credit-based hosts (for example Copilot): one last question can keep the productive session alive and save the user another paid round.
-
----
-
-## 6. `sspec ask` Workflow
-
-From the agent's perspective, treat this as **one atomic work unit**: `create` -> edit -> `prompt`.
-
-- It prevents half-finished ask files from being left behind
-- In hosts that gate `sspec ask prompt` for approval, the approval pause gives the user time to prepare the answer
-- It preserves the real interaction boundary: the user responds at `prompt`, not at `create`
-
-```bash
-sspec ask create <topic>          # Create .yml template
-# → Edit file: fill reason + question fields
-sspec ask prompt <path-to-yml>    # User answers → converts to .md record
-sspec ask list                    # Show pending/completed asks
-```
-
-Default posture: do all three steps in one flow unless you are intentionally stopping to let another agent or the user refine the draft file first.
-
-**Content rules**:
-- Keep the `question` field focused on the actual question
-- Long analysis/drafts → write to `.sspec/tmp/<topic>.md`, reference path in question
-- Batch related questions in one ask, don't create separate asks per item
-
-Adapt the wording to the decision; keep the create/edit/prompt flow intact.
-
-```yaml
-# Anti-pattern: 200 lines of analysis stuffed into question field
-# Correct:
-reason: |
-  Architecture decision needed
-question: |
-  See draft at .sspec/tmp/design-draft.md.
-
-  **Option A**: <brief>
-  **Option B**: <brief>
-
-  Which approach?
-```
+📚 `sspec howto force-end-align`
 

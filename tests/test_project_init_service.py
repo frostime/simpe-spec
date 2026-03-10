@@ -62,6 +62,7 @@ class TestInitializeProject:
         assert (sspec / 'requests').is_dir()
         assert (sspec / 'asks').is_dir()
         assert (sspec / 'skills').is_dir()
+        assert (sspec / 'howto').is_dir()
         assert (sspec / 'spec-docs').is_dir()
 
     def test_creates_meta_json(self, tmp_path: Path):

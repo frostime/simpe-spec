@@ -35,6 +35,15 @@ def _set_spec_status(change_path: Path, status: str) -> None:
     spec.write_text(updated, encoding='utf-8')
 
 
+def _update_spec_frontmatter(change_path: Path, **values: str) -> None:
+    """Update one or more spec.md frontmatter values."""
+
+    spec = change_path / 'spec.md'
+    content = spec.read_text(encoding='utf-8')
+    updated = update_frontmatter(content, values)
+    spec.write_text(updated, encoding='utf-8')
+
+
 def _write_tasks(change_path: Path, done: int, total: int) -> None:
     """Write a tasks.md with the given done/total checkbox counts."""
     lines = []
@@ -310,14 +319,37 @@ class TestListChanges:
         changes = list_changes(sspec_root, include_archived=True)
         assert any(c.archived for c in changes)
 
-    def test_sorted_by_name(self, sspec_root: Path):
-        create_change(sspec_root, 'zebra')
-        create_change(sspec_root, 'alpha')
+    def test_sorts_active_changes_by_created_descending(self, sspec_root: Path):
+        zebra = create_change(sspec_root, 'zebra')
+        alpha = create_change(sspec_root, 'alpha')
+        middle = create_change(sspec_root, 'middle')
+
+        _update_spec_frontmatter(zebra, created='2026-02-01T10:00:00')
+        _update_spec_frontmatter(alpha, created='2026-02-03T10:00:00')
+        _update_spec_frontmatter(middle, created='2026-02-02T10:00:00')
+
         changes = list_changes(sspec_root)
         names = [c.name for c in changes]
-        # parse_change may use the name from spec.md frontmatter;
-        # but directory listing should still be sorted
-        assert names == sorted(names)
+        assert names == ['alpha', 'middle', 'zebra']
+
+    def test_sorts_archived_changes_by_archived_descending(self, sspec_root: Path):
+        older = create_change(sspec_root, 'older-archive')
+        newer = create_change(sspec_root, 'newer-archive')
+
+        _set_spec_status(older, 'DONE')
+        _set_spec_status(newer, 'DONE')
+
+        older_info = parse_change(older)
+        newer_info = parse_change(newer)
+        older_archive = archive_change(sspec_root, older_info)
+        newer_archive = archive_change(sspec_root, newer_info)
+
+        _update_spec_frontmatter(older_archive, archived='2026-02-01T10:00:00')
+        _update_spec_frontmatter(newer_archive, archived='2026-02-03T10:00:00')
+
+        changes = list_changes(sspec_root, include_archived=True)
+        archived_names = [c.name for c in changes if c.archived]
+        assert archived_names == ['newer-archive', 'older-archive']
 
 
 # ---------------------------------------------------------------------------

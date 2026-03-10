@@ -3,7 +3,7 @@ name: sspec-research
 description: "Investigate the problem space, read code, build understanding. Use when starting new work or when context is insufficient."
 metadata:
   author: frostime
-  version: 2.0.0
+  version: 2.0.1
 ---
 
 # SSPEC Research
@@ -39,6 +39,8 @@ Explore and investigate before designing. This phase is about **understanding**,
 - Find integration points, patterns already in use
 - Surface hidden complexity or edge cases
 - Read `project.md`, `spec-docs/`, existing change handovers
+- To locate the change to resume, use `sspec change list` or `sspec change find <name>`
+- To read long Markdown files efficiently: `sspec howto read-long-mdfile`
 
 **Compare approaches** (if multiple paths visible):
 - Brainstorm options, build comparison tables

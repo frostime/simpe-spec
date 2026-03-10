@@ -58,6 +58,8 @@ For each pending task:
 
 After completing each task, update the Progress section:
 
+→ For the allowed status transitions: `sspec howto update-change-status`
+
 ```markdown
 **Overall**: 40%
 

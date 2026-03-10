@@ -245,6 +245,9 @@ def list_changes_cmd(include_all: bool = False) -> None:
 def _list_changes(sspec_root: Path, include_all: bool) -> None:
     """List changes."""
     changes = list_changes(sspec_root, include_archived=include_all)
+    archived_total = len(list_changes(sspec_root, include_archived=True)) - len(
+        list_changes(sspec_root, include_archived=False)
+    )
 
     if not changes:
         console.print('[dim]No changes found.[/dim]')
@@ -264,11 +267,11 @@ def _list_changes(sspec_root: Path, include_all: bool) -> None:
         console.print()
         console.print('[bold dim]Archived[/bold dim]')
         _print_changes_list(archived, dim=True)
-    elif archived:
-        console.print(f'[dim]Archived: {len(archived)} (use --all to show)[/dim]')
+    elif archived_total:
+        console.print(f'[dim]Archived: {archived_total} (use --all to show)[/dim]')
 
     console.print()
-    console.print(f'[dim]Active: {len(active)} | Archived: {len(archived)}[/dim]')
+    console.print(f'[dim]Active: {len(active)} | Archived: {archived_total}[/dim]')
 
 
 def _display_change(change: ChangeInfo, dim: bool = False, in_detail: bool = False) -> None:
@@ -322,7 +325,7 @@ def _display_change(change: ChangeInfo, dim: bool = False, in_detail: bool = Fal
 
 def _print_changes_list(changes: list[ChangeInfo], dim: bool = False) -> None:
     """Print changes as a list."""
-    for change in sorted(changes, key=lambda x: x.name):
+    for change in changes:
         _display_change(change, dim=dim)
         console.print()
 

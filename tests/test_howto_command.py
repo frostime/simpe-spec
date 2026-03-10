@@ -50,7 +50,7 @@ def test_howto_implicit_read_renders_body_without_frontmatter(
     result = runner.invoke(main, ['howto', 'Local_Guide'])
 
     assert result.exit_code == 0
-    assert '=== local-guide ===' in result.output
+    assert '===== HOWTO/local-guide =====' in result.output
     assert '# local-guide' in result.output
     assert 'Follow the steps.' in result.output
     assert '---\nname:' not in result.output
@@ -84,10 +84,42 @@ def test_howto_read_supports_multiple_names(tmp_path: Path, monkeypatch) -> None
     result = runner.invoke(main, ['howto', 'read', 'local-guide', 'extra-guide'])
 
     assert result.exit_code == 0
-    assert '=== local-guide ===' in result.output
-    assert '=== extra-guide ===' in result.output
+    assert '===== HOWTO/local-guide =====' in result.output
+    assert '===== HOWTO/extra-guide =====' in result.output
     assert 'Second body.' in result.output
-    assert '\n\n\n=== extra-guide ===' in result.output
+    assert '\n\n\n===== HOWTO/extra-guide =====' in result.output
+
+
+def test_howto_list_and_read_work_without_sspec_project(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+
+    result = runner.invoke(main, ['howto', '--list'])
+    assert result.exit_code == 0
+    assert 'source: builtin' in result.output
+
+    result = runner.invoke(main, ['howto', 'write-howto'])
+    assert result.exit_code == 0
+    assert '===== HOWTO/write-howto =====' in result.output
+
+
+def test_howto_can_use_standalone_sspec_howto_dir(tmp_path: Path, monkeypatch) -> None:
+    # Standalone mode: `.sspec/howto/` exists, but `.sspec/project.md` is absent.
+    sspec_howto_dir = tmp_path / '.sspec' / 'howto'
+    sspec_howto_dir.mkdir(parents=True, exist_ok=True)
+    (sspec_howto_dir / 'local-guide.md').write_text(LOCAL_GUIDE, encoding='utf-8')
+
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+
+    result = runner.invoke(main, ['howto', '--list'])
+    assert result.exit_code == 0
+    assert '- name: local-guide' in result.output
+    assert '  source: project' in result.output
+
+    result = runner.invoke(main, ['howto', 'local-guide'])
+    assert result.exit_code == 0
+    assert '===== HOWTO/local-guide =====' in result.output
 
 
 def test_howto_new_creates_project_file(tmp_path: Path, monkeypatch) -> None:

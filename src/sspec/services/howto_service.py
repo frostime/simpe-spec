@@ -84,17 +84,23 @@ def _build_howto_info(
     )
 
 
-def collect_howtos(sspec_root: Path) -> HowtoCatalog:
-    """Collect builtin and project HOWTOs with deterministic duplicate handling."""
+def collect_howtos(sspec_root: Path | None) -> HowtoCatalog:
+    """Collect builtin and project HOWTOs with deterministic duplicate handling.
+
+    When sspec_root is None, only builtin HOWTOs are collected.
+    """
 
     items: list[HowtoInfo] = []
     warnings: list[str] = []
     seen: dict[str, HowtoInfo] = {}
 
-    sources: tuple[tuple[HowtoSource, Path], ...] = (
+    sources_list: list[tuple[HowtoSource, Path]] = [
         ('builtin', get_builtin_howto_dir()),
-        ('project', get_project_howto_dir(sspec_root)),
-    )
+    ]
+    if sspec_root is not None:
+        sources_list.append(('project', get_project_howto_dir(sspec_root)))
+
+    sources: tuple[tuple[HowtoSource, Path], ...] = tuple(sources_list)
 
     for source, howto_dir in sources:
         if not howto_dir.exists():
@@ -124,7 +130,7 @@ def collect_howtos(sspec_root: Path) -> HowtoCatalog:
 
 
 def resolve_howto(
-    sspec_root: Path,
+    sspec_root: Path | None,
     name: str,
 ) -> tuple[HowtoInfo | None, tuple[str, ...]]:
     """Resolve a HOWTO name to one collected HOWTO entry."""

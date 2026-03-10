@@ -4,8 +4,8 @@ desc: Write HOWTO docs as directive, agent-facing operating guides for one concr
 ---
 
 HOWTO is a micro SKILL/RULE for agent system.
-The reader of HOWTO is AGENT/LLM Model, it collect rules by execute `sspec howto <name>`.
-A HOWTO must be concret, focused, directive, and actionable without human interpretation.
+The reader is an AGENT/LLM model; it collects rules by running `sspec howto <name>`.
+A HOWTO must be concrete, focused, directive, and actionable without human interpretation.
 
 **Do this**
 - Solve one job only. If the draft answers multiple questions, split it.

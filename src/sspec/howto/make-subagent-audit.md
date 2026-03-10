@@ -1,6 +1,6 @@
 ---
 name: make-subagent-audit
-desc:
+desc: Run independent reviews with subagents against a git diff range.
 ---
 
 Conduct independent code-level reviews using Subagents.

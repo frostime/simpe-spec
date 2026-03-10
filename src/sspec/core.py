@@ -202,6 +202,22 @@ def find_sspec_root(start: Path | None = None) -> Path | None:
     return None
 
 
+def find_sspec_dir(start: Path | None = None) -> Path | None:
+    """Find a `.sspec/` directory by walking up from start path.
+
+    Unlike `find_sspec_root()`, this does not require project markers (like
+    `.sspec/project.md`). It exists for optional sub-features that can be used
+    in a standalone way (for example `.sspec/howto/`).
+    """
+
+    path = start or Path.cwd()
+    for parent in [path] + list(path.parents):
+        sspec_path = parent / SSPEC_DIR
+        if sspec_path.is_dir():
+            return sspec_path
+    return None
+
+
 def get_sspec_root() -> Path:
     """Get .sspec directory or raise error."""
 

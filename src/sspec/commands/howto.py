@@ -11,7 +11,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
 
-from sspec.core import SspecNotFoundError, get_sspec_root
+from sspec.core import SSPEC_DIR, find_sspec_dir
 from sspec.services.howto_service import (
     collect_howtos,
     create_project_howto,
@@ -43,12 +43,14 @@ class ImplicitReadGroup(click.Group):
 
 
 def _get_sspec_root_or_fail() -> Path:
-    """Resolve `.sspec/` root or raise a CLI error."""
+    """Best-effort resolve `.sspec/` directory.
 
-    try:
-        return get_sspec_root()
-    except SspecNotFoundError:
-        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
+    HOWTO is intentionally usable without a fully initialized sspec project:
+    - If `.sspec/` exists, merge builtin + `.sspec/howto/`.
+    - Otherwise, fall back to builtin-only.
+    """
+
+    return find_sspec_dir() or Path.cwd() / SSPEC_DIR
 
 
 def _resolve_output_format(
@@ -58,7 +60,7 @@ def _resolve_output_format(
     """Resolve effective HOWTO output format from local option or parent contexts."""
 
     if local_output_format in {'plain', 'rich'}:
-        return local_output_format # type: ignore[return-value]
+        return local_output_format  # type: ignore[return-value]
 
     current: click.Context | None = ctx
     while current is not None:
@@ -152,7 +154,7 @@ def howto(ctx: click.Context, list_only: bool, output_format: str | None) -> Non
 def list_cmd(ctx: click.Context, output_format: str | None) -> None:
     """List all available HOWTO documents."""
 
-    sspec_root = _get_sspec_root_or_fail()
+    sspec_root = find_sspec_dir()
     catalog = collect_howtos(sspec_root)
     effective_format = _resolve_output_format(ctx, output_format)
     _print_warnings(catalog.warnings, output_format=effective_format)
@@ -193,7 +195,7 @@ def list_cmd(ctx: click.Context, output_format: str | None) -> None:
 def read_cmd(ctx: click.Context, names: tuple[str, ...], output_format: str | None) -> None:
     """Read one or more HOWTO documents by name."""
 
-    sspec_root = _get_sspec_root_or_fail()
+    sspec_root = find_sspec_dir()
     effective_format = _resolve_output_format(ctx, output_format)
     rendered_items: list[tuple[str, str, str, str]] = []
     warning_list: list[str] = []
@@ -218,13 +220,14 @@ def read_cmd(ctx: click.Context, names: tuple[str, ...], output_format: str | No
 
     _print_warnings(tuple(dict.fromkeys(warning_list)), output_format=effective_format)
 
-    for index, (name, source, _description, body) in enumerate(rendered_items):
+    for index, (name, source, description, body) in enumerate(rendered_items):
         if effective_format == 'plain':
             _render_plain_howto(name=name, body=body)
         else:
-            # if description:
-            #     console.print(f'[dim]{description}[/dim]')
-            #     console.print()
+            if description:
+                # Print description outside the panel so it stays plain/ASCII in captured output.
+                console.print(f'[dim]{description}[/dim]')
+                console.print()
 
             console.print(
                 Panel(
@@ -236,8 +239,12 @@ def read_cmd(ctx: click.Context, names: tuple[str, ...], output_format: str | No
             )
 
         if index < len(rendered_items) - 1:
-            console.print()
-            console.print()
+            if effective_format == 'plain':
+                click.echo('')
+                click.echo('')
+            else:
+                console.print()
+                console.print()
 
 
 @howto.command(name='new')

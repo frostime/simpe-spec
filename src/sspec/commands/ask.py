@@ -130,6 +130,11 @@ def ask_prompt(ask_file: Path) -> None:
         click.echo('')
         click.echo(f'[OK] Ask recorded to: {rel_str}')
         click.echo('')
+        click.echo(
+            'Note: If the answer output below looks garbled in this terminal, '
+            f'open {rel_str} directly (UTF-8).'
+        )
+        click.echo('')
         click.echo('Answer:')
         click.echo(answer)
 

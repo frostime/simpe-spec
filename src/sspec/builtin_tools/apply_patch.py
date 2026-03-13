@@ -148,6 +148,36 @@ def read_text_robust(file_path: Path) -> str:
         return text
 
 
+def read_patch_text_interactive() -> str:
+    """Read patch text via prompt_toolkit multiline input.
+
+    Submit with Esc+Enter (or Ctrl+D). Cancel with Ctrl+C.
+    """
+    from prompt_toolkit import PromptSession
+    from prompt_toolkit.key_binding import KeyBindings
+
+    bindings = KeyBindings()
+
+    @bindings.add('escape', 'enter')
+    def _submit_escape_enter(event):
+        event.current_buffer.validate_and_handle()
+
+    @bindings.add('c-d')
+    def _submit_ctrl_d(event):
+        event.current_buffer.validate_and_handle()
+
+    session = PromptSession(multiline=True, key_bindings=bindings)
+
+    try:
+        text = session.prompt('> ')
+    except (KeyboardInterrupt, EOFError):
+        return ''
+
+    if text and not text.endswith('\n'):
+        text += '\n'
+    return text
+
+
 def safe_resolve_under_root(root: Path, user_path: str) -> Path:
     """
     将 patch 里的相对路径解析到 root 下：
@@ -679,13 +709,10 @@ def register_command(group):
 
         patch_text = ''
         if use_input:
-            from sspec.builtin_tools.prompt import run_interactive_editor
-
             console.print(
-                '[cyan]Interactive input:[/cyan] paste/write patch text, then Esc+Enter to submit.'
+                '[cyan]Interactive input:[/cyan] paste/write patch text, then Esc+Enter (or Ctrl+D) to submit.'
             )
-            text, _ = run_interactive_editor(root_dir=project_root)
-            patch_text = text
+            patch_text = read_patch_text_interactive()
 
             if not patch_text.strip():
                 console.print('[yellow]No input. Skipped.[/yellow]')

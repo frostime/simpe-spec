@@ -19,3 +19,9 @@ commands:
     description: 激活虚拟环境
     type: cmd-line
     invoke: .venv/Scripts/activate
+  uv_publish:
+    description: uv 发布到 pypi
+    type: script
+    invoke: pwsh -File {script}
+    script_file: scripts\uv_publish.ps1
+    script_strategy: ref

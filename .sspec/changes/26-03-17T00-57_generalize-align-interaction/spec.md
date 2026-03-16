@@ -1,6 +1,6 @@
 ---
 name: generalize-align-interaction
-status: DOING
+status: REVIEW
 type: "refactor"
 change-type: single
 created: 2026-03-17T00:57:34
@@ -64,19 +64,19 @@ change lifecycle（Research → Design → Plan → Implement → Review → Han
 - `howto/force-end-align` 整个文件
 - `sspec-align/SKILL.md` §1 表格中 `@force-end-align` 相关行
 
-#### Change C: `sspec ask` 退出主流程
+#### Change C: `sspec ask` 退出主流程，但恢复 `sspec tool ask` fallback
 
-`sspec ask` 不再出现在 AGENTS.md、SKILL、HOWTO 的推荐主流程中。交互职责完全交给平台原生能力（question 工具或对话）。
+`sspec ask` 不再出现在 AGENTS.md、SKILL、HOWTO 的推荐主流程中。默认交互职责交给平台原生能力（question 工具或对话）；当平台没有 `question`-like 工具时，使用 `sspec tool ask` 作为 fallback ask channel。
 
-**本轮实现范围**：先把模板协议和 HOWTO/提示文案去耦合；现有 `sspec ask` CLI 代码暂时保留原位置，不做兼容迁移。
+兼容策略：保留现有顶级 `sspec ask` 命令，同时把同一组子命令挂到 `sspec tool ask` 下，并通过 `--prompt` 暴露 agent-facing usage。
 
 具体改动：
+- `src/sspec/commands/tool.py` 挂载 `ask` 子命令组，使 `sspec tool ask ...` 可用
+- `src/sspec/commands/ask.py` 增加 `--prompt`，输出 fallback ask workflow 与用法说明
 - `AGENTS.md` §3 重写：删除 channel 选择矩阵，不再提及 `sspec ask`
-- `sspec-align/SKILL.md` §2 (Choose the Channel) 删除，§4 (Use of sspec ask) 删除
+- `sspec-align/SKILL.md` §2 (Choose the Channel) 删除，改为 question-tool concise ask + `sspec tool ask` fallback
 - 各 phase SKILL 中引用 `sspec ask` 的地方全部移除
-- CLI Quick Reference 中移除 `sspec ask` 条目
-
-**后续可选项**：如果后面仍然需要保留 ask 能力，再单独把它迁移为 `sspec tool ask`，并处理命令兼容与文档更新。
+- CLI Quick Reference 中增加 `sspec tool ask --prompt` 条目
 
 决策记录的归宿改为已有机制：
 
@@ -126,7 +126,9 @@ Micro task (≤3 files, ≤30min, obvious):
 | HOWTO `write-sspec-ask` | 删除 |
 | `src/sspec/howto/use-sspec-cli.md` | 移除 howto 中的 `sspec ask` 示例 |
 | `src/sspec/commands/change.py` | 移除 change 创建成功后的旧 `sspec ask` 提示文案 |
-| `src/sspec/commands/tool.py` / `src/sspec/builtin_tools/` | 增加 `sspec tool ask` 入口与 `--prompt` 使用说明 |
+| `src/sspec/builtin_tools/ask.py` | 将 ask 实现迁入 builtin tools，并为 ask group 增加 `--prompt` 用法说明 |
+| `src/sspec/commands/tool.py` | 通过 builtin tool 注册 ask group 到 `sspec tool` 下，提供 fallback ask channel |
+| `.sspec/spec-docs/interaction-records.md` | 同步 ask 架构路径与命令入口到 builtin tool 模型 |
 
 ### 不改的部分
 
@@ -134,6 +136,6 @@ Micro task (≤3 files, ≤30min, obvious):
 - spec.md / tasks.md / handover.md 三件套结构和模板
 - spec-docs 系统
 - Scale assessment 逻辑（micro/single/multi）
-- `sspec ask` CLI 代码本身（本轮保留，不迁移；后续可单独处理）
+- 顶级 `sspec ask` 兼容入口（保留，避免现有用法断裂）
 - Handover 机制（保留，仍然 mandatory at session end）
 - Design / Implement 的 hard gate 性质（保留，只是实现方式从 sspec ask 改为 question 工具/对话）

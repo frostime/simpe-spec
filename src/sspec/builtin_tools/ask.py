@@ -1,4 +1,4 @@
-"""sspec ask command - two-step Q&A with file-based workflow."""
+"""Ask workflow exposed both as top-level command and builtin tool."""
 
 from __future__ import annotations
 
@@ -22,11 +22,57 @@ from sspec.services.editor_service import open_in_editor
 
 console = Console()
 
+__all__ = [
+    'ASK_TOOL_PROMPT',
+    'ask_group',
+    'register_command',
+]
 
-@click.group(name='ask')
-def ask_group() -> None:
+
+ASK_TOOL_PROMPT = """
+# ask — Fallback User Consultation Workflow
+
+Use this only when no built-in `question`-like tool is available.
+
+## Important
+
+- Put the context, summary, tradeoffs, and file references in normal output first.
+- Use the ask workflow only to present the final question and collect the answer.
+- For long analysis, write a draft under `.sspec/tmp/` and link it from the question.
+
+## Usage
+
+```
+sspec tool ask --prompt
+sspec tool ask create <topic>
+sspec tool ask prompt <path-to-yml>
+sspec tool ask list
+sspec tool ask archive [name]
+```
+
+## Recommended Flow
+
+1. Summarize the context in normal output
+2. `sspec tool ask create <topic>`
+3. Fill `reason` and `question`
+4. `sspec tool ask prompt <path>`
+
+`sspec ask ...` remains available for compatibility, but agents should reference
+the tool namespace in protocol guidance.
+""".strip()
+
+
+@click.group(name='ask', invoke_without_command=True)
+@click.option('--prompt', 'show_prompt', is_flag=True, help='Show LLM-oriented fallback usage.')
+@click.pass_context
+def ask_group(ctx: click.Context, show_prompt: bool) -> None:
     """Manage ask prompts for mid-execution user consultation."""
-    pass
+    if show_prompt:
+        click.echo(ASK_TOOL_PROMPT)
+        return
+
+    if ctx.invoked_subcommand is None:
+        click.echo(ctx.get_help())
 
 
 def _resolve_ask_file(asks_dir: Path, name: str, interactive: bool) -> Path:
@@ -84,8 +130,8 @@ def ask_create(name: str) -> None:
     click.echo('')
     click.echo('Next steps:')
     click.echo(f'  1. Edit reason and question in {rel_str}')
-    click.echo(f'  2. Run: sspec ask prompt {rel_str}')
-    click.echo("  3. Agent will get user's answer from `sspec ask prompt`.")
+    click.echo(f'  2. Run: sspec tool ask prompt {rel_str}')
+    click.echo("  3. Agent will get user's answer from `sspec tool ask prompt`.")
     click.echo('Note:')
     click.echo('  - Simple/Complex question -> write in QUESTION fields.')
     click.echo(
@@ -302,3 +348,8 @@ def _archive_single_ask(sspec_root: Path, ask_path: Path, auto_yes: bool) -> Non
     dest_path = archive_ask(sspec_root, sspec_root / 'asks', ask_path)
     rel_path = dest_path.relative_to(sspec_root.parent)
     click.echo(f'Archived to: {rel_path}')
+
+
+def register_command(group: click.Group) -> None:
+    """Register ask under `sspec tool` as a builtin fallback channel."""
+    group.add_command(ask_group)

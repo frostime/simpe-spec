@@ -266,6 +266,7 @@ Read the SKILL for the current phase. Unless the SKILL says otherwise, each phas
 
 **How to gate**:
 - If a `question`-like tool is available (e.g. `vscode/askQuestion`, `opencode/question`) → first present the summary / context / references in normal output, then use the tool only for the concise ask itself
+- Otherwise, if `sspec tool ask` exists → use it as the fallback ask channel; detailed usage: `sspec tool ask --prompt`
 - Otherwise → state the question clearly in output, end turn, wait for user reply
 
 **Record decisions** in their natural home — `spec.md` for design, `handover.md` Durable Memory for direction changes, Session Log for user feedback. No separate system needed.
@@ -309,6 +310,7 @@ Run `sspec <command> --help` for full options. Keep this list minimal:
 | `sspec change new <name> [--from <REQUEST>]` | Create a change |
 | `sspec change status <name>` | Inspect current change state |
 | `sspec doc new "<name>"` | Create spec-doc |
+| `sspec tool ask --prompt` | Show fallback ask workflow when no `question` tool exists |
 | `sspec tool mdtoc <file>` | Pre-scan Markdown |
 | `sspec tool now [--date|--utc|--json]` | Show current time when timestamps matter |
 | `sspec howto list` | Browse operational micro-guides |

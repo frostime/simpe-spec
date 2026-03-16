@@ -28,11 +28,14 @@ Before continuing execution, choose whether the current moment only needs a summ
 ## 2. How To Gate
 
 - If a built-in `question`-like tool is available, first present the context in normal output, then use the tool only for the concise question itself.
+- Otherwise, if `sspec tool ask` is available, use it as the fallback ask channel.
 - Otherwise, state the question clearly in normal output and end the turn.
 
 For large context, write analysis to `.sspec/tmp/` and link it instead of pasting everything inline.
 
 **Question-tool rule**: do not stuff long context, tradeoff tables, or multi-paragraph analysis into the `question` tool payload. Show the summary first; let the tool carry only the decision prompt.
+
+Fallback tool usage reference: `sspec tool ask --prompt`
 
 ---
 

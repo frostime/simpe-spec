@@ -1,12 +1,14 @@
 ---
 name: Interaction Records
-description: Define request and ask file schemas, linking rules, completion flow, and archive rewrites
-updated: 2026-03-07
+description: Define request and ask file schemas, linking rules, fallback ask flow, and archive rewrites
+updated: 2026-03-17
 scope:
   - /src/sspec/services/request_service.py
   - /src/sspec/services/ask_service.py
   - /src/sspec/commands/request.py
-  - /src/sspec/commands/ask.py
+  - /src/sspec/builtin_tools/ask.py
+  - /src/sspec/commands/tool.py
+  - /src/sspec/cli.py
   - /src/sspec/libs/path_refs.py
   - /tests/test_request_service.py
   - /tests/test_ask_service.py
@@ -22,9 +24,11 @@ replacement: ""
 sspec 通过两类持久记录承载人与 Agent 的互动：
 
 - `request`：开发者提交的任务入口
-- `ask`：Agent 在执行过程中发起的关键对齐记录
+- `ask`：Agent 在缺少 `question`-like 工具时使用的 fallback 对齐记录
 
 这两类记录都必须能被归档，并在归档后保持跨文件引用有效。
+
+说明：当前推荐入口是 `sspec tool ask ...`；顶级 `sspec ask ...` 作为兼容入口保留，二者共享同一套实现与记录格式。
 
 ## Lifecycle Overview
 
@@ -34,8 +38,8 @@ graph TD
     R2 --> R3[link_request_to_change]
     R3 --> R4[requests/archive/*.md]
 
-    A1[sspec ask create] --> A2[.sspec/asks/<ts>_<name>.yml]
-    A2 --> A3[sspec ask prompt]
+    A1[sspec tool ask create] --> A2[.sspec/asks/<ts>_<name>.yml]
+    A2 --> A3[sspec tool ask prompt]
     A3 --> A4[.sspec/asks/<ts>_<name>.md]
     A4 --> A5[asks/archive/*.md]
 ```
@@ -90,6 +94,13 @@ request file
 - 所有引用在 `requests/`、`changes/`、`asks/`、`tmp/` 中精确改写
 
 ## Ask Contract
+
+### Command Entry Points
+
+| Entry | Status | Purpose |
+|------|--------|---------|
+| `sspec tool ask ...` | preferred | fallback ask workflow for agents without a `question` tool |
+| `sspec ask ...` | compatibility | legacy-compatible alias to the same implementation |
 
 ### Active File Types
 

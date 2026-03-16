@@ -1,6 +1,6 @@
 ---
 change: "generalize-align-interaction"
-updated: "2026-03-17T01:40"
+updated: "2026-03-17T02:02"
 ---
 
 # Tasks
@@ -48,21 +48,21 @@ updated: "2026-03-17T01:40"
 - [x] Verify generated SKILL files in `.sspec/skills/` match templates
 **Verification**: `git diff` shows only expected changes; `sspec howto list` clean; no broken references
 
-### Feedback Tasks 🚧
+### Feedback Tasks ✅
 - [x] Adjust align rules so complex context is emitted in normal output before using a `question`-like tool `src/sspec/templates/AGENTS.md`
 - [x] Update `src/sspec/templates/skills/sspec-align/SKILL.md` to state that `question`-like tools should carry only the concise ask, not the full context
-- [ ] Commit the alignment-rule changes as an isolated checkpoint commit
-- [ ] Implement `sspec tool ask` and document `--prompt` usage in the CLI/help text
-- [ ] Update alignment docs to say: if no `question`-like tool exists, use `sspec tool ask`; detailed usage: `sspec tool ask --prompt`
-- [ ] Reinstall, sync templates, and verify generated copies after the tool-ask change
-**Verification**: alignment docs are concise and consistent; `sspec tool ask --help` exposes `--prompt`; generated files stay in sync
+- [x] Commit the alignment-rule changes as an isolated checkpoint commit
+- [x] Implement `sspec tool ask` and document `--prompt` usage in the CLI/help text
+- [x] Update alignment docs to say: if no `question`-like tool exists, use `sspec tool ask`; detailed usage: `sspec tool ask --prompt`
+- [x] Reinstall, sync templates, and verify generated copies after the tool-ask change
+**Verification**: alignment docs are concise and consistent; `sspec tool ask --prompt` prints fallback usage; generated files stay in sync
 
 ---
 
 ## Progress
 <!-- @REPLACE -->
 
-**Overall**: 80%
+**Overall**: 100%
 
 | Phase | Progress | Status |
 |-------|----------|--------|
@@ -71,7 +71,7 @@ updated: "2026-03-17T01:40"
 | Phase 3: Phase SKILLs | 100% | ✅ |
 | Phase 4: Delete HOWTOs | 100% | ✅ |
 | Phase 5: Sync & verify | 100% | ✅ |
-| Feedback Tasks | 33% | 🚧 |
+| Feedback Tasks | 100% | ✅ |
 
 **Recent**:
 - Completed: Rewrite alignment model in `src/sspec/templates/AGENTS.md`
@@ -79,4 +79,6 @@ updated: "2026-03-17T01:40"
 - Completed: Remove ask/force-end-align HOWTOs under `src/sspec/howto/`
 - Completed: Reinstall package and sync generated `AGENTS.md` / `.sspec/skills/`
 - Completed: tighten question-tool guidance for `question`-like tools
-- Pending: add `sspec tool ask` fallback
+- Completed: add `sspec tool ask` fallback and `--prompt` usage
+- Verified: `uv run pytest tests/test_ask_command.py tests/test_ask_service.py` passed (29 passed)
+- Completed: align `.sspec/spec-docs/interaction-records.md` with fallback/compat ask semantics

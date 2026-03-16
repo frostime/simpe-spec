@@ -1,6 +1,6 @@
 # Handover: generalize-align-interaction
 
-**Updated**: 2026-03-17T01:40
+**Updated**: 2026-03-17T02:02
 
 ---
 
@@ -48,6 +48,11 @@ If something becomes obsolete, mark it as obsolete with a timestamp instead of d
 - [2026-03-17T01:38] [Alignment] 用户 review 反馈：`question`-like 工具应只承载短问题，复杂上下文先走普通输出；并要求恢复 `sspec tool ask` fallback，说明参考 `sspec tool ask --prompt`。
 - [2026-03-17T01:38] [Decision] 当前 change 继续进行，不新开 change；先完成 align 规则修正并单独提交，再实现 `sspec tool ask`。
 - [2026-03-17T01:40] [Decision] `question`-like 工具使用规则明确为：摘要/参考信息先走普通输出，工具 payload 只保留最终短问句。
+- [2026-03-17T01:45] [Decision] 恢复 `sspec tool ask` 作为 fallback ask channel；顶级 `sspec ask` 保留为兼容入口。
+- [2026-03-17T01:45] [VerificationShortcut] 运行 `uv run sspec tool ask --prompt` 可验证 fallback ask workflow 与文档提示是否可用。
+- [2026-03-17T01:45] [Decision] `ask` 的实现文件迁入 `src/sspec/builtin_tools/ask.py`；`commands/` 不再承载 ask 逻辑。
+- [2026-03-17T01:56] [VerificationShortcut] 运行 `uv run pytest tests/test_ask_command.py tests/test_ask_service.py` 可快速验证新旧 ask 入口与 ask service。
+- [2026-03-17T02:02] [Decision] `Interaction Records` spec-doc 已同步：ask 现在被定义为 fallback 对齐记录，`sspec tool ask` 为推荐入口，`sspec ask` 为兼容入口。
 
 ## Session Log (Append-Only)
 <!-- Newest entry first. Each entry is an atomic batch (one cohesive work record).
@@ -104,3 +109,36 @@ Any user interaction (feedback, @align, @argue) MUST start a new log entry. -->
 **Next**
 - 按用户要求先提交这一小轮对齐规则改动
 - 提交后继续实现 `sspec tool ask` 与相关文档
+
+### 2026-03-17T01:45 [work-log] Added tool ask fallback
+
+**Accomplished**
+- 在 `src/sspec/commands/tool.py` 下挂载 `ask` group，使 `sspec tool ask ...` 可用，同时保留顶级 `sspec ask` 兼容
+- 将 ask 实现迁入 `src/sspec/builtin_tools/ask.py`，并增加 `--prompt`，输出 fallback ask workflow 与推荐用法
+- 更新 `src/sspec/templates/AGENTS.md`、`src/sspec/templates/skills/sspec-align/SKILL.md`、`src/sspec/howto/use-sspec-cli.md`，统一引用 `sspec tool ask --prompt`
+- 更新 `.sspec/spec-docs/interaction-records.md`，同步 ask 架构路径与命令入口
+- 运行 `uv pip install -e .`、`uv run sspec project update`、`uv run sspec tool ask --prompt`、`uv run sspec howto list` 完成验证
+
+**Next**
+- 等待用户 review 本轮新增的 `sspec tool ask` fallback 与对齐规则
+
+### 2026-03-17T01:56 [work-log] Verified ask command paths with targeted tests
+
+**Accomplished**
+- 新增 `tests/test_ask_command.py` 覆盖：`sspec ask prompt`、`sspec tool ask prompt`、`sspec tool ask --prompt`
+- 运行 `uv run pytest tests/test_ask_command.py tests/test_ask_service.py`
+- 结果：29 passed
+
+**Next**
+- 等待用户确认是否接受当前 ask 双入口方案
+- 如果接受，可提交第二轮改动
+
+### 2026-03-17T02:02 [work-log] Synced interaction spec-doc semantics
+
+**Accomplished**
+- 检查 `.sspec/spec-docs/interaction-records.md` 的内容语义，而不只是路径
+- 将 ask 从“关键对齐记录”修正为“缺少 question-like 工具时的 fallback 对齐记录”
+- 明确写入双入口语义：`sspec tool ask ...` 为 preferred，`sspec ask ...` 为 compatibility
+
+**Next**
+- 等待用户 review 当前双入口方案与 spec-doc 修正

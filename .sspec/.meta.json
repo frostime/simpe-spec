@@ -1,9 +1,9 @@
 {
   "meta_schema": "2.1",
   "sspec_schema": "3.2",
-  "sspec_version": "1.4.2.dev2+ga9003d253.d20260316",
+  "sspec_version": "1.4.2.dev3+g832ca5cde.d20260316",
   "created_at": "2026-02-07T18:42:39.297150",
-  "updated_at": "2026-03-17T01:40:11.391067",
+  "updated_at": "2026-03-17T01:44:53.169861",
   "file_hashes": {
     "skills/use-powershell": "c14a032ce16697b8",
     "skills/write-patch": "53a7cb880be7ee69",
@@ -15,7 +15,7 @@
     "skills/sspec-plan": "d799fae14168fddd",
     "skills/sspec-research": "e8f21729a1eda8c2",
     "skills/sspec-review": "d2036e47d0e97b25",
-    "skills/sspec-align": "f978ae497b496272"
+    "skills/sspec-align": "b9144e41bc477dba"
   },
   "managed_skills": [
     "sspec-align",

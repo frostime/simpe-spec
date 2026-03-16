@@ -14,9 +14,9 @@ If syntax is uncertain, use `sspec --help` or `sspec <command> --help`, then cho
 | `sspec change new --from <path>` | Create change from request file |
 | `sspec change list` / `sspec change find <name>` | Locate active changes |
 | `sspec change archive [<name>]` | Archive one change or open the selector |
-| `sspec ask create <topic>` + `sspec ask prompt <path>` | Create and ask |
-| `sspec request list` / `sspec ask list` | List requests/asks |
+| `sspec request list` | List request records |
 | `sspec doc new "<name>"` | Create spec-doc |
+| `sspec tool ask --prompt` | Show fallback ask workflow and usage |
 | `sspec tool mdtoc <file>` | Pre-scan Markdown |
 | `sspec tool now [--date|--utc|--json]` | Get reliable current time |
 

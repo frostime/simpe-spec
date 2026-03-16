@@ -8,45 +8,34 @@ metadata:
 
 # SSPEC Align
 
-Before continuing execution, eliminate critical uncertainty and obtain explicit user confirmation.
+Before continuing execution, choose whether the current moment only needs a summary or truly needs a user decision.
 
-**Core principle**: `@align` is not "asking a question" — it is **stopping before wrong action**.
-
----
-
-## 1. When To Align
-
-| Strength | Situation |
-|---|---|
-| **Mandatory** | Design gate |
-| **Mandatory** | Implement complete / review request |
-| **Mandatory** | Blocker, wrong assumption, rejected tool call |
-| **Mandatory** | Scope or direction change |
-| **Mandatory** | Irreversible action |
-| **Mandatory** | Split current work into a new change or replace a change with a `BLOCKED` successor |
-| **Optional** | Straightforward plan confirmation |
-| **Optional** | Minor preference or low-risk mode switch |
-| **Optional/Mandatory** | Session-end acknowledgement after all mandatory gates cleared; Mandatory if @force-end-align specified |
-| **Optional** | Spec-doc follow-up |
-
-**Rule**: If unsure whether to align -> align. 30 seconds now beats a rework cycle later.
+**Core principle**: `@align` is not automatically a hard stop. Use a hard stop only when the user must decide something before safe progress can continue.
 
 ---
 
-## 2. Choose the Channel
+## 1. Levels
 
-- No built-in `question` tool -> use `sspec ask`
-- Built-in `question` tool available -> choose by persistence
+| Level | Agent behavior | Typical situations |
+|---|---|---|
+| `report` | Summarize current state and continue execution | Plan done, progress update, low-risk confirmation, lightweight preference |
+| `gate` | Present the decision or review target, then stop and wait for user response | Design gate, implement complete / review request, blocker, wrong assumption, rejected tool call, scope or direction change, irreversible action, split / replace current change |
 
-| Situation | Tool |
-|---|---|
-| Design approval, implement review, blocker resolution, anything future agents may need to trace | `sspec ask` |
-| Change split / replacement decision (`follow-up-change`, `supersede-change`) | `sspec ask` |
-| Quick yes/no, light preference, temporary confirmation | `question` tool |
+**Rule**: If safe progress depends on a user decision, use `gate`. Otherwise prefer `report`.
 
-**Plan rule**: Treat plan confirmation as lightweight by default. Upgrade it to `sspec ask` only when the plan introduces meaningful tradeoffs, scope changes, or decisions worth tracing later.
+---
 
-**Do not use "session end" as the deciding factor.** If the final question is really design approval or review sign-off, it still needs `sspec ask`.
+## 2. How To Gate
+
+- If a built-in `question`-like tool is available, first present the context in normal output, then use the tool only for the concise question itself.
+- Otherwise, if `sspec tool ask` is available, use it as the fallback ask channel.
+- Otherwise, state the question clearly in normal output and end the turn.
+
+For large context, write analysis to `.sspec/tmp/` and link it instead of pasting everything inline.
+
+**Question-tool rule**: do not stuff long context, tradeoff tables, or multi-paragraph analysis into the `question` tool payload. Show the summary first; let the tool carry only the decision prompt.
+
+Fallback tool usage reference: `sspec tool ask --prompt`
 
 ---
 
@@ -60,48 +49,27 @@ Alignment without record = information lost on next session.
 | Plan confirmed/revised | `tasks.md` |
 | Direction changed, key decision made | `handover.md` Durable Memory |
 | User feedback received | `handover.md` Session Log (new `user-feedback` entry) |
-| Needs standalone Q&A record | `.sspec/asks/` via `sspec ask` |
+
+**No separate ask record is required.** Put the decision in its natural home.
 
 ---
 
-## 4. Use of sspec ask
+## 4. Message Shape
 
-Treat `sspec ask` as one atomic flow:
+### `report`
 
-1. `sspec ask create <topic>`
-2. Fill `reason`
-3. Fill `question`
-4. `sspec ask prompt <path>`
+Keep it short:
+- what just completed
+- what happens next
+- any risk or assumption worth surfacing
 
-Do not stop halfway unless you intentionally want to leave a draft for later refinement.
+### `gate`
 
-**Minimum content**:
-- `reason`: why alignment is needed now, and what risk exists if you proceed without it
-- `question`: current state, decision needed, and the exact ask to the user
-- long analysis: write it to `.sspec/tmp/` and link it instead of pasting everything into the ask body
+Make the stop explicit:
+- current state
+- decision / review needed
+- what changes based on the answer
+- link to `spec.md`, `tasks.md`, or `.sspec/tmp/...` if useful
 
-Minimal skeleton:
-
-```yaml
-reason: |
-  <why alignment is needed now>
-question: |
-  <current state>
-  <decision needed>
-  See: <path if useful>
-
-  <explicit ask>
-```
-
-For the exact CLI procedure, read: `sspec howto use-sspec-ask`
-For a tighter writing template, read: `sspec howto write-sspec-ask`
-
----
-
-## 5. `@force-end-align`
-
-If a task explicitly requests `@force-end-align`, treat it as a high-priority end-of-turn instruction.
-
-Meaning: when you believe the work is done and would normally stop, do one last user-facing alignment instead of silently ending the turn. Prefer the built-in `question` tool. Use `sspec ask` only if that final check also needs durable record, approval, or sign-off.
-📚 `sspec howto force-end-align`
+When a `question` tool is available, the normal output carries the context and the tool carries the final short ask.
 

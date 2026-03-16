@@ -19,7 +19,7 @@ Turn the approved design (spec.md B) into a concrete, file-level execution plan 
 2. Choose planning mode: single/sub vs root
 3. Fill tasks.md (phases + tasks OR milestones)
 4. Update Progress section
-5. @align user for final review
+5. @align with a report, then continue to implementation
 ```
 
 ## Step 1: Choose Planning Mode
@@ -97,14 +97,14 @@ Rules of thumb:
 After filling tasks, update the Progress section (overall + per-phase).
 Start at 0% unless work already began.
 
-## Exit: @align User Review (MANDATORY)
+## Exit: @align Report
 
-Present the task breakdown to user:
+Present the task breakdown:
 - Number of phases and total tasks
 - Key verification criteria
 - Estimated scope
 
-Wait for user approval before starting `sspec-implement`.
+This is a `report`, not a hard gate. After summarizing the plan, continue to `sspec-implement` unless the user interrupts or the plan itself reveals a real decision that needs a `gate`.
 
 ---
 

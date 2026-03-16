@@ -82,7 +82,7 @@ Research is inherently ambiguous — requirements are often unclear, intent can 
 
 **How to ask**:
 - Use `question` tool for quick in-flight clarifications (don't block research for simple things)
-- Batch non-blocking questions → align at research end with `sspec ask`
+- Batch non-blocking questions and ask them at a natural checkpoint
 - **Never defer a critical ambiguity to design** — clarify it now, or your research points at the wrong target
 
 **Posture**: One question now beats a wrong design later.

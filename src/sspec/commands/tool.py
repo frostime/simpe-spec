@@ -2,7 +2,7 @@
 
 import click
 
-from sspec.builtin_tools import apply_patch, mdtoc, now, pack_zip, view_tree
+from sspec.builtin_tools import apply_patch, ask, mdtoc, now, pack_zip, view_tree
 
 
 @click.group()
@@ -17,3 +17,4 @@ pack_zip.register_command(tool)
 view_tree.register_command(tool)
 mdtoc.register_command(tool)
 now.register_command(tool)
+ask.register_command(tool)

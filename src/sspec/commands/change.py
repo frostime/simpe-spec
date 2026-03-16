@@ -221,7 +221,7 @@ def new(name: str | None = None, from_request: str | None = None, root: bool = F
     console.print('[yellow]Next:[/yellow]')
     console.print('  0. Read sspec-design skill for standards and best practices')
     console.print('  1. Read spec.md / tasks.md, follow templates format and @RULE Hints')
-    console.print('  2. Fill spec.md/tasks.md, run `sspec ask create` for validation')
+    console.print('  2. Fill spec.md/tasks.md, then align with the user before implementation')
     console.print('  3. Update handover.md at end of each session (Consult sspec-handover skill)')
 
 

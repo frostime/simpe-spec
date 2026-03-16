@@ -3,7 +3,8 @@
 import click
 from rich.console import Console
 
-from sspec.commands import ask, change, cmd, doc, howto, project, request, skill, tmp, tool
+from sspec.builtin_tools import ask
+from sspec.commands import change, cmd, doc, howto, project, request, skill, tmp, tool
 from sspec.core import configure_stdio_error_fallback
 
 configure_stdio_error_fallback()

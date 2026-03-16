@@ -91,4 +91,6 @@ When all tasks are complete:
 2. Summarize what was implemented
 3. `@align` user: "Implementation complete. Please review. Any issues or feedback?"
 
+This is a hard gate. If a `question`-like tool is available, use it. Otherwise state the review request clearly in normal output and stop.
+
 → Transition to `sspec-review` phase.

@@ -167,8 +167,7 @@ SSPEC is a doc-driven workflow. Planning, tracking, and handover live in `.sspec
 ├── spec-docs/     # Formal specs (architecture, APIs)
 ├── changes/<n>/   # spec.md | tasks.md | handover.md [+ reference/]
 ├── requests/      # User intent records
-├── tmp/           # Informal drafts
-└── asks/          # Q&A decision records
+└── tmp/           # Informal drafts
 ```
 
 ---
@@ -184,14 +183,14 @@ SPEC activation signals (enter Change Workflow §2): request file attached, user
 | Directive (`@resume`, `@handover`, etc.) | Execute → §5 Shortcuts |
 | Request (attached or described) | Assess scale → Change Workflow §2 |
 | Resume existing change | `read(handover→tasks→spec)` → continue |
-| Micro task (≤3 files, ≤30min, obvious) | Do directly, no change needed |
+| Micro task (≤3 files, ≤30min, obvious) | Do directly — no change, no spec.md, no tasks.md, no @align gates. Optionally update handover.md if session has one. |
 
 Resume tip: Run `sspec howto resume-change`
 
 **Background rules**:
 - Important discovery → write to `handover.md` immediately
 - Long session (>30 exchanges) → checkpoint `handover.md`
-- Uncertain → `@align` (30s alignment < hours of rework) → `sspec howto use-sspec-ask`
+- Uncertain → `@align` (30s alignment < hours of rework)
 - User rejects tool call → STOP → `@align` reason
 - Current date/time uncertain → use sspec tool now instead of guessing → `sspec howto get-current-time`
 
@@ -212,10 +211,10 @@ Each phase has a dedicated SKILL. Read it before starting.
 [Research]  (understand + clarify; @align mid-research for ambiguities)
    |
    v
-[Design]    -- @align gate (MANDATORY) + [Handover] --> "Align understanding + solution"
+[Design]    -- @align gate (MANDATORY) + [Handover] --> "User confirms design"
    |
    v
-[Plan]      -- @align gate (LIGHTWEIGHT) --> "Confirm task breakdown"
+[Plan]      -- @align report --> "Output summary, continue to implement"
    |
    v
 [Implement] -- @align gate (MANDATORY) --> "Done for this round, please review"
@@ -226,7 +225,7 @@ Each phase has a dedicated SKILL. Read it before starting.
    +-- satisfied --> [Handover]
 ```
 
-**Flow rules**: Follow phase order. `@align` gates are hard stops — must pass before proceeding. Failed gate → return to phase, update, realign. `Implement` and `Review` loop until user satisfied.
+**Flow rules**: Follow phase order. `gate` = hard stop, must pass before proceeding. `report` = output summary, keep going. Failed gate → return to phase, update, realign. `Implement` and `Review` loop until user satisfied.
 
 **Handover** is lifecycle-critical — mandatory at session end, also at long sessions (>30 exchanges), major phase switches, and before context-losing events.
 
@@ -237,9 +236,9 @@ Read the SKILL for the current phase. Unless the SKILL says otherwise, each phas
 | Phase | SKILL | Main output | Gate |
 |-------|-------|-------------|------|
 | **Research** | `sspec-research` | `reference/`, `handover.md` notes | optional `question` |
-| **Design** | `sspec-design` | `spec.md` | **@align** mandatory |
-| **Plan** | `sspec-plan` | `tasks.md` | lightweight confirm |
-| **Implement** | `sspec-implement` | code, `tasks.md` progress | **@align** mandatory |
+| **Design** | `sspec-design` | `spec.md` | **gate** (mandatory) |
+| **Plan** | `sspec-plan` | `tasks.md` | **report** (continue) |
+| **Implement** | `sspec-implement` | code, `tasks.md` progress | **gate** (mandatory) |
 | **Review** | `sspec-review` | feedback tasks / acceptance loop | rejected -> Implement |
 | **Handover** | `sspec-handover` | `handover.md`, `project.md` | session end required |
 ### Scale Assessment (in Design phase)
@@ -258,27 +257,22 @@ Read the SKILL for the current phase. Unless the SKILL says otherwise, each phas
 ---
 ## 3. Alignment (@align)
 
-`@align` means the Agent proactively aligns with the User, through:
-- Built-in tools such as `AskUserQuestion` (e.g. `vscode/askQuestion`, `opencode/question`)
-- The `sspec ask` CLI tool
+`@align` has two levels:
 
-**Choose by question type**:
-- Simple, bounded confirmation -> `question` tool
-- Open-ended, tradeoff-heavy, or worth recording -> `sspec ask`
-- Design / Implement phase gates -> `sspec ask` (mandatory)
-- Split current work into a follow-up / replacement change -> `sspec ask` (mandatory)
-- Plan confirmation or mid-research clarification -> `question` tool
-- If no `question`-like tool is available -> use `sspec ask`
+| Level | Agent behavior | When to use |
+|-------|---------------|-------------|
+| `report` | Output summary, **keep going** | Plan done, progress updates, minor confirmations |
+| `gate` | Output question/summary, **stop and wait for user response** | Design done, Implement done, irreversible actions, scope changes, direction disputes, blockers, ambiguity only user can resolve |
 
-📚 Full flow and recording procedure: `sspec howto use-sspec-ask` | skeleton/template: `sspec howto write-sspec-ask`
+**How to gate**:
+- If a `question`-like tool is available (e.g. `vscode/askQuestion`, `opencode/question`) → first present the summary / context / references in normal output, then use the tool only for the concise ask itself
+- Otherwise → state the question clearly in output, end turn, wait for user reply
 
-For large context, write analysis to `.sspec/tmp/` and link it from the question body. Move confirmed valuable materials to `change/reference/` later.
+**Record decisions** in their natural home — `spec.md` for design, `handover.md` Durable Memory for direction changes, Session Log for user feedback. No separate system needed.
 
-→ `@force-end-align` directive: Do one last user-facing alignment instead of silently ending the turn when the agent believes the work is done, see `sspec howto force-end-align`. !IMPORTANT
+For large context, write analysis to `.sspec/tmp/` and link it from normal output or the final concise ask. Move confirmed valuable materials to `change/reference/` later.
 
-At phase gates: Design + Implement are mandatory, Plan is lightweight, Review loops until satisfied.
-
-📚 Full workflow, patterns, and content rules: `sspec-align` SKILL
+📚 Full workflow and patterns: `sspec-align` SKILL
 
 ---
 
@@ -314,7 +308,6 @@ Run `sspec <command> --help` for full options. Keep this list minimal:
 |---------|-----|
 | `sspec change new <name> [--from <REQUEST>]` | Create a change |
 | `sspec change status <name>` | Inspect current change state |
-| `sspec ask create <topic>` + `sspec ask prompt <path>` | Create and ask |
 | `sspec doc new "<name>"` | Create spec-doc |
 | `sspec tool mdtoc <file>` | Pre-scan Markdown |
 | `sspec tool now [--date|--utc|--json]` | Show current time when timestamps matter |

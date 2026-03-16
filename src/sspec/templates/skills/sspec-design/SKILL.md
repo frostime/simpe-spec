@@ -243,7 +243,7 @@ Root spec does NOT include file-level Scope Summary — that belongs in each sub
 
 ## Step 4: @align for Alignment (MANDATORY)
 
-**Never skip this step.** This is a user-in-the-loop confirmation — like review phase, the user must sign off.
+**Never skip this step.** This is a hard gate — the user must confirm the design before planning can be considered complete.
 
 Present the design to user for confirmation:
 - Problem statement summary
@@ -251,8 +251,9 @@ Present the design to user for confirmation:
 - Key interfaces and data types
 - (Root) Phase breakdown
 
+If a `question`-like tool is available, use it for the gate. Otherwise present the design clearly in normal output and stop.
+
 After user confirms design, proceed to `sspec-plan`.
-Only after user also approves the task plan, transition status `PLANNING → DOING`.
 
 ---
 

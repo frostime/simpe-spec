@@ -1,6 +1,6 @@
 ---
 name: generalize-align-interaction
-status: PLANNING
+status: DOING
 type: "refactor"
 change-type: single
 created: 2026-03-17T00:57:34
@@ -64,18 +64,19 @@ change lifecycle（Research → Design → Plan → Implement → Review → Han
 - `howto/force-end-align` 整个文件
 - `sspec-align/SKILL.md` §1 表格中 `@force-end-align` 相关行
 
-#### Change C: `sspec ask` 降级为 builtin tool
+#### Change C: `sspec ask` 退出主流程
 
-`sspec ask` 从独立的顶级命令降级到 `sspec tool` 下，不再出现在主流程中。交互职责完全交给平台原生能力（question 工具或对话）。
+`sspec ask` 不再出现在 AGENTS.md、SKILL、HOWTO 的推荐主流程中。交互职责完全交给平台原生能力（question 工具或对话）。
 
-**新定位**：`sspec tool ask` 作为一个 builtin tool 存在，仅在特殊场景下使用（如平台没有内置 question 工具时的 fallback）。不在 AGENTS.md 或 SKILL 中作为推荐交互方式。
+**本轮实现范围**：先把模板协议和 HOWTO/提示文案去耦合；现有 `sspec ask` CLI 代码暂时保留原位置，不做兼容迁移。
 
 具体改动：
-- `sspec ask` 命令组从 CLI 顶级降级为 `sspec tool ask`（或保留顶级但从模板中移除所有引用）
 - `AGENTS.md` §3 重写：删除 channel 选择矩阵，不再提及 `sspec ask`
 - `sspec-align/SKILL.md` §2 (Choose the Channel) 删除，§4 (Use of sspec ask) 删除
 - 各 phase SKILL 中引用 `sspec ask` 的地方全部移除
 - CLI Quick Reference 中移除 `sspec ask` 条目
+
+**后续可选项**：如果后面仍然需要保留 ask 能力，再单独把它迁移为 `sspec tool ask`，并处理命令兼容与文档更新。
 
 决策记录的归宿改为已有机制：
 
@@ -103,6 +104,11 @@ Micro task (≤3 files, ≤30min, obvious):
 - `use-sspec-ask` — 随 Change C，sspec ask 不再是主流程
 - `write-sspec-ask` — 同上
 
+### Review Amendments
+
+- `question`-like 工具默认只承载短问题本身；复杂上下文、汇总、参考路径应先通过普通输出呈现，再附上清晰的短 question，避免把长上下文塞进工具参数。
+- `sspec ask` 不能只停留在“退出主流程”的语义；需要恢复为 `sspec tool ask` 的 fallback 能力，并在 `--prompt` 参数的帮助信息/文档里明确用法。
+
 ### Scope Summary
 
 | File / Area | Change |
@@ -118,7 +124,9 @@ Micro task (≤3 files, ≤30min, obvious):
 | HOWTO `force-end-align` | 删除 |
 | HOWTO `use-sspec-ask` | 删除 |
 | HOWTO `write-sspec-ask` | 删除 |
-| `sspec ask` CLI | 降级为 `sspec tool ask` 或从模板引用中完全移除（CLI 代码保留） |
+| `src/sspec/howto/use-sspec-cli.md` | 移除 howto 中的 `sspec ask` 示例 |
+| `src/sspec/commands/change.py` | 移除 change 创建成功后的旧 `sspec ask` 提示文案 |
+| `src/sspec/commands/tool.py` / `src/sspec/builtin_tools/` | 增加 `sspec tool ask` 入口与 `--prompt` 使用说明 |
 
 ### 不改的部分
 
@@ -126,6 +134,6 @@ Micro task (≤3 files, ≤30min, obvious):
 - spec.md / tasks.md / handover.md 三件套结构和模板
 - spec-docs 系统
 - Scale assessment 逻辑（micro/single/multi）
-- `sspec ask` CLI 代码本身（保留功能，只是不在模板中推荐）
+- `sspec ask` CLI 代码本身（本轮保留，不迁移；后续可单独处理）
 - Handover 机制（保留，仍然 mandatory at session end）
 - Design / Implement 的 hard gate 性质（保留，只是实现方式从 sspec ask 改为 question 工具/对话）

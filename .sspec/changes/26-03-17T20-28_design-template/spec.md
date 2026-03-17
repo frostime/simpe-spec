@@ -1,6 +1,6 @@
 ---
 name: design-template
-status: PLANNING
+status: DONE
 type: ''
 change-type: single
 created: 2026-03-17 20:28:51

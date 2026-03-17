@@ -68,6 +68,14 @@ def test_tool_write_create_with_text_outside_sspec_project() -> None:
         assert 'create wrote' in result.output
 
 
+def test_tool_write_prompt_does_not_require_target() -> None:
+    runner = CliRunner()
+    result = runner.invoke(main, ['tool', 'write', '--prompt'])
+
+    assert result.exit_code == 0
+    assert '# write - Explicit File Writing Helper' in result.output
+
+
 def test_tool_write_append_with_stdin_preserves_existing_newlines() -> None:
     runner = CliRunner()
 

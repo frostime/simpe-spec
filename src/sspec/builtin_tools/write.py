@@ -171,11 +171,10 @@ def register_command(group: click.Group) -> None:
     import click
 
     @group.command(name=TOOL_NAME, help=TOOL_DESCRIPTION)
-    @click.argument('target', type=click.Path(path_type=Path))
+    @click.argument('target', type=click.Path(path_type=Path), required=False)
     @click.option(
         '--mode',
         type=click.Choice(['append', 'create', 'overwrite']),
-        required=True,
         help='Writing mode.',
     )
     @click.option('--stdin', 'use_stdin', is_flag=True, help='Read content from piped stdin.')
@@ -189,8 +188,8 @@ def register_command(group: click.Group) -> None:
         help='Show agent-oriented usage guidance.',
     )
     def write_command(
-        target: Path,
-        mode: str,
+        target: Path | None,
+        mode: str | None,
         use_stdin: bool,
         text: str | None,
         encoding: str,
@@ -201,6 +200,11 @@ def register_command(group: click.Group) -> None:
         if show_prompt:
             click.echo(TOOL_PROMPT)
             return
+
+        if target is None:
+            raise click.ClickException('Missing argument: TARGET')
+        if mode is None:
+            raise click.ClickException('Missing option: --mode')
 
         if use_stdin == (text is not None):
             raise click.ClickException('Use exactly one input source: --stdin or --text.')

@@ -197,9 +197,9 @@ def read_patch_text_interactive() -> str:
     return text
 
 
-def safe_resolve_under_root(root: Path, user_path: str) -> Path:
+def resolve_patch_path(root: Path, user_path: str) -> Path:
     """
-    将 patch 里的路径解析为安全目标：
+    将 patch 里的路径解析为目标文件：
     - 允许绝对路径
     - 相对路径仍禁止 .. 越界
     """
@@ -213,7 +213,7 @@ def safe_resolve_under_root(root: Path, user_path: str) -> Path:
     try:
         resolved.relative_to(root_abs)
     except ValueError:
-        raise ValueError(f'路径越界（疑似使用 ..）: {user_path}') from None
+        raise ValueError(f'Path escapes workspace root: {user_path}') from None
 
     return resolved
 
@@ -251,7 +251,7 @@ def parse_line_range(text: str) -> tuple[int | None, int | None]:
 
 def _parse_patch_header_text(text: str) -> tuple[str, tuple[int | None, int | None] | None]:
     """Parse patch header body (without leading `# `)."""
-    if not text or any(ch.isspace() for ch in text):
+    if not text:
         raise ValueError(f'Invalid patch header: {text}')
 
     if ':' not in text:
@@ -278,7 +278,30 @@ def parse_patch_header(
         raise ValueError(f'Invalid patch header: {header}')
 
     display_path, line_range = _parse_patch_header_text(stripped[2:].strip())
-    return safe_resolve_under_root(project_root, display_path), display_path, line_range
+    return resolve_patch_path(project_root, display_path), display_path, line_range
+
+
+def path_is_within_root(path: Path, root: Path) -> bool:
+    """Return whether a resolved path is inside the current workspace root."""
+    try:
+        path.resolve(strict=False).relative_to(root.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def find_external_absolute_patches(
+    patches: list[PatchBlock], workspace_root: Path
+) -> list[PatchBlock]:
+    """Collect absolute-path patches that target files outside the workspace."""
+    external: list[PatchBlock] = []
+    for patch in patches:
+        if not Path(patch.display_path).is_absolute():
+            continue
+        if path_is_within_root(patch.file_path, workspace_root):
+            continue
+        external.append(patch)
+    return external
 
 
 def is_patch_header_line(line: str) -> bool:
@@ -414,18 +437,20 @@ def parse_patches(patch_text: str, *, project_root: Path | None = None) -> Patch
                     file_line, project_root=root
                 )
             except ValueError:
-                errors.append(f'Line {file_line_idx + 1}: 无法解析文件路径: {file_line}')
+                errors.append(
+                    f'Line {file_line_idx + 1}: Failed to parse patch header: {file_line}'
+                )
                 continue
             except Exception as e:
-                errors.append(f'Line {file_line_idx + 1}: 路径不合法: {file_line} ({e})')
+                errors.append(f'Line {file_line_idx + 1}: Invalid path: {file_line} ({e})')
                 continue
 
             # 检查文件是否存在
             if not file_path.exists():
-                errors.append(f'Line {file_line_idx + 1}: 文件不存在: {display_path}')
+                errors.append(f'Line {file_line_idx + 1}: File does not exist: {display_path}')
                 continue
             if not file_path.is_file():
-                errors.append(f'Line {file_line_idx + 1}: 不是文件: {display_path}')
+                errors.append(f'Line {file_line_idx + 1}: Not a file: {display_path}')
                 continue
 
             # 提取 SEARCH / REPLACE 内容（不包括标记行）
@@ -444,7 +469,7 @@ def parse_patches(patch_text: str, *, project_root: Path | None = None) -> Patch
             )
 
         except Exception as e:
-            errors.append(f'解析 patch 块失败: {e}')
+            errors.append(f'Failed to parse patch block: {e}')
 
     return PatchParseResult(patches=patches, errors=errors)
 
@@ -565,7 +590,8 @@ def apply_patch(patch: PatchBlock) -> PatchApplyResult:
         if patch.line_range:
             try:
                 normalized_range = normalize_line_range(patch.line_range, total_lines)
-                assert normalized_range is not None
+                if normalized_range is None:
+                    raise ValueError('Resolved line range is empty')
                 scope_start, scope_end = normalized_range
             except ValueError as e:
                 return PatchApplyResult(
@@ -750,6 +776,7 @@ PATCH_PROMPT = """# patch - SEARCH/REPLACE file editing helper
 - Header: `# <path>` or `# <path>:<range>`
 - Range syntax: `L10-L25`, `L10-`, `-L25`
 - Paths: relative paths resolve from project root / cwd; absolute paths are also allowed
+- Absolute paths outside the current workspace require confirmation, or `--unsafe` to bypass
 
 ```patch
 # src/utils.py:L10-L25
@@ -757,6 +784,17 @@ PATCH_PROMPT = """# patch - SEARCH/REPLACE file editing helper
 return x * 2
 =======
 return x * 3
+>>>>>>> REPLACE
+```
+
+Example with an absolute path that contains spaces:
+
+```patch
+# C:\\My Project\\docs\\my file.md:L3-
+<<<<<<< SEARCH
+old text
+=======
+new text
 >>>>>>> REPLACE
 ```
 
@@ -779,6 +817,10 @@ sspec tool patch [OPTIONS]
 1. `--stdin` - recommended for agents
 2. `PATCH_FILE` or `--file PATCH_FILE`
 3. `--input` - interactive input
+
+### Safety flag
+
+- `--unsafe` bypasses the outside-workspace absolute path confirmation
 
 ### `--stdin` example (bash)
 
@@ -814,6 +856,7 @@ return x * 3
 4. Relative paths must stay under the detected project root / current working directory; absolute paths are allowed
 5. If SEARCH is missing but REPLACE exists uniquely in scope, the patch is treated as already applied
 6. Failed patch output may contain explanation text outside fenced `patch` blocks; those fenced blocks remain directly reusable as later patch input
+7. Absolute paths outside the current workspace require explicit confirmation unless `--unsafe` is provided
 """
 
 # Alias for Tool Interface
@@ -862,6 +905,11 @@ def register_command(group):
         help='Preview patches without applying changes',
     )
     @click.option(
+        '--unsafe',
+        is_flag=True,
+        help='Bypass confirmation for absolute paths outside the current workspace.',
+    )
+    @click.option(
         '--output-failed',
         type=click.Path(path_type=Path),
         help='Custom markdown file or directory for failed patch bundle output.',
@@ -882,6 +930,7 @@ def register_command(group):
         stdin_mode: bool,
         input_mode: bool,
         dry_run: bool,
+        unsafe: bool,
         output_failed: Path | None,
         yes: bool,
         prompt: bool,
@@ -979,15 +1028,41 @@ def register_command(group):
         table.add_column('Scope', style='dim')
 
         for patch in patches:
-            scope = (
-                f'L{patch.line_range[0]}-L{patch.line_range[1]}'
-                if patch.line_range
-                else 'Full file'
-            )
+            scope = format_line_range(patch.line_range)
             table.add_row(format_patch_header(patch), scope)
 
         console.print(table)
         console.print()
+
+        external_absolute_patches = find_external_absolute_patches(patches, project_root)
+        if external_absolute_patches:
+            console.print(
+                '[yellow]Warning:[/yellow] Absolute path(s) outside the current workspace:'
+            )
+            for patch in external_absolute_patches:
+                console.print(f'  - {patch.display_path}')
+            console.print(f'Workspace: {project_root}')
+
+            if dry_run:
+                console.print(
+                    '[yellow]Dry-run note:[/yellow] no confirmation required because no changes will be applied.'
+                )
+            elif unsafe:
+                console.print(
+                    '[yellow]Unsafe mode:[/yellow] outside-workspace confirmation bypassed.'
+                )
+            elif use_stdin:
+                console.print(
+                    '[red]Error:[/red] `--stdin` mode cannot request outside-workspace confirmation. '
+                    'Re-run with `--unsafe` if you intend to patch these paths.'
+                )
+                raise click.exceptions.Exit(code=1)
+            elif not click.confirm(
+                'Allow patching files outside the current workspace?',
+                default=False,
+            ):
+                console.print('[yellow]Aborted.[/yellow]')
+                raise click.Abort()
 
         if dry_run:
             console.print('[yellow]Dry-run mode:[/yellow] no changes will be applied')

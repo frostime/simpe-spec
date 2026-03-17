@@ -1,6 +1,6 @@
 # Handover: patch-tool-agent-hardening
 
-**Updated**: 2026-03-17T15:43
+**Updated**: 2026-03-17T16:22
 
 ---
 
@@ -50,6 +50,8 @@ Project-wide items -> ALSO append to project.md Notes. -->
 - [2026-03-17T15:13] [Decision] `already_applied` should be detected by checking `REPLACE` after `SEARCH` misses, and should not count as a fatal batch failure.
 - [2026-03-17T15:13] [Constraint] Non-`.sspec` runs must not create a synthetic `.sspec/` tree for failed patch output; use system temp when no project root exists.
 - [2026-03-17T15:31] [VerificationShortcut] Focused verification for this change is `pytest tests/test_apply_patch.py tests/test_tool_command.py` plus `uv run sspec tool patch --prompt`.
+- [2026-03-17T16:06] [Decision] Absolute patch targets outside the current workspace require explicit confirmation unless `--unsafe` is present; `--yes` alone must not bypass this safety gate.
+- [2026-03-17T16:16] [Decision] Patch header paths now support spaces by treating an optional `:range` suffix as the final segment only; no quoting syntax was added in this change.
 
 ## Session Log (Append-Only)
 <!-- Newest entry first. Each entry is an atomic batch (one cohesive work record).
@@ -112,3 +114,40 @@ Any user interaction (feedback, @align, @argue) MUST start a new log entry. -->
 
 **Notes**
 - This feedback changed presentation only; implementation behavior stayed the same.
+
+### 2026-03-17T16:06 [user-feedback] outside-workspace absolute path safety
+
+**Accomplished**
+- Added a confirmation gate for absolute patch targets outside the current workspace and introduced `--unsafe` as the explicit automation bypass.
+- Fixed the preview-table scope bug for open-ended ranges by switching preview rendering to `format_line_range(...)`.
+- Added regression tests for confirmation behavior, `--unsafe` bypass, and canonical open-ended scope display.
+
+**Next**
+- Re-run prompt verification and return to user review.
+
+**Notes**
+- `--stdin` mode now refuses outside-workspace absolute paths unless `--unsafe` is provided, because piped stdin cannot safely carry an additional interactive confirmation.
+
+### 2026-03-17T16:16 [user-feedback] follow-up review adjustments
+
+**Accomplished**
+- Kept outside-workspace warnings visible during `--dry-run` instead of returning early before safety information is shown.
+- Moved `--unsafe` out of the prompt's input-method list into a dedicated safety note.
+- Added support for patch header paths containing spaces and covered the behavior with parser + command tests.
+
+**Next**
+- Return to user review with the latest safety/prompt/parser refinements.
+
+**Notes**
+- Supporting spaces was implemented by loosening header parsing rather than inventing a new quoting syntax, so `:L...` range suffixes must remain the final path segment.
+
+### 2026-03-17T16:22 [user-feedback] prompt example clarity
+
+**Accomplished**
+- Replaced the abstract "paths may contain spaces" parsing note in `PATCH_PROMPT` with a concrete absolute-path example that includes spaces and a range suffix.
+
+**Next**
+- Re-run prompt verification and return to user review.
+
+**Notes**
+- This change only affects prompt clarity; parsing behavior is unchanged.

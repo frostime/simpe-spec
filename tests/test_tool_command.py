@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import tempfile
 from pathlib import Path
 
 from click.testing import CliRunner
@@ -165,6 +166,136 @@ beta
 
         assert rerun.exit_code == 0
         assert target.read_text(encoding='utf-8') == 'beta\n'
+
+
+def test_tool_patch_open_ended_range_preview_uses_canonical_scope() -> None:
+    runner = CliRunner()
+
+    with runner.isolated_filesystem():
+        target = Path('note.txt')
+        target.write_text('one\ntwo\nthree\n', encoding='utf-8')
+        patch_path = Path('patch.md')
+        patch_path.write_text(
+            """# note.txt:L2-
+<<<<<<< SEARCH
+two
+three
+=======
+TWO
+THREE
+>>>>>>> REPLACE
+""",
+            encoding='utf-8',
+        )
+
+        result = runner.invoke(main, ['tool', 'patch', str(patch_path), '--dry-run'])
+
+        assert result.exit_code == 0
+        assert 'L2-' in result.output
+        assert 'L2-LNone' not in result.output
+
+
+def test_tool_patch_dry_run_warns_for_outside_workspace_absolute_paths() -> None:
+    runner = CliRunner()
+
+    with runner.isolated_filesystem(), tempfile.TemporaryDirectory() as external_dir:
+        external_target = Path(external_dir) / 'note.txt'
+        external_target.write_text('old\n', encoding='utf-8')
+        patch_path = Path('patch.md')
+        patch_path.write_text(
+            f"""# {external_target}
+<<<<<<< SEARCH
+old
+=======
+new
+>>>>>>> REPLACE
+""",
+            encoding='utf-8',
+        )
+
+        result = runner.invoke(main, ['tool', 'patch', str(patch_path), '--dry-run'])
+
+        assert result.exit_code == 0
+        assert 'Absolute path(s) outside the current workspace' in result.output
+        assert 'Dry-run note:' in result.output
+        assert external_target.read_text(encoding='utf-8') == 'old\n'
+
+
+def test_tool_patch_absolute_path_outside_workspace_requires_confirmation() -> None:
+    runner = CliRunner()
+
+    with runner.isolated_filesystem(), tempfile.TemporaryDirectory() as external_dir:
+        external_target = Path(external_dir) / 'note.txt'
+        external_target.write_text('old\n', encoding='utf-8')
+        patch_path = Path('patch.md')
+        patch_path.write_text(
+            f"""# {external_target}
+<<<<<<< SEARCH
+old
+=======
+new
+>>>>>>> REPLACE
+""",
+            encoding='utf-8',
+        )
+
+        denied = runner.invoke(main, ['tool', 'patch', str(patch_path), '--yes'], input='n\n')
+        assert denied.exit_code != 0
+        assert 'Absolute path(s) outside the current workspace' in denied.output
+        assert external_target.read_text(encoding='utf-8') == 'old\n'
+
+        allowed = runner.invoke(main, ['tool', 'patch', str(patch_path), '--yes'], input='y\n')
+        assert allowed.exit_code == 0
+        assert external_target.read_text(encoding='utf-8') == 'new\n'
+
+
+def test_tool_patch_stdin_requires_unsafe_for_absolute_path_outside_workspace() -> None:
+    runner = CliRunner()
+
+    with runner.isolated_filesystem(), tempfile.TemporaryDirectory() as external_dir:
+        external_target = Path(external_dir) / 'note.txt'
+        external_target.write_text('old\n', encoding='utf-8')
+        patch_text = f"""# {external_target}
+<<<<<<< SEARCH
+old
+=======
+new
+>>>>>>> REPLACE
+"""
+
+        blocked = runner.invoke(main, ['tool', 'patch', '--stdin', '--yes'], input=patch_text)
+        assert blocked.exit_code == 1
+        assert '--stdin` mode cannot request outside-workspace confirmation' in blocked.output
+        assert external_target.read_text(encoding='utf-8') == 'old\n'
+
+        allowed = runner.invoke(
+            main,
+            ['tool', 'patch', '--stdin', '--yes', '--unsafe'],
+            input=patch_text,
+        )
+        assert allowed.exit_code == 0
+        assert 'Unsafe mode:' in allowed.output
+        assert external_target.read_text(encoding='utf-8') == 'new\n'
+
+
+def test_tool_patch_supports_paths_with_spaces() -> None:
+    runner = CliRunner()
+
+    with runner.isolated_filesystem():
+        target = Path('note space.txt')
+        target.write_text('old\n', encoding='utf-8')
+        patch_text = """# note space.txt
+<<<<<<< SEARCH
+old
+=======
+new
+>>>>>>> REPLACE
+"""
+
+        result = runner.invoke(main, ['tool', 'patch', '--stdin', '--yes'], input=patch_text)
+
+        assert result.exit_code == 0
+        assert target.read_text(encoding='utf-8') == 'new\n'
 
 
 def test_tool_write_append_with_stdin_preserves_existing_newlines() -> None:

@@ -27,6 +27,17 @@ def test_parse_patch_header_supports_absolute_paths_and_open_ranges(tmp_path: Pa
     assert relative_range == (None, 20)
 
 
+def test_parse_patch_header_supports_paths_with_spaces(tmp_path: Path) -> None:
+    parsed_path, display_path, line_range = parse_patch_header(
+        '# docs/my file.py:L3-L5',
+        project_root=tmp_path,
+    )
+
+    assert parsed_path == (tmp_path / 'docs' / 'my file.py').resolve()
+    assert display_path == 'docs/my file.py'
+    assert line_range == (3, 5)
+
+
 def test_parse_patches_supports_markdown_bundle_input(tmp_path: Path) -> None:
     target = tmp_path / 'note.txt'
     target.write_text('old\n', encoding='utf-8')

@@ -124,13 +124,13 @@ patch input (PATCH_FILE | --file | --stdin | --input)
 
 #### Key Logic
 
-**Fix A: Input and path model** — Add `--stdin` as the agent-friendly non-interactive input path. Keep `PATCH_FILE` / `--file` for file-based input and `--input` as a human fallback. Patch headers accept both absolute and relative file paths; relative paths remain rooted at the detected project root (or `cwd` when no `.sspec` project exists).
+**Fix A: Input and path model** — Add `--stdin` as the agent-friendly non-interactive input path. Keep `PATCH_FILE` / `--file` for file-based input and `--input` as a human fallback. Patch headers accept both absolute and relative file paths, and path text may contain spaces as long as an optional range suffix stays as the final `:...` segment. Relative paths remain rooted at the detected project root (or `cwd` when no `.sspec` project exists). Absolute paths outside the current workspace require an explicit confirmation prompt, and `--unsafe` is the only supported bypass for non-interactive automation.
 
 **Fix B: Header and line-range parsing** — Replace the single regex-only file header parse with a helper that can distinguish Windows drive letters from `:Lx-Ly` suffixes. Support canonical ranges `L10-L20`, `L10-`, `-L20`, while still accepting legacy `10-20` syntax for backward compatibility. Open-ended ranges resolve against the current file length at apply time.
 
 **Fix C: Retry-aware failure classification** — When `SEARCH` is not found, run the same scoped matching process against `REPLACE` before declaring failure. This allows the tool to distinguish `already_applied`, `replace_ambiguous`, `search_replace_coexist`, and true `search_not_found` cases. `already_applied` and `no_change_patch` count as non-fatal outcomes so rerunning a patch batch does not fail just because some edits were already present.
 
-**Fix D: Diagnostics and failed bundle output** — Emit a per-patch terminal summary that includes patch source line (`Patch line: L...`), target line or candidate lines (`Target line(s): ...`), reason, and a truncated SEARCH/REPLACE preview. Save all failed patches into one markdown bundle. Each failed section contains readable explanation outside the code fence and the original patch inside a fenced `patch` block so the same file can be reused as future patch input after minor edits.
+**Fix D: Diagnostics and failed bundle output** — Emit a per-patch terminal summary that includes patch source line (`Patch line: L...`), target line or candidate lines (`Target line(s): ...`), reason, and a truncated SEARCH/REPLACE preview. Save all failed patches into one markdown bundle. Each failed section contains readable explanation outside the code fence and the original patch inside a fenced `patch` block so the same file can be reused as future patch input after minor edits. Even in `--dry-run`, outside-workspace absolute targets still warn so preview mode reflects the real safety posture.
 
 #### Scope Summary
 

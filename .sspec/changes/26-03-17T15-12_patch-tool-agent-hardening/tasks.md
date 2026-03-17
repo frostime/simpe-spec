@@ -1,6 +1,6 @@
 ---
 change: "patch-tool-agent-hardening"
-updated: "2026-03-17T15:43:36+08:00"
+updated: "2026-03-17T16:22:23+08:00"
 ---
 
 # Tasks
@@ -31,6 +31,10 @@ updated: "2026-03-17T15:43:36+08:00"
 ### Feedback Tasks ✅
 - [x] Refine `src/sspec/builtin_tools/apply_patch.py` prompt text — reduce verbosity and document both bash and PowerShell `--stdin` examples
 - [x] Reorganize `src/sspec/builtin_tools/apply_patch.py` prompt text — clarify tool identity, single/multi patch format, CLI apply methods, and important failure rules
+- [x] Tighten `src/sspec/builtin_tools/apply_patch.py` outside-workspace absolute path behavior — require confirmation by default and `--unsafe` for automated bypass
+- [x] Fix preview scope rendering for open-ended line ranges and add regression coverage in `tests/test_tool_command.py`
+- [x] Expand `src/sspec/builtin_tools/apply_patch.py` header parsing — support paths with spaces and keep outside-workspace warnings visible during `--dry-run`
+- [x] Refine `src/sspec/builtin_tools/apply_patch.py` prompt wording — replace the abstract path-with-spaces note with a concrete absolute-path example
 
 <!-- @RULE: Organize by phases. Each task <2h, independently testable.
 Phase emoji: ⏳ pending | 🚧 in progress | ✅ done
@@ -63,3 +67,6 @@ If the work should become a new follow-up or replacement change, do not put it h
 - 2026-03-17: Added retry-aware statuses, line-numbered failure output, markdown bundle output, and command-level regression coverage.
 - 2026-03-17: Shortened the patch prompt and expanded `--stdin` examples to cover both bash and PowerShell.
 - 2026-03-17: Reorganized the patch prompt around tool identity, patch format, CLI usage, and important rules.
+- 2026-03-17: Added outside-workspace absolute path confirmation plus `--unsafe`, and fixed open-ended range preview output.
+- 2026-03-17: Added support for space-containing patch paths and moved outside-workspace warnings ahead of `--dry-run` exit.
+- 2026-03-17: Replaced the ambiguous path-with-spaces wording in `patch --prompt` with a concrete full-path example.

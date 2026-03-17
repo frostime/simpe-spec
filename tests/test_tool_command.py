@@ -76,6 +76,97 @@ def test_tool_write_prompt_does_not_require_target() -> None:
     assert '# write - Explicit File Writing Helper' in result.output
 
 
+def test_tool_patch_accepts_stdin_input() -> None:
+    runner = CliRunner()
+
+    with runner.isolated_filesystem():
+        target = Path('note.txt')
+        target.write_text('old\n', encoding='utf-8')
+        patch_text = """# note.txt
+<<<<<<< SEARCH
+old
+=======
+new
+>>>>>>> REPLACE
+"""
+
+        result = runner.invoke(
+            main,
+            ['tool', 'patch', '--stdin', '--yes'],
+            input=patch_text,
+        )
+
+        assert result.exit_code == 0
+        assert target.read_text(encoding='utf-8') == 'new\n'
+
+
+def test_tool_patch_failure_outside_sspec_writes_temp_markdown_bundle() -> None:
+    runner = CliRunner()
+
+    with runner.isolated_filesystem():
+        target = Path('note.txt')
+        target.write_text('alpha\n', encoding='utf-8')
+        patch_text = """# note.txt
+<<<<<<< SEARCH
+missing
+=======
+beta
+>>>>>>> REPLACE
+"""
+
+        result = runner.invoke(
+            main,
+            ['tool', 'patch', '--stdin', '--yes'],
+            input=patch_text,
+        )
+
+        assert result.exit_code == 1
+        assert 'File: note.txt' in result.output
+        assert 'Patch line: L1' in result.output
+        assert '<<<<<<< SEARCH' in result.output
+        assert not Path('.sspec').exists()
+
+        match = re.search(r'Full failed patch bundle:\s*(.+)\r?\n', result.output)
+        assert match is not None
+        bundle_path = Path(match.group(1).strip())
+        assert bundle_path.exists()
+        content = bundle_path.read_text(encoding='utf-8')
+        assert '## Failed Patch 1' in content
+        assert '```patch' in content
+
+
+def test_tool_patch_bundle_markdown_is_reusable_as_patch_input() -> None:
+    runner = CliRunner()
+
+    with runner.isolated_filesystem():
+        target = Path('note.txt')
+        target.write_text('alpha\n', encoding='utf-8')
+        patch_text = """# note.txt
+<<<<<<< SEARCH
+missing
+=======
+beta
+>>>>>>> REPLACE
+"""
+
+        failed = runner.invoke(
+            main,
+            ['tool', 'patch', '--stdin', '--yes'],
+            input=patch_text,
+        )
+        assert failed.exit_code == 1
+
+        match = re.search(r'Full failed patch bundle:\s*(.+)\r?\n', failed.output)
+        assert match is not None
+        bundle_path = Path(match.group(1).strip())
+
+        target.write_text('missing\n', encoding='utf-8')
+        rerun = runner.invoke(main, ['tool', 'patch', str(bundle_path), '--yes'])
+
+        assert rerun.exit_code == 0
+        assert target.read_text(encoding='utf-8') == 'beta\n'
+
+
 def test_tool_write_append_with_stdin_preserves_existing_newlines() -> None:
     runner = CliRunner()
 

@@ -86,7 +86,7 @@ mdtoc.register_command(tool)
 
 | Subcommand | Module | Purpose |
 |------------|--------|---------|
-| `patch` | `/src/sspec/builtin_tools/apply_patch.py` | Apply SEARCH/REPLACE patches with preview and failed-patch capture |
+| `patch` | `/src/sspec/builtin_tools/apply_patch.py` | Apply SEARCH/REPLACE patches with stdin/file input, retry-aware statuses, and markdown failed-bundle output |
 | `pack-zip` | `/src/sspec/builtin_tools/pack_zip.py` | Package a project into zip while respecting `.gitignore` and extra include/exclude rules |
 | `view-tree` | `/src/sspec/builtin_tools/view_tree.py` | Render a project tree with gitignore-aware filtering and optional file stats |
 | `fileinfo` | `/src/sspec/builtin_tools/fileinfo.py` | Inspect file size, encoding, newline style, and text/binary status across files, directories, and globs |
@@ -100,9 +100,13 @@ mdtoc.register_command(tool)
 **Module**: `/src/sspec/builtin_tools/apply_patch.py`
 
 **Notable behavior**:
-- Exactly one input source: patch file, `--file`, or `--input`
+- Exactly one input source: patch file, `--file`, `--stdin`, or `--input`
+- Accepts relative targets rooted at the detected project root / cwd, plus absolute target paths
+- Supports canonical and open-ended line ranges such as `L10-L25`, `L10-`, and `-L25`
+- Repeated apply attempts can report `already_applied` instead of a generic `SEARCH` failure
 - Rich preview before apply
-- Failed patches auto-saved to `.sspec/tmp/failed-patches/<timestamp>/`
+- Failed patches are bundled into one markdown file; inside `.sspec/tmp/failed-patches/` for sspec projects or system temp otherwise
+- Failure summaries print patch-source and target-file line numbers plus a truncated SEARCH/REPLACE preview
 - `--prompt` prints the agent-facing patch spec instead of applying
 
 ### `pack-zip` — Package Project Snapshot

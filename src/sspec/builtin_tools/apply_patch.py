@@ -19,10 +19,11 @@ from __future__ import annotations
 
 import os
 import re
+import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     from rich.console import Console
@@ -51,7 +52,7 @@ class PatchBlock:
 
     file_path: Path
     display_path: str
-    line_range: tuple[int, int] | None  # (start, end) 1-based, inclusive
+    line_range: tuple[int | None, int | None] | None  # (start, end) 1-based, inclusive
     search_content: str
     replace_content: str
     source_line_start: int  # patch 在源文本中的起始行号（用于错误报告）
@@ -71,9 +72,27 @@ class PatchApplyResult:
 
     patch: PatchBlock | None
     success: bool
+    status: Literal[
+        'applied',
+        'already_applied',
+        'search_not_found',
+        'search_ambiguous',
+        'replace_ambiguous',
+        'search_replace_coexist',
+        'invalid_path',
+        'missing_file',
+        'not_a_file',
+        'invalid_line_range',
+        'out_of_range',
+        'parse_error',
+        'write_error',
+        'no_change_patch',
+    ]
     error: str | None = None
     match_mode: str | None = None  # exact | loose
     match_line: int | None = None  # 1-based line number in file
+    related_lines: list[int] | None = None
+    source_line_start: int | None = None
     search_line_count: int = 0
     replace_line_count: int = 0
 
@@ -180,13 +199,13 @@ def read_patch_text_interactive() -> str:
 
 def safe_resolve_under_root(root: Path, user_path: str) -> Path:
     """
-    将 patch 里的相对路径解析到 root 下：
-    - 禁止绝对路径
-    - 禁止 .. 越界
+    将 patch 里的路径解析为安全目标：
+    - 允许绝对路径
+    - 相对路径仍禁止 .. 越界
     """
     p = Path(user_path)
     if p.is_absolute():
-        raise ValueError(f'不允许绝对路径: {user_path}')
+        return p.resolve(strict=False)
 
     root_abs = root.resolve()
     resolved = (root_abs / p).resolve()
@@ -197,6 +216,82 @@ def safe_resolve_under_root(root: Path, user_path: str) -> Path:
         raise ValueError(f'路径越界（疑似使用 ..）: {user_path}') from None
 
     return resolved
+
+
+def parse_line_range(text: str) -> tuple[int | None, int | None]:
+    """Parse `L10-L20`, `L10-`, `-L20`, or legacy `10-20` syntax."""
+    patterns = [
+        re.compile(r'^L(?P<start>\d+)-L(?P<end>\d+)$'),
+        re.compile(r'^L(?P<start>\d+)-$'),
+        re.compile(r'^-L(?P<end>\d+)$'),
+        re.compile(r'^(?P<start>\d+)-(?P<end>\d+)$'),
+    ]
+
+    for pattern in patterns:
+        match = pattern.fullmatch(text)
+        if not match:
+            continue
+
+        start = match.groupdict().get('start')
+        end = match.groupdict().get('end')
+        start_i = int(start) if start else None
+        end_i = int(end) if end else None
+
+        if start_i is not None and start_i <= 0:
+            raise ValueError(f'Invalid line range: {text}')
+        if end_i is not None and end_i <= 0:
+            raise ValueError(f'Invalid line range: {text}')
+        if start_i is not None and end_i is not None and end_i < start_i:
+            raise ValueError(f'Invalid line range: {text}')
+
+        return start_i, end_i
+
+    raise ValueError(f'Invalid line range: {text}')
+
+
+def _parse_patch_header_text(text: str) -> tuple[str, tuple[int | None, int | None] | None]:
+    """Parse patch header body (without leading `# `)."""
+    if not text or any(ch.isspace() for ch in text):
+        raise ValueError(f'Invalid patch header: {text}')
+
+    if ':' not in text:
+        return text, None
+
+    path_part, suffix = text.rsplit(':', 1)
+    if not path_part:
+        raise ValueError(f'Invalid patch header: {text}')
+
+    try:
+        return path_part, parse_line_range(suffix)
+    except ValueError:
+        return text, None
+
+
+def parse_patch_header(
+    header: str,
+    *,
+    project_root: Path,
+) -> tuple[Path, str, tuple[int | None, int | None] | None]:
+    """Parse '# <path>[:<range>]' with absolute/relative path support."""
+    stripped = strip_line_ending(header)
+    if not stripped.startswith('# '):
+        raise ValueError(f'Invalid patch header: {header}')
+
+    display_path, line_range = _parse_patch_header_text(stripped[2:].strip())
+    return safe_resolve_under_root(project_root, display_path), display_path, line_range
+
+
+def is_patch_header_line(line: str) -> bool:
+    """Return whether a line looks like a patch file header."""
+    stripped = strip_line_ending(line)
+    if not stripped.startswith('# '):
+        return False
+
+    try:
+        _parse_patch_header_text(stripped[2:].strip())
+        return True
+    except ValueError:
+        return False
 
 
 def atomic_write_text(path: Path, text: str, *, encoding: str = 'utf-8') -> None:
@@ -230,8 +325,6 @@ def atomic_write_text(path: Path, text: str, *, encoding: str = 'utf-8') -> None
 
 # ============ LRR Phase 1: 行分类 ============
 
-FILE_PATH_PATTERN = re.compile(r'^#\s+(\S+?)(?::L?(\d+)-L?(\d+))?\s*$')
-
 SEARCH_MARK = '<<<<<<< SEARCH'
 DELIM_MARK = '======='
 REPLACE_MARK = '>>>>>>> REPLACE'
@@ -250,7 +343,7 @@ def classify_line(line: str) -> str:
     stripped = strip_line_ending(line)
 
     # 文件路径行（允许行尾空格）
-    if FILE_PATH_PATTERN.match(stripped):
+    if is_patch_header_line(stripped):
         return 'F'
 
     # 标记行必须精确匹配（不允许额外空格）
@@ -316,19 +409,15 @@ def parse_patches(patch_text: str, *, project_root: Path | None = None) -> Patch
             file_line = strip_line_ending(lrr.lines[file_line_idx])
 
             # 解析文件路径和行范围
-            m = FILE_PATH_PATTERN.match(file_line)
-            if not m:
+            try:
+                file_path, display_path, line_range = parse_patch_header(
+                    file_line, project_root=root
+                )
+            except ValueError:
                 errors.append(f'Line {file_line_idx + 1}: 无法解析文件路径: {file_line}')
                 continue
-
-            file_path_str, start_str, end_str = m.groups()
-            display_path = file_path_str
-
-            # 安全解析路径
-            try:
-                file_path = safe_resolve_under_root(root, file_path_str)
             except Exception as e:
-                errors.append(f'Line {file_line_idx + 1}: 路径不合法: {display_path} ({e})')
+                errors.append(f'Line {file_line_idx + 1}: 路径不合法: {file_line} ({e})')
                 continue
 
             # 检查文件是否存在
@@ -338,14 +427,6 @@ def parse_patches(patch_text: str, *, project_root: Path | None = None) -> Patch
             if not file_path.is_file():
                 errors.append(f'Line {file_line_idx + 1}: 不是文件: {display_path}')
                 continue
-
-            line_range = None
-            if start_str and end_str:
-                start_i, end_i = int(start_str), int(end_str)
-                if start_i <= 0 or end_i <= 0 or end_i < start_i:
-                    errors.append(f'Line {file_line_idx + 1}: 非法行范围: {start_str}-{end_str}')
-                    continue
-                line_range = (start_i, end_i)
 
             # 提取 SEARCH / REPLACE 内容（不包括标记行）
             search_lines = lrr.extract_lines(match, 'search')
@@ -416,6 +497,59 @@ def find_block_matches(
     return matches
 
 
+def find_preferred_matches(
+    region_lines: list[str], needle_lines: list[str]
+) -> tuple[list[int], str | None]:
+    """Return exact matches first, else loose matches."""
+    exact = find_block_matches(region_lines, needle_lines, loose=False)
+    if exact:
+        return exact, 'exact'
+
+    loose = find_block_matches(region_lines, needle_lines, loose=True)
+    if loose:
+        return loose, 'loose'
+
+    return [], None
+
+
+def normalize_line_range(
+    line_range: tuple[int | None, int | None] | None,
+    total_lines: int,
+) -> tuple[int, int] | None:
+    """Resolve open-ended 1-based line ranges against file length."""
+    if line_range is None:
+        return None
+
+    start_raw, end_raw = line_range
+    start = 1 if start_raw is None else start_raw
+    end = total_lines if end_raw is None else end_raw
+
+    if start <= 0 or end <= 0 or end < start:
+        raise ValueError(f'Invalid line range: {format_line_range(line_range)}')
+
+    return start, end
+
+
+def absolute_line_numbers(prefix_len: int, matches: list[int]) -> list[int]:
+    """Convert region-relative match offsets to file line numbers."""
+    return [prefix_len + match + 1 for match in matches]
+
+
+def format_line_range(line_range: tuple[int | None, int | None] | None) -> str:
+    """Format a line range using canonical display syntax."""
+    if line_range is None:
+        return 'Full file'
+
+    start, end = line_range
+    if start is not None and end is not None:
+        return f'L{start}-L{end}'
+    if start is not None:
+        return f'L{start}-'
+    if end is not None:
+        return f'-L{end}'
+    return 'Full file'
+
+
 def apply_patch(patch: PatchBlock) -> PatchApplyResult:
     """应用单个 patch"""
     try:
@@ -425,17 +559,33 @@ def apply_patch(patch: PatchBlock) -> PatchApplyResult:
 
         file_newline = detect_newline_style(content)
         file_lines = split_lines_keepends(content)
+        total_lines = len(file_lines)
 
         # 确定搜索范围
         if patch.line_range:
-            start_idx = patch.line_range[0] - 1
-            end_idx_excl = patch.line_range[1]  # inclusive -> exclusive
-
-            if start_idx < 0 or end_idx_excl > len(file_lines):
+            try:
+                normalized_range = normalize_line_range(patch.line_range, total_lines)
+                assert normalized_range is not None
+                scope_start, scope_end = normalized_range
+            except ValueError as e:
                 return PatchApplyResult(
                     patch=patch,
                     success=False,
-                    error=f'行范围 {patch.line_range} 超出文件范围 (1-{len(file_lines)})',
+                    status='invalid_line_range',
+                    error=str(e),
+                    source_line_start=patch.source_line_start,
+                )
+
+            start_idx = scope_start - 1
+            end_idx_excl = scope_end
+
+            if start_idx < 0 or end_idx_excl > total_lines:
+                return PatchApplyResult(
+                    patch=patch,
+                    success=False,
+                    status='out_of_range',
+                    error=f'Line range {format_line_range(patch.line_range)} is outside file bounds (1-{total_lines})',
+                    source_line_start=patch.source_line_start,
                 )
 
             prefix = file_lines[:start_idx]
@@ -457,46 +607,82 @@ def apply_patch(patch: PatchBlock) -> PatchApplyResult:
             return PatchApplyResult(
                 patch=patch,
                 success=False,
-                error='SEARCH 内容为空：为避免误改，拒绝应用该 patch',
+                status='parse_error',
+                error='SEARCH content is empty',
+                source_line_start=patch.source_line_start,
             )
 
-        # 1) 精确匹配
-        exact = find_block_matches(region, search_lines, loose=False)
-        if len(exact) == 1:
-            match_start = exact[0]
-            match_mode = 'exact'
-        elif len(exact) > 1:
+        if search_text == replace_text:
+            return PatchApplyResult(
+                patch=patch,
+                success=True,
+                status='no_change_patch',
+                error='SEARCH and REPLACE are identical',
+                source_line_start=patch.source_line_start,
+                search_line_count=len(search_lines),
+                replace_line_count=len(replace_lines),
+            )
+
+        search_matches, search_mode = find_preferred_matches(region, search_lines)
+        replace_matches, replace_mode = find_preferred_matches(region, replace_lines)
+
+        if len(search_matches) == 1:
+            match_start = search_matches[0]
+            match_mode = search_mode
+        elif len(search_matches) > 1:
+            related_lines = absolute_line_numbers(len(prefix), search_matches)
+            status = 'search_replace_coexist' if replace_matches else 'search_ambiguous'
+            reason = (
+                'SEARCH and REPLACE both exist in scope; narrow the line range'
+                if replace_matches
+                else 'SEARCH matched multiple locations; narrow the line range'
+            )
             return PatchApplyResult(
                 patch=patch,
                 success=False,
-                error=f'找到 {len(exact)} 处精确匹配，存在歧义（建议加行范围限定）',
+                status=status,
+                error=reason,
+                match_mode=search_mode,
+                related_lines=related_lines,
+                source_line_start=patch.source_line_start,
                 search_line_count=len(search_lines),
                 replace_line_count=len(replace_lines),
             )
         else:
-            # 2) 容忍匹配（行尾空白/纯空白行）
-            loose = find_block_matches(region, search_lines, loose=True)
-            if len(loose) == 1:
-                match_start = loose[0]
-                match_mode = 'loose'
-            elif len(loose) > 1:
+            if len(replace_matches) == 1:
                 return PatchApplyResult(
                     patch=patch,
-                    success=False,
-                    error=(
-                        f'找到 {len(loose)} 处匹配（忽略行尾空白后），存在歧义（建议加行范围限定）'
-                    ),
+                    success=True,
+                    status='already_applied',
+                    error='SEARCH not found, but REPLACE already exists',
+                    match_mode=replace_mode,
+                    match_line=absolute_line_numbers(len(prefix), replace_matches)[0],
+                    source_line_start=patch.source_line_start,
                     search_line_count=len(search_lines),
                     replace_line_count=len(replace_lines),
                 )
-            else:
+            if len(replace_matches) > 1:
                 return PatchApplyResult(
                     patch=patch,
                     success=False,
-                    error='未找到匹配的 SEARCH 内容',
+                    status='replace_ambiguous',
+                    error='SEARCH not found, and REPLACE matched multiple locations',
+                    match_mode=replace_mode,
+                    related_lines=absolute_line_numbers(len(prefix), replace_matches),
+                    source_line_start=patch.source_line_start,
                     search_line_count=len(search_lines),
                     replace_line_count=len(replace_lines),
                 )
+
+            return PatchApplyResult(
+                patch=patch,
+                success=False,
+                status='search_not_found',
+                error='SEARCH content not found in scope',
+                source_line_start=patch.source_line_start,
+                search_line_count=len(search_lines),
+                replace_line_count=len(replace_lines),
+            )
 
         match_end = match_start + len(search_lines)
 
@@ -510,8 +696,10 @@ def apply_patch(patch: PatchBlock) -> PatchApplyResult:
         return PatchApplyResult(
             patch=patch,
             success=True,
+            status='applied',
             match_mode=match_mode,
             match_line=match_line,
+            source_line_start=patch.source_line_start,
             search_line_count=len(search_lines),
             replace_line_count=len(replace_lines),
         )
@@ -520,14 +708,16 @@ def apply_patch(patch: PatchBlock) -> PatchApplyResult:
         return PatchApplyResult(
             patch=patch,
             success=False,
-            error=f'应用 patch 失败: {e}',
+            status='write_error',
+            error=f'Failed to apply patch: {e}',
+            source_line_start=patch.source_line_start,
         )
 
 
 def format_patch_header(patch: PatchBlock) -> str:
     header = f'# {patch.display_path}'
     if patch.line_range:
-        header += f':L{patch.line_range[0]}-L{patch.line_range[1]}'
+        header += f':{format_line_range(patch.line_range)}'
     return header
 
 
@@ -538,7 +728,7 @@ def apply_patches(patch_text: str, *, project_root: Path | None = None) -> Batch
     if parse_result.errors:
         return BatchApplyResult(
             results=[
-                PatchApplyResult(patch=None, success=False, error=err)
+                PatchApplyResult(patch=None, success=False, status='parse_error', error=err)
                 for err in parse_result.errors
             ]
         )
@@ -549,53 +739,19 @@ def apply_patches(patch_text: str, *, project_root: Path | None = None) -> Batch
 
 # ============ Prompt 模板 ============
 
-PATCH_PROMPT = """Please return the code changes as patches, following the SEARCH/REPLACE specification below:
+PATCH_PROMPT = """# patch - SEARCH/REPLACE file editing helper
 
-## Format Specification
+`sspec tool patch` is a helper for editing existing files with structured SEARCH/REPLACE patch blocks.
 
-Each patch block consists of two parts:
+## Patch Format
 
-1) File path line (SEARCH must immediately follow; blank lines are allowed in between, but do not insert other text)
+### Single Patch Block
 
-Format A (Recommended, common case):
-# path/to/file.py
+- Header: `# <path>` or `# <path>:<range>`
+- Range syntax: `L10-L25`, `L10-`, `-L25`
+- Paths: relative paths resolve from project root / cwd; absolute paths are also allowed
 
-Format B (Optional, used only when the SEARCH fragment is too short and may match multiple locations):
-# path/to/file.py:10-25
-or
-# path/to/file.py:L10-L25
-
-Notes:
-- Line number ranges are optional and only used to narrow the search scope to avoid multiple matches
-- Line numbers are 1-based and inclusive (including both start and end lines)
-
-2) SEARCH/REPLACE block (marker lines must be on their own line without extra spaces)
-
-#### Example A: Without line number range (most common)
-
-```example
-# src/utils.py
-<<<<<<< SEARCH
-return x * 2
-=======
-return x * 3
->>>>>>> REPLACE
-```
-
-#### Example B: With line number range (without L)
-
-```example
-# src/utils.py:10-25
-<<<<<<< SEARCH
-return x * 2
-=======
-return x * 3
->>>>>>> REPLACE
-```
-
-#### Example C: With line number range (with L)
-
-```example
+```patch
 # src/utils.py:L10-L25
 <<<<<<< SEARCH
 return x * 2
@@ -604,13 +760,60 @@ return x * 3
 >>>>>>> REPLACE
 ```
 
+### Multiple Patch Blocks
+
+- Multiple patch blocks can be combined in one input
+- You may insert arbitrary explanation text between patch blocks
+- Each patch block only needs to keep its own format valid
+
+## Apply Patch via CLI
+
+### Basic command
+
+```bash
+sspec tool patch [OPTIONS]
+```
+
+### Input methods
+
+1. `--stdin` - recommended for agents
+2. `PATCH_FILE` or `--file PATCH_FILE`
+3. `--input` - interactive input
+
+### `--stdin` example (bash)
+
+```bash
+cat <<'EOF' | sspec tool patch --stdin --yes
+# src/utils.py
+<<<<<<< SEARCH
+return x * 2
+=======
+return x * 3
+>>>>>>> REPLACE
+EOF
+```
+
+### `--stdin` example (powershell)
+
+```powershell
+@'
+# src/utils.py
+<<<<<<< SEARCH
+return x * 2
+=======
+return x * 3
+>>>>>>> REPLACE
+'@ | sspec tool patch --stdin --yes
+```
+
 ## Important Rules
 
-1. Exact match priority: SEARCH content should exactly match the code in the file (including indentation)
-2. Whitespace tolerance fallback: Differences in trailing whitespace/tabs and pure blank lines are ignored during matching, but leading indentation must be consistent
-3. Unique match: If multiple matches are found, the operation will fail (recommend using line range restrictions)
-4. Path safety: Must be relative to the project root directory; absolute paths and ".." boundary violations are prohibited
-5. File existence: Files will be checked for existence before applying patches
+1. SEARCH must match exactly first; loose fallback ignores trailing whitespace and blank-line-only differences
+2. If SEARCH matches multiple locations, add a narrower line range
+3. Target files must already exist
+4. Relative paths must stay under the detected project root / current working directory; absolute paths are allowed
+5. If SEARCH is missing but REPLACE exists uniquely in scope, the patch is treated as already applied
+6. Failed patch output may contain explanation text outside fenced `patch` blocks; those fenced blocks remain directly reusable as later patch input
 """
 
 # Alias for Tool Interface
@@ -641,6 +844,12 @@ def register_command(group):
         help='Read patch text from a file (alternative to positional PATCH_FILE)',
     )
     @click.option(
+        '--stdin',
+        'stdin_mode',
+        is_flag=True,
+        help='Read patch text from stdin.',
+    )
+    @click.option(
         '-i',
         '--input',
         'input_mode',
@@ -655,7 +864,7 @@ def register_command(group):
     @click.option(
         '--output-failed',
         type=click.Path(path_type=Path),
-        help='Custom directory for failed patches (default: .sspec/tmp/failed-patches/<timestamp>)',
+        help='Custom markdown file or directory for failed patch bundle output.',
     )
     @click.option(
         '--yes',
@@ -670,6 +879,7 @@ def register_command(group):
     def patch_command(
         patch_file: Path | None,
         patch_file_opt: Path | None,
+        stdin_mode: bool,
         input_mode: bool,
         dry_run: bool,
         output_failed: Path | None,
@@ -685,8 +895,11 @@ def register_command(group):
 
         # Determine input source (default to --input when no file is provided)
         file_sources = [p for p in [patch_file, patch_file_opt] if p is not None]
-        if input_mode and file_sources:
-            console.print('[red]Error:[/red] Use either --input or --file/PATCH_FILE, not both.')
+        explicit_sources = int(bool(file_sources)) + int(stdin_mode) + int(input_mode)
+        if explicit_sources > 1:
+            console.print(
+                '[red]Error:[/red] Use exactly one input source: PATCH_FILE/--file, --stdin, or --input.'
+            )
             raise click.Abort()
         if len(file_sources) > 1:
             console.print(
@@ -694,7 +907,8 @@ def register_command(group):
             )
             raise click.Abort()
 
-        use_input = input_mode or (not file_sources)
+        use_stdin = stdin_mode
+        use_input = input_mode or (explicit_sources == 0)
 
         # Determine project root (used for path safety + prompt file completion)
         sspec_root = find_sspec_root()
@@ -708,7 +922,19 @@ def register_command(group):
             project_root = sspec_root.parent
 
         patch_text = ''
-        if use_input:
+        if use_stdin:
+            if sys.stdin.isatty():
+                console.print('[red]Error:[/red] No stdin content detected.')
+                raise click.Abort()
+            try:
+                patch_text = sys.stdin.buffer.read().decode('utf-8')
+            except UnicodeDecodeError as e:
+                console.print(f'[red]Error:[/red] Failed to decode stdin as utf-8: {e}')
+                raise click.Abort() from None
+            if not patch_text.strip():
+                console.print('[yellow]No input. Skipped.[/yellow]')
+                return
+        elif use_input:
             console.print(
                 '[cyan]Interactive input:[/cyan] paste/write patch text, then Esc+Enter (or Ctrl+D) to submit.'
             )
@@ -732,7 +958,17 @@ def register_command(group):
             console.print('[red]Parsing errors:[/red]')
             for err in parse_result.errors:
                 console.print(f'  - {err}')
-            raise click.Abort()
+            bundle_path = _save_failed_patches(
+                console,
+                failed_results=[],
+                raw_patch_text=patch_text,
+                parse_errors=parse_result.errors,
+                output_path=output_failed,
+                project_root=project_root,
+                in_sspec_project=sspec_root is not None,
+            )
+            console.print(f'[yellow]Full failed patch bundle:[/yellow] {bundle_path}')
+            raise click.exceptions.Exit(code=1)
 
         patches = parse_result.patches
         console.print(f'[green][OK][/green] Found {len(patches)} patch(es)\n')
@@ -772,7 +1008,17 @@ def register_command(group):
         # Save failed patches
         failed_results = [r for r in results if not r.success]
         if failed_results:
-            _save_failed_patches(console, failed_results, output_failed, project_root)
+            bundle_path = _save_failed_patches(
+                console,
+                failed_results=failed_results,
+                raw_patch_text=patch_text,
+                parse_errors=[],
+                output_path=output_failed,
+                project_root=project_root,
+                in_sspec_project=sspec_root is not None,
+            )
+            _display_failed_details(console, failed_results, bundle_path)
+            console.print(f'[yellow]Full failed patch bundle:[/yellow] {bundle_path}')
 
         # Exit with appropriate code
         if failed_results:
@@ -790,7 +1036,9 @@ def _display_results(console: Console, results: list[PatchApplyResult]) -> None:
     table.add_column('Δ lines', style='dim', justify='right', no_wrap=True)
     table.add_column('Note', style='dim')
 
-    succeeded = 0
+    applied = 0
+    already_applied = 0
+    no_change = 0
     failed = 0
 
     for result in results:
@@ -805,18 +1053,30 @@ def _display_results(console: Console, results: list[PatchApplyResult]) -> None:
             )
             continue
         if result.success:
-            succeeded += 1
+            delta = result.replace_line_count - result.search_line_count
             match = result.match_mode or '-'
             if result.match_line is not None:
                 match = f'{match} @L{result.match_line}'
 
-            delta = result.replace_line_count - result.search_line_count
+            status_label = '[green][OK][/green]'
+            note = 'Applied'
+            if result.status == 'already_applied':
+                already_applied += 1
+                status_label = '[cyan][=][/cyan]'
+                note = 'Already applied'
+            elif result.status == 'no_change_patch':
+                no_change += 1
+                status_label = '[blue][~][/blue]'
+                note = 'No change'
+            else:
+                applied += 1
+
             table.add_row(
                 format_patch_header(result.patch),
-                '[green][OK][/green]',
+                status_label,
                 match,
                 f'{delta:+d}',
-                'Applied',
+                note,
             )
         else:
             failed += 1
@@ -835,41 +1095,164 @@ def _display_results(console: Console, results: list[PatchApplyResult]) -> None:
 
     # Summary
     if failed == 0:
-        console.print(f'[green]Summary:[/green] All {succeeded} patch(es) applied successfully')
+        console.print(
+            '[green]Summary:[/green] '
+            f'Applied: {applied} | Already applied: {already_applied} | No change: {no_change}'
+        )
     else:
-        console.print(f'[yellow]Summary:[/yellow] {succeeded} succeeded, {failed} failed')
+        console.print(
+            '[yellow]Summary:[/yellow] '
+            f'Applied: {applied} | Already applied: {already_applied} | '
+            f'No change: {no_change} | Failed: {failed}'
+        )
+
+
+def _truncate_patch_chunk(text: str, *, max_lines: int = 8) -> list[str]:
+    """Truncate a patch body for readable terminal previews."""
+    lines = text.splitlines()
+    if len(lines) <= max_lines:
+        return lines
+    hidden = len(lines) - max_lines
+    return [*lines[:max_lines], f'(content omitted, {hidden} more lines)']
+
+
+def _format_patch_preview(patch: PatchBlock) -> str:
+    """Build a compact SEARCH/REPLACE preview for failed patch output."""
+    preview_lines = ['<<<<<<< SEARCH']
+    preview_lines.extend(_truncate_patch_chunk(patch.search_content))
+    preview_lines.append('=======')
+    preview_lines.extend(_truncate_patch_chunk(patch.replace_content))
+    preview_lines.append('>>>>>>> REPLACE')
+    return '\n'.join(preview_lines)
+
+
+def _format_target_line_info(result: PatchApplyResult) -> str:
+    """Format the most relevant target line information for output."""
+    if result.match_line is not None:
+        return f'L{result.match_line}'
+    if result.related_lines:
+        return ', '.join(f'L{line}' for line in result.related_lines)
+    if result.patch and result.patch.line_range:
+        return format_line_range(result.patch.line_range)
+    return 'Full file'
+
+
+def _display_failed_details(
+    console: Console,
+    failed_results: list[PatchApplyResult],
+    bundle_path: Path,
+) -> None:
+    """Print detailed failure diagnostics with file and line information."""
+    console.print()
+    console.print('[bold yellow]Failed Patch Details[/bold yellow]')
+
+    for index, result in enumerate(failed_results, start=1):
+        console.print()
+        console.print(f'[bold]Failed Patch {index}[/bold]')
+        if result.patch is None:
+            console.print('File: N/A')
+            console.print(f'Status: {result.status}')
+            console.print(f'Reason: {result.error or "Unknown parsing error"}')
+            continue
+
+        console.print(f'File: {result.patch.display_path}')
+        console.print(f'Status: {result.status}')
+        console.print(f'Patch line: L{result.source_line_start or result.patch.source_line_start}')
+        console.print(f'Target line(s): {_format_target_line_info(result)}')
+        console.print(f'Reason: {result.error or "Unknown error"}')
+        console.print()
+        console.print(_format_patch_preview(result.patch))
+        console.print(f'Note: Full patch in {bundle_path}')
+
+
+def _resolve_failed_output_path(
+    output_path: Path | None,
+    *,
+    project_root: Path,
+    in_sspec_project: bool,
+) -> Path:
+    """Resolve a single markdown file path for failed patch output."""
+    from datetime import datetime
+
+    timestamp = datetime.now().strftime('%Y-%m-%dT%H-%M-%S')
+    default_name = f'{timestamp}.md'
+
+    if output_path is not None:
+        candidate = output_path.expanduser().resolve(strict=False)
+        if candidate.exists() and candidate.is_dir():
+            return candidate / default_name
+        if candidate.suffix:
+            return candidate
+        return candidate / default_name
+
+    if in_sspec_project:
+        return project_root / '.sspec' / 'tmp' / 'failed-patches' / default_name
+
+    handle = tempfile.NamedTemporaryFile(
+        mode='w',
+        suffix='.md',
+        prefix='sspec-failed-patches-',
+        delete=False,
+        encoding='utf-8',
+    )
+    handle.close()
+    return Path(handle.name)
 
 
 def _save_failed_patches(
     console: Console,
+    *,
     failed_results: list[PatchApplyResult],
-    output_dir: Path | None,
+    raw_patch_text: str,
+    parse_errors: list[str],
+    output_path: Path | None,
     project_root: Path,
-) -> None:
-    """Save failed patches to a timestamped directory."""
-    from datetime import datetime
+    in_sspec_project: bool,
+) -> Path:
+    """Save all failed patch information into one markdown bundle."""
+    bundle_path = _resolve_failed_output_path(
+        output_path,
+        project_root=project_root,
+        in_sspec_project=in_sspec_project,
+    )
+    bundle_path.parent.mkdir(parents=True, exist_ok=True)
 
-    if output_dir is None:
-        timestamp = datetime.now().strftime('%Y-%m-%dT%H-%M-%S')
-        output_dir = project_root / '.sspec' / 'tmp' / 'failed-patches' / timestamp
+    lines = ['# Failed Patch Bundle', '']
 
-    output_dir.mkdir(parents=True, exist_ok=True)
+    if parse_errors:
+        lines.extend(['## Parsing Errors', ''])
+        for error in parse_errors:
+            lines.append(f'- {error}')
+        lines.extend(
+            ['', '### Original Input', '', '```patch', raw_patch_text.rstrip('\n'), '```', '']
+        )
 
-    for i, result in enumerate(failed_results, start=1):
-        if result.patch:
-            # Reconstruct patch text
-            patch_text = f'# {result.patch.display_path}'
-            if result.patch.line_range:
-                patch_text += f':L{result.patch.line_range[0]}-L{result.patch.line_range[1]}'
-            patch_text += '\n'
-            patch_text += '<<<<<<< SEARCH\n'
-            patch_text += result.patch.search_content
-            patch_text += '=======\n'
-            patch_text += result.patch.replace_content
-            patch_text += '>>>>>>> REPLACE\n'
+    for index, result in enumerate(failed_results, start=1):
+        if result.patch is None:
+            continue
 
-            # Save to file
-            filename = f'patch_{i:02d}.md'
-            (output_dir / filename).write_text(patch_text, encoding='utf-8')
+        lines.extend(
+            [
+                f'## Failed Patch {index}',
+                '',
+                f'- File: `{result.patch.display_path}`',
+                f'- Status: `{result.status}`',
+                f'- Patch line: `L{result.source_line_start or result.patch.source_line_start}`',
+                f'- Target line(s): `{_format_target_line_info(result)}`',
+                f'- Reason: {result.error or "Unknown error"}',
+                '',
+                '```patch',
+                format_patch_header(result.patch),
+                '<<<<<<< SEARCH',
+                result.patch.search_content.rstrip('\n'),
+                '=======',
+                result.patch.replace_content.rstrip('\n'),
+                '>>>>>>> REPLACE',
+                '```',
+                '',
+            ]
+        )
 
-    console.print(f'[yellow]Failed patches saved to:[/yellow] {output_dir}')
+    bundle_path.write_text('\n'.join(lines).rstrip() + '\n', encoding='utf-8')
+    console.print(f'[yellow]Failed patches saved to:[/yellow] {bundle_path}')
+    return bundle_path

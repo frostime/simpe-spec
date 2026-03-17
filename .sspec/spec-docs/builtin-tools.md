@@ -68,7 +68,7 @@ view_tree.register_command(tool)
 mdtoc.register_command(tool)
 ```
 
-**Current tool set**: `patch`, `pack-zip`, `view-tree`, `mdtoc`
+**Current tool set**: `patch`, `pack-zip`, `view-tree`, `fileinfo`, `write`, `mdtoc`, `now`, `ask`
 
 **Adding a new tool**:
 1. Create module in `src/sspec/builtin_tools/new_tool.py`
@@ -89,7 +89,11 @@ mdtoc.register_command(tool)
 | `patch` | `/src/sspec/builtin_tools/apply_patch.py` | Apply SEARCH/REPLACE patches with preview and failed-patch capture |
 | `pack-zip` | `/src/sspec/builtin_tools/pack_zip.py` | Package a project into zip while respecting `.gitignore` and extra include/exclude rules |
 | `view-tree` | `/src/sspec/builtin_tools/view_tree.py` | Render a project tree with gitignore-aware filtering and optional file stats |
+| `fileinfo` | `/src/sspec/builtin_tools/fileinfo.py` | Inspect file size, encoding, newline style, and text/binary status across files, directories, and globs |
+| `write` | `/src/sspec/builtin_tools/write.py` | Write file content via pipe or text argument using explicit create/append/overwrite modes |
 | `mdtoc` | `/src/sspec/builtin_tools/mdtoc.py` | Pre-scan Markdown size/headings before targeted reading |
+| `now` | `/src/sspec/builtin_tools/now.py` | Provide stable local/UTC timestamps for agent-authored docs |
+| `ask` | `/src/sspec/builtin_tools/ask.py` | Fallback user consultation workflow when no native question tool exists |
 
 ### `patch` — Apply SEARCH/REPLACE Patches
 
@@ -119,6 +123,26 @@ mdtoc.register_command(tool)
 - Resolves a project root for gitignore filtering
 - Hides universal noise dirs such as `.git`, `__pycache__`, and `node_modules`
 - Can show file sizes or line/char detail for text files
+
+### `fileinfo` — Inspect File Metadata
+
+**Module**: `/src/sspec/builtin_tools/fileinfo.py`
+
+**Notable behavior**:
+- Works outside `.sspec/` projects and accepts absolute or relative paths
+- Accepts multiple files, directories, and glob patterns in one command
+- Reports size, modified time, text/binary classification, encoding guess, BOM, newline style, and line count when available
+- Supports `--json` for agent-friendly structured output
+
+### `write` — Explicit File Writing
+
+**Module**: `/src/sspec/builtin_tools/write.py`
+
+**Notable behavior**:
+- Works outside `.sspec/` projects and accepts absolute or relative paths
+- Requires explicit `--mode create|append|overwrite`
+- Supports `--stdin` for multi-line piped content and `--text` for short inline writes
+- Preserves existing newline style during append/overwrite when it can decode the target file
 
 ### `mdtoc` — Markdown TOC Pre-Scan
 
@@ -177,7 +201,7 @@ Never test destructive or archive-writing paths in project root.
 
 **Manual registration over auto-discovery (now)**:
 - **Trade-off**: explicit code vs automatic discovery
-- **Decision**: manual for now (current set = 4 tools)
+- **Decision**: manual for now (current set remains small enough for explicit registration)
 - **Rationale**: the registry is still small enough that explicit imports in `commands/tool.py` are clearer than discovery magic
 - **Future**: auto-discovery when tool count or plugin needs justify it
 

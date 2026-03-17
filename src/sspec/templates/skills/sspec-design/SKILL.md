@@ -117,6 +117,8 @@ sspec howto write-dim-<name>                # read a specific dimension
 
 These rules apply to **every** spec regardless of which dimensions are chosen.
 
+**Read the dimension howto before writing** — Each dimension's howto defines its writing norms (e.g. code blocks for interfaces, ASCII diagrams for behavior). Read it before writing that sub-section: `sspec howto write-dim-<name>`.
+
 **Scope Summary Table** — For changes affecting ≥3 files, Key Design MUST end with a `File | Change` table. This gives reviewers and implementers a fast orientation map.
 
 ```markdown
@@ -209,7 +211,7 @@ Root spec does NOT include file-level Scope Summary — that belongs in each sub
 Present the design to user for confirmation:
 - Problem statement summary
 - Proposed approach and rationale
-- Key design dimensions chosen and their content
+- Key design dimensions chosen and their core decisions
 - (Root) Phase breakdown
 
 If a `question`-like tool is available, use it for the gate. Otherwise present the design clearly in normal output and stop.

@@ -59,3 +59,4 @@ may not be well-understood enough to design.
 
 - Interface Contract (behavior shows "how it runs", interfaces show "what it exposes")
 - Outcome Preview (behavior shows the process, outcome shows the result)
+- Structural Blueprint (behavior shows how things interact, structure shows where they live)

@@ -71,7 +71,7 @@ def _build_howto_info(
 
     description = str(meta.get('desc') or meta.get('description') or '').strip()
     howto_type_raw = meta.get('type')
-    howto_type = str(howto_type_raw).strip() if howto_type_raw else None
+    howto_type = str(howto_type_raw).strip() or None if howto_type_raw else None
     try:
         relative_file = howto_path.relative_to(root_dir).as_posix()
     except ValueError:

@@ -4,7 +4,7 @@ Concrete examples of spec.md (A + B) for root changes (multi-phase coordinators)
 Root spec describes scope and phase decomposition — NOT file-level interface detail.
 File-level interface design belongs in each sub-change's own spec.md.
 
-**📚 Standards**: See [SKILL.md](./SKILL.md) for Presentation Rules 1–4 (Root Change adaptations) and workflow.
+**📚 Standards**: See [SKILL.md](./SKILL.md) for Universal Rules and workflow.
 
 ---
 
@@ -143,15 +143,15 @@ Root spec describes phases; sub-change specs describe the **implementation desig
 Sub-change spec.md must:
 - Reference the root change in frontmatter (`type: root-change`)
 - Have a scoped Section A (just this phase's problem, not the full root scope)
-- Have a full Section B with all applicable Presentation Rules (Rules 1–4 from SKILL.md Step 3A)
-- Include a Scope Summary Table (Rule 3) for its own file set
+- Have a full Section B with appropriate predictability dimensions (see SKILL.md Step 3A)
+- Include a Scope Summary Table for its own file set (Universal Rule)
 
 ### What the Root spec does NOT include
 
-| ❌ Not in root spec | ✅ Goes in sub-change spec |
+| Not in root spec | Goes in sub-change spec |
 |--------------------|--------------------------|
-| Function/class signatures per phase | Each sub-change's Interface Design section |
-| Data models for each phase | Each sub-change's Data Model section |
+| Function/class signatures per phase | Each sub-change's relevant design dimensions |
+| Data models for each phase | Each sub-change's relevant design dimensions |
 | File-level Scope Summary (per phase) | Each sub-change's Scope Summary Table |
 | Task lists | Each sub-change's tasks.md |
 

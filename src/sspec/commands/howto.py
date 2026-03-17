@@ -13,6 +13,7 @@ from rich.table import Table
 
 from sspec.core import SSPEC_DIR, find_sspec_dir
 from sspec.services.howto_service import (
+    HowtoInfo,
     collect_howtos,
     create_project_howto,
     read_howto_body,
@@ -82,7 +83,7 @@ def _print_warnings(warnings: tuple[str, ...], *, output_format: OutputFormat) -
             click.echo(f'WARNING: {warning}')
 
 
-def _render_plain_list(items, *, show_type: bool = False) -> None:
+def _render_plain_list(items: tuple[HowtoInfo, ...], *, show_type: bool = False) -> None:
     """Render HOWTO list in YAML-like plain text."""
 
     for item in items:
@@ -170,10 +171,15 @@ def list_cmd(ctx: click.Context, output_format: str | None, howto_type: str | No
         items = tuple(item for item in items if item.type == howto_type)
 
     if not items:
+        msg = (
+            f"No HOWTOs matching type '{howto_type}'."
+            if howto_type
+            else 'No HOWTO documents found.'
+        )
         if effective_format == 'rich':
-            console.print('[dim]No HOWTO documents found.[/dim]')
+            console.print(f'[dim]{msg}[/dim]')
         else:
-            click.echo('No HOWTO documents found.')
+            click.echo(msg)
         return
 
     has_types = any(item.type for item in items)

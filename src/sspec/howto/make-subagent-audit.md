@@ -14,6 +14,7 @@ Conduct independent code-level reviews using Subagents.
    1. Identified potential issues and their risk levels.
    2. Suggested improvements and best practices.
 4. The main Agent objectively evaluates the Subagent review results, makes decisions in combination with the code files, and ultimately consolidates them into a comprehensive review report.
+5. Align with users on how to handle the review results.
 
 **Multi-Subagent Division**
 When the codebase is complex, multiple Subagents can be employed, for example:

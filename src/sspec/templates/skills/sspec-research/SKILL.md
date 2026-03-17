@@ -42,6 +42,11 @@ Explore and investigate before designing. This phase is about **understanding**,
 - To locate the change to resume, use `sspec change list` or `sspec change find <name>`
 - To read long Markdown files efficiently: `sspec howto read-long-mdfile`
 
+**Grill User**:
+- Interview user relentlessly about every unclear aspect of the thing he want, until reach a shared understanding.
+- Walk down each branch of the design tree, resolving dependencies between decisions one-by-one.
+- If a question can be answered by exploring the codebase, explore the codebase instead.
+
 **Compare approaches** (if multiple paths visible):
 - Brainstorm options, build comparison tables
 - Sketch tradeoffs with ASCII diagrams

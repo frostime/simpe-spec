@@ -3,7 +3,7 @@ name: sspec-design
 description: "Assess scale, create change, fill spec.md, align with user. Use after research when ready to define the solution."
 metadata:
   author: frostime
-  version: 3.3.1
+  version: 4.0.0
 ---
 
 # SSPEC Design
@@ -56,93 +56,68 @@ Quick checks:
 
 Follow the guidance below and the `@RULE` blocks in the generated `spec.md` template.
 
-### What Users Care About Most
+### Section A — Problem Statement
 
-Users review designs for: **interfaces**, **data types**, **data flow**, and **logic flow**.
-Prioritize these in Section B. Abstract hand-waving ("we'll handle it later") erodes trust.
-
-### Single Change
-
-**Section A — Problem Statement**:
 - Quantify impact: "[metric] causing [impact]"
 - Simple changes: single paragraph
 - Complex changes: split "Current Situation" + "User Requirement"
 
-| ❌ Bad | ✅ Good |
-|--------|---------|
+| Bad | Good |
+|-----|------|
 | "Need to refactor" | "Auth takes 5s → 12% conversion drop" |
 | "Improve the UI" | "Form completion rate 23% → target 60%" |
 
-**Section B — Proposed Solution**:
+### Section B — Proposed Solution
 
 `### Approach`: Core idea (1-3 paragraphs) + why this over alternatives.
 
-`### Key Design`: Scale by complexity:
+`### Key Design`: Choose predictability dimensions as sub-sections (see below).
 
 | Complexity | Design Depth |
 |------------|-------------|
 | Simple (≤5 files) | Inline in Approach, brief mention |
-| Medium (5-15 files) | Sub-sections: `### Interface Design`, `### Data Flow`, `### Key Logic` (add `### Data Model` if introducing new schemas) |
+| Medium (5-15 files) | Dedicated dimension sub-sections |
 | Complex (>15 files) | Detailed design in `reference/design.md`, link from B |
 
-**What MUST appear in B** (by priority):
-1. **Interfaces** — function signatures, API contracts, class interfaces
-2. **Data types** — models, schemas, type definitions
-3. **Data flow** — how data moves through the system (input → transform → output)
-4. **Logic flow** — key algorithms, decision trees, state machines
-5. **Design rationale** — why this approach over alternatives
+### Choosing Dimensions
 
-### Presentation Rules
+A spec is a **prediction contract** — the user reads it and forms an expectation of what the change will produce. Different changes need different kinds of prediction.
 
-These rules govern *how* content in Section B must be expressed, not just what to include.
-A spec that names the right elements but describes them in prose fails the standard.
+Before writing Key Design sub-sections, ask yourself:
 
-**Rule 1 — Code blocks for interfaces**
+1. What kind of change is this? (feature / fix / refactor / docs / ...)
+2. What does the user need to predict to feel in control?
+3. Which 2-4 dimensions best serve that prediction?
 
-Any interface, signature, or type definition MUST appear in a fenced typed code block.
-Prose is supplementary only.
+Your choice is reflected in the sub-section headings you use. No need to write a "dimension selection rationale" — the structure speaks for itself.
 
-```python
-# ✅ Good — concrete, typed, annotatable
-@dataclass
-class ChangeRef:
-    source: str             # workspace-relative path, no leading ./
-    type: RefType           # 'request' | 'root-change' | 'sub-change' | 'doc'
-    note: str | None = None  # NEW: optional annotation
-```
+### Predictability Dimensions
 
-```
-# ❌ Bad — reader must mentally reconstruct the shape
-Add an optional `note` field to ChangeRef. It's a string for annotation purposes.
-```
+| Dimension | User's Question | When to Use |
+|-----------|----------------|-------------|
+| Outcome Preview | "What will it look like when done?" | Result is visually demonstrable (CLI output, UI, before/after) |
+| Interface Contract | "What are the boundaries and contracts?" | Involves function signatures, APIs, type definitions |
+| Structural Blueprint | "How are things organized?" | Involves module splits, file trees, component hierarchy |
+| Behavioral Spec | "How does the system behave?" | Involves call chains, state machines, algorithm flows |
+| Data Architecture | "What does the data look like and how does it flow?" | Involves schemas, storage structures, data pipelines |
+| Content Outline | "What will the content structure be?" | Changes target documents, templates, or specs |
+| Migration Path | "How do we get from here to there?" | Needs migration, compatibility, or rollback strategy |
+| Impact Map | "What changes and what doesn't?" | Scope needs explicit boundaries |
 
-**Rule 2 — ASCII diagrams with text explain for data flow**
+The menu is open — custom dimensions are allowed if none of the above fit. Briefly note the rationale in Approach.
 
-Any data-flow or call-path description MUST include an ASCII tree or flowchart
-using `│ ├── └──` notation. A diagram + short explanatory text is the target form.
+Each dimension has a detailed writing spec and snippet examples available as a howto:
 
 ```
-# ✅ Good — tree + companion text
-HTTP Request
-  │
-  ├── validate_input()  → reject malformed data early
-  ├── load_user()       → fetch from DB/cache
-  ├── apply_change()    → pure business logic
-  └── persist_result()  → write side effects
-
-**Note**: Keep `apply_change()` pure so it can be unit-tested without I/O.
+sspec howto list --type design-dimension    # browse all dimension cards
+sspec howto write-dim-<name>                # read a specific dimension
 ```
 
-```
-# ❌ Bad — text-only narration
-When creating a change from a request, the system reads the request, creates a
-directory, copies templates, then links them bidirectionally.
-```
+### Universal Rules
 
-**Rule 3 — Scope Summary Table**
+These rules apply to **every** spec regardless of which dimensions are chosen.
 
-For changes affecting ≥3 files, Key Design MUST end with a `File | Change` table.
-This provides reviewers and implementers a fast orientation map.
+**Scope Summary Table** — For changes affecting ≥3 files, Key Design MUST end with a `File | Change` table. This gives reviewers and implementers a fast orientation map.
 
 ```markdown
 ### Scope Summary
@@ -153,14 +128,9 @@ This provides reviewers and implementers a fast orientation map.
 | `tests/test_users_api.py` | Add tests for cache hit/miss |
 ```
 
-**Rule 4 — Change Item Labeling**
-
-For changes with ≥3 independent items (fixes, features, or refactors), label each
-item in Section B (Label A / B / C, or descriptive slug). This creates stable
-cross-references for tasks.md.
+**Item Labeling** — For changes with ≥3 independent items (fixes, features, or refactors), label each item in Section B. This creates stable cross-references for tasks.md.
 
 ```markdown
-# ✅ Good — labeled, addressable in tasks.md
 **Fix A: Request linking** — `link_request()` must write bidirectional references.
 **Feat B: Cache TTL jitter** — Add ±10% jitter to reduce stampede risk.
 **Refactor C: Extract cache interface** — isolate I/O behind `CacheClient`.
@@ -170,22 +140,13 @@ cross-references for tasks.md.
 - [ ] Implement Feat B per spec §B
 ```
 
-```markdown
-# ❌ Bad — unlabeled, tasks.md must re-describe the design
-### Changes
-Add bidirectional linking to change creation. Add dry-run flag. Refactor name normalization.
-```
+### B vs tasks.md Boundary
 
-**What does NOT belong in B**: Execution order (tasks.md), file-level task lists (tasks.md).
+B defines *how it should work* (design). tasks.md defines *what to do* (execution). Tasks reference B — e.g. "implement interface per spec.md B" — never copy.
 
-**B vs tasks.md boundary**: B defines *how it should work* (interfaces, data model, logic). tasks.md defines *what to do* (file-level steps, verification). Tasks reference B — e.g. "implement interface per spec.md B" — never copy.
+**What does NOT belong in B**: Execution order, file-level task lists.
 
-### Key Design Sub-sections (Recommended)
-
-Prefer explicit sub-sections: `Interface Design` / `Data Flow` / `Key Logic` / `Scope Summary`.
-If in doubt, mimic the structure from [examples-single.md](./examples-single.md).
-
-📚 Full examples with all four rules applied: [examples-single.md](./examples-single.md)
+📚 Scenario examples: [examples-feature.md](./examples-feature.md) | [examples-docs.md](./examples-docs.md) | [examples-refactor.md](./examples-refactor.md)
 
 ## Step 3B: Fill Root Change spec.md (Type B)
 
@@ -219,14 +180,14 @@ Each sub-change then goes through its own design → plan → implement → revi
 
 ### Presentation Rules for Root Change
 
-Rules 1–4 from Step 3A apply when relevant, adapted to phase scope:
+Universal rules from Step 3A apply, adapted to phase scope:
 
 | Rule | Single Change | Root Change |
 |------|--------------|-------------|
-| Rule 1 (code blocks) | Interfaces in sub-sections | Shared interfaces that span phases (if any) |
-| Rule 2 (ASCII diagrams) | Data-flow within a module | Phase dependency tree |
-| Rule 3 (Scope Summary) | ≥3 files → File\|Change table | Phase\|Depends On\|Scope table |
-| Rule 4 (item labeling) | ≥3 independent fixes/feats | ≥3 phases with independent scope |
+| Scope Summary | ≥3 files → File\|Change table | Phase\|Depends On\|Scope table |
+| Item Labeling | ≥3 independent fixes/feats | ≥3 phases with independent scope |
+
+Phase dependency trees use ASCII diagrams (see `sspec howto write-dim-behavioral-spec` for notation).
 
 Root spec does NOT include file-level Scope Summary — that belongs in each sub-change's spec.
 
@@ -248,7 +209,7 @@ Root spec does NOT include file-level Scope Summary — that belongs in each sub
 Present the design to user for confirmation:
 - Problem statement summary
 - Proposed approach and rationale
-- Key interfaces and data types
+- Key design dimensions chosen and their content
 - (Root) Phase breakdown
 
 If a `question`-like tool is available, use it for the gate. Otherwise present the design clearly in normal output and stop.
@@ -261,5 +222,8 @@ After user confirms design, proceed to `sspec-plan`.
 
 | When | Load |
 |------|------|
-| Single-change examples (Simple / Medium / Complex) + B→tasks boundary | [examples-single.md](./examples-single.md) |
+| Feature/Bugfix scenario examples | [examples-feature.md](./examples-feature.md) |
+| Protocol/Template/Docs scenario examples | [examples-docs.md](./examples-docs.md) |
+| Refactor/Migration scenario examples | [examples-refactor.md](./examples-refactor.md) |
 | Root-change examples (phase overview, dependency tree, sub-change B) | [examples-root.md](./examples-root.md) |
+| Dimension writing specs (per-dimension howto cards) | `sspec howto list --type design-dimension` |

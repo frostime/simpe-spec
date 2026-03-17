@@ -28,31 +28,31 @@ updated: ""
 - [x] Create `src/sspec/howto/write-dim-impact-map.md` (absorb old Rule 3 Scope Summary as primary form)
 **Verification**: ✅ `sspec howto list --type design-dimension` shows all 8; `sspec howto write-dim-interface-contract` prints card body
 
-### Phase 3: SKILL Rewrite ⏳
-- [ ] Rewrite Step 3A in `src/sspec/templates/skills/sspec-design/SKILL.md`: replace fixed sub-sections with predictability dimensions menu + meta-thinking guidance
-- [ ] Elevate Scope Summary + Item Labeling as universal rules at Key Design level in SKILL.md
-- [ ] Remove old Presentation Rules section (Rule 1-4 block) from SKILL.md; reference dimension howtos instead
-- [ ] Update References table at end of SKILL.md to point to new example files
-**Verification**: Read SKILL.md; Step 3A should present dimension menu, universal rules, and howto references; no mention of fixed Interface Design/Data Flow/Key Logic sub-sections
+### Phase 3: SKILL Rewrite ✅
+- [x] Rewrite Step 3A in `src/sspec/templates/skills/sspec-design/SKILL.md`: replace fixed sub-sections with predictability dimensions menu + meta-thinking guidance
+- [x] Elevate Scope Summary + Item Labeling as universal rules at Key Design level in SKILL.md
+- [x] Remove old Presentation Rules section (Rule 1-4 block) from SKILL.md; reference dimension howtos instead
+- [x] Update References table at end of SKILL.md to point to new example files
+**Verification**: ✅ Step 3A presents dimension menu, universal rules, howto references; no fixed Interface Design/Data Flow/Key Logic
 
-### Phase 4: Examples Reorganization ⏳
-- [ ] Create `src/sspec/templates/skills/sspec-design/examples-feature.md` (Feature/Bugfix scenario)
-- [ ] Create `src/sspec/templates/skills/sspec-design/examples-docs.md` (Protocol/Template/Docs scenario)
-- [ ] Create `src/sspec/templates/skills/sspec-design/examples-refactor.md` (Refactor/Migration scenario)
-- [ ] Delete `src/sspec/templates/skills/sspec-design/examples-single.md`
-**Verification**: SKILL.md References table links to three new files + examples-root.md; old examples-single.md gone
+### Phase 4: Examples Reorganization ✅
+- [x] Create `src/sspec/templates/skills/sspec-design/examples-feature.md` (Feature/Bugfix scenario)
+- [x] Create `src/sspec/templates/skills/sspec-design/examples-docs.md` (Protocol/Template/Docs scenario)
+- [x] Create `src/sspec/templates/skills/sspec-design/examples-refactor.md` (Refactor/Migration scenario)
+- [x] Delete `src/sspec/templates/skills/sspec-design/examples-single.md`
+**Verification**: ✅ Three new files created; old file deleted; SKILL References table links to new files
 
-### Phase 5: Template Comment Update ⏳
-- [ ] Update `### Key Design` comment in `src/sspec/templates/change/spec.md` per spec.md Change F
-**Verification**: Read spec.md template; comment references dimension menu + universal rules
+### Phase 5: Template Comment Update ✅
+- [x] Update `### Key Design` comment in `src/sspec/templates/change/spec.md` per spec.md Change F
+**Verification**: ✅ Comment references dimension menu + universal rules
 
-### Phase 6: Sync & Smoke Test ⏳
-- [ ] `uv pip install -e .` to refresh template cache
-- [ ] `uv run sspec project update` to sync self-hosted copies
-- [ ] `uv run ruff check src/` + `uv run ruff format src/`
-- [ ] Smoke test in `tmp/`: `uv run sspec project init` → verify generated spec.md has new comment
-- [ ] `uv run sspec howto list --type design-dimension` → verify 8 cards listed
-**Verification**: Clean lint, init produces updated template, howto filter works
+### Phase 6: Sync & Smoke Test ✅
+- [x] `uv pip install -e .` to refresh template cache
+- [x] `uv run sspec project update` to sync self-hosted copies
+- [x] `uv run ruff check src/` + `uv run ruff format src/`
+- [x] Smoke test in `tmp/`: `uv run sspec project init` → verify generated spec.md has new comment
+- [x] `uv run sspec howto list --type design-dimension` → verify 8 cards listed
+**Verification**: ✅ Clean lint, init produces updated template, howto filter works
 
 ### Feedback Tasks
 
@@ -61,16 +61,16 @@ updated: ""
 ## Progress
 <!-- @REPLACE -->
 
-**Overall**: 0%
+**Overall**: 100%
 
 | Phase | Progress | Status |
 |-------|----------|--------|
-| Phase 1: Howto Infrastructure | 0% | ⏳ |
-| Phase 2: Dimension Howto Cards | 0% | ⏳ |
-| Phase 3: SKILL Rewrite | 0% | ⏳ |
-| Phase 4: Examples Reorganization | 0% | ⏳ |
-| Phase 5: Template Comment Update | 0% | ⏳ |
-| Phase 6: Sync & Smoke Test | 0% | ⏳ |
+| Phase 1: Howto Infrastructure | 100% | ✅ |
+| Phase 2: Dimension Howto Cards | 100% | ✅ |
+| Phase 3: SKILL Rewrite | 100% | ✅ |
+| Phase 4: Examples Reorganization | 100% | ✅ |
+| Phase 5: Template Comment Update | 100% | ✅ |
+| Phase 6: Sync & Smoke Test | 100% | ✅ |
 
 **Recent**:
-- (none yet)
+- Completed: All 6 phases implemented and verified

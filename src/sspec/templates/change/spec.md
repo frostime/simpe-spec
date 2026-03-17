@@ -47,13 +47,12 @@ If review history matters, add `### Review Amendments` under B as part of the de
 <!-- Core idea (1-3 paragraphs) + why this over alternatives -->
 
 ### Key Design
-<!-- Interfaces, data models, key logic — scale by complexity:
-Simple (≤5 files): inline in Approach, brief mention
-Medium (5-15 files): dedicated sub-sections (### Interface Design, ### Data Flow, ### Key Logic)
-Complex (>15 files): detailed design here or in reference/design.md
+<!-- Choose 2-4 predictability dimensions as sub-sections (see SKILL.md).
+Ask: what does the user need to predict to feel in control of this change?
+Browse dimensions: `sspec howto list --type design-dimension`
 
-Presentation Rules (see SKILL.md for full examples):
-Rule 1: interfaces/types → typed code block (not prose)
-Rule 2: data flow → ASCII tree (`│ ├── └──` notation) + explanatory text
-Rule 3: ≥3 files → Scope Summary Table at end (| File | Change |)
-Rule 4: ≥3 independent items → label each (Fix A / Feat B / Refactor C…) -->
+Universal rules:
+- ≥3 files → end with Scope Summary table (| File | Change |)
+- ≥3 independent items → label each (Fix A / Feat B / Refactor C…)
+
+Dimension-specific writing norms are in each dimension's howto. -->

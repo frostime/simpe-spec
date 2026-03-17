@@ -124,7 +124,7 @@ Each dimension has a detailed writing spec and snippet examples available as a h
 ```
 sspec howto list --type design-dimension    # browse all dimension cards
 sspec howto write-dim-<name>                # read a specific dimension
-sspec howto write-dim-<n1> write-dim-<n2>   # read in batch
+sspec howto read write-dim-<n1> write-dim-<n2>  # read in batch
 ```
 
 Two old hard constraints still matter:

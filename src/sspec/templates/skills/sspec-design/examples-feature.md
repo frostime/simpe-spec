@@ -90,6 +90,8 @@ sspec change list --filter-tag frontend
         └── for each change: parse_frontmatter() → filter by tags
 \`\`\`
 
+Note: tag validation happens before any change files are written, so invalid input fails fast and never leaves a partial change directory behind.
+
 #### Scope Summary
 
 | File | Change |
@@ -164,6 +166,8 @@ _build_howto_info(path)
   ├── desc = meta.get('desc') or ''           # fallback
   └── return HowtoInfo(...)                   # never None for parse issues
 \`\`\`
+
+Note: parse failures stay local to `_build_howto_info()`, so one malformed project HOWTO no longer takes down the whole list command.
 ```
 
 ---

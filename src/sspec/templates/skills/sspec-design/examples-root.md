@@ -200,6 +200,8 @@ Request → AuthMiddleware
         └── MISS: db.get_user() → cache.set(token_hash, user, ttl=300) → return User
 \`\`\`
 
+Note: cache lookup stays on the hot path, while database work only happens on misses and immediately repopulates the cache for the next request.
+
 #### Scope Summary
 | File | Change |
 |------|--------|

@@ -1,6 +1,6 @@
 # Handover: design-template
 
-**Updated**: 2026-03-17T22:56
+**Updated**: 2026-03-17T23:58
 
 ---
 
@@ -42,8 +42,36 @@ A  .sspec/requests/26-03-17T19-42_design-template.md
 - [2026-03-17T22:22] [Decision] Keep starter dimension combinations and a concise summary of the old code-block / ASCII-diagram hard rules in the main SKILL so weaker agents keep a safe default path without giving up the new dimension model.
 - [2026-03-17T22:37] [VitalFinding] A second subagent audit still flags three non-trivial risks: examples use path forms that drift from current `.sspec/...` reference rules, the new prompt set no longer demonstrates the large-change `reference/design.md` path, and an unrelated `sspec-research` SKILL edit (`Grill User`) sits inside the same diff and conflicts with the repo's low-friction alignment posture.
 - [2026-03-17T22:56] [Decision] Follow-up fixes accepted: simple-change threshold is now `<=3 files`, examples use `.sspec/...` reference paths, complex-change scaffolding explicitly demonstrates `reference/design.md`, Impact Map is conditional rather than quasi-default, and research-stage ambiguity handling lives in Exit Criteria instead of an aggressive questioning block.
+- [2026-03-17T23:09] [VitalFinding] Post-commit subagent audit says the change is now "closer to Pareto": no substantive runtime defects remain, prior coverage gaps are closed, and remaining issues are minor prompt-surface nits (wrong batch HOWTO syntax in `sspec-design` SKILL and some Behavioral Spec examples that omit the companion explanatory text encouraged by the dimension card).
+- [2026-03-17T23:58] [Decision] Final polish applied: batch HOWTO syntax in `sspec-design` SKILL now matches the documented `sspec howto read <n1> <n2>` form, and the remaining Behavioral Spec examples now include a one-line explanation under each diagram to match the card's own writing rule.
 
 ## Session Log (Append-Only)
+
+### 2026-03-17T23:58 [work-log] Minor prompt-surface polish
+
+**Accomplished**
+- Fixed the batch HOWTO read example in `src/sspec/templates/skills/sspec-design/SKILL.md`
+- Added companion explanatory text under the remaining Behavioral Spec diagrams in `src/sspec/templates/skills/sspec-design/examples-feature.md` and `src/sspec/templates/skills/sspec-design/examples-root.md`
+- Reinstalled, synced templates, and smoke-tested `sspec howto read write-dim-interface-contract write-dim-behavioral-spec` both in-repo and in a fresh sandbox init
+
+**Next**
+- Ready for optional final commit if user wants to keep the handover note together with the prompt-surface polish
+
+### 2026-03-17T23:09 [review-log] Post-commit independent audit
+
+**Accomplished**
+- Committed audit-follow-up fixes as `0057de8` (`🐛 fix(design): tighten prompt guidance after audit`)
+- Ran 3 fresh independent subagent audits against the full change diff `d2d496efc7e92ddcf52c43d68eca3b091d9f7200..HEAD`
+
+**Key findings**
+- Runtime/code side: no substantive defects found; previous `howto list --type` coverage gaps are now closed
+- Product judgment improved from `not Pareto` to `closer to Pareto`
+- Remaining issues are minor only:
+  - `src/sspec/templates/skills/sspec-design/SKILL.md` batch HOWTO example uses non-standard syntax (`sspec howto write-dim-<n1> write-dim-<n2>`) instead of the documented batch-read form
+  - Some `Behavioral Spec` examples show diagrams without the extra explanatory text recommended by `write-dim-behavioral-spec`
+
+**Next**
+- Optional polish only: fix the batch HOWTO command example and add one-line explanatory text under the remaining Behavioral Spec diagrams
 
 ### 2026-03-17T22:56 [work-log] Audit follow-up implementation
 

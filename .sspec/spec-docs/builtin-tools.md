@@ -68,7 +68,7 @@ view_tree.register_command(tool)
 mdtoc.register_command(tool)
 ```
 
-**Current tool set**: `patch`, `pack-zip`, `view-tree`, `mdtoc`
+**Current tool set**: `patch`, `pack-zip`, `view-tree`, `fileinfo`, `write`, `mdtoc`, `now`, `ask`
 
 **Adding a new tool**:
 1. Create module in `src/sspec/builtin_tools/new_tool.py`
@@ -86,19 +86,30 @@ mdtoc.register_command(tool)
 
 | Subcommand | Module | Purpose |
 |------------|--------|---------|
-| `patch` | `/src/sspec/builtin_tools/apply_patch.py` | Apply SEARCH/REPLACE patches with preview and failed-patch capture |
+| `patch` | `/src/sspec/builtin_tools/apply_patch.py` | Apply SEARCH/REPLACE patches with stdin/file input, retry-aware statuses, and markdown failed-bundle output |
 | `pack-zip` | `/src/sspec/builtin_tools/pack_zip.py` | Package a project into zip while respecting `.gitignore` and extra include/exclude rules |
 | `view-tree` | `/src/sspec/builtin_tools/view_tree.py` | Render a project tree with gitignore-aware filtering and optional file stats |
+| `fileinfo` | `/src/sspec/builtin_tools/fileinfo.py` | Inspect file size, encoding, newline style, and text/binary status across files, directories, and globs |
+| `write` | `/src/sspec/builtin_tools/write.py` | Write file content via pipe or text argument using explicit create/append/overwrite modes |
 | `mdtoc` | `/src/sspec/builtin_tools/mdtoc.py` | Pre-scan Markdown size/headings before targeted reading |
+| `now` | `/src/sspec/builtin_tools/now.py` | Provide stable local/UTC timestamps for agent-authored docs |
+| `ask` | `/src/sspec/builtin_tools/ask.py` | Fallback user consultation workflow when no native question tool exists |
 
 ### `patch` — Apply SEARCH/REPLACE Patches
 
 **Module**: `/src/sspec/builtin_tools/apply_patch.py`
 
 **Notable behavior**:
-- Exactly one input source: patch file, `--file`, or `--input`
+- Exactly one input source: patch file, `--file`, `--stdin`, or `--input`
+- Accepts relative targets rooted at the detected project root / cwd, plus absolute target paths
+- Patch header paths may contain spaces, for example `# C:\My Project\docs\my file.md:L3-`
+- Absolute target paths outside the current workspace require explicit confirmation, or `--unsafe` to bypass in automation
+- Supports canonical and open-ended line ranges such as `L10-L25`, `L10-`, and `-L25`
+- Repeated apply attempts can report `already_applied` instead of a generic `SEARCH` failure
+- `--dry-run` still surfaces outside-workspace absolute path warnings even though no write occurs
 - Rich preview before apply
-- Failed patches auto-saved to `.sspec/tmp/failed-patches/<timestamp>/`
+- Failed patches are bundled into one markdown file; inside `.sspec/tmp/failed-patches/` for sspec projects or system temp otherwise
+- Failure summaries print patch-source and target-file line numbers plus a truncated SEARCH/REPLACE preview
 - `--prompt` prints the agent-facing patch spec instead of applying
 
 ### `pack-zip` — Package Project Snapshot
@@ -119,6 +130,26 @@ mdtoc.register_command(tool)
 - Resolves a project root for gitignore filtering
 - Hides universal noise dirs such as `.git`, `__pycache__`, and `node_modules`
 - Can show file sizes or line/char detail for text files
+
+### `fileinfo` — Inspect File Metadata
+
+**Module**: `/src/sspec/builtin_tools/fileinfo.py`
+
+**Notable behavior**:
+- Works outside `.sspec/` projects and accepts absolute or relative paths
+- Accepts multiple files, directories, and glob patterns in one command
+- Reports size, modified time, text/binary classification, encoding guess, BOM, newline style, and line count when available
+- Supports `--json` for agent-friendly structured output
+
+### `write` — Explicit File Writing
+
+**Module**: `/src/sspec/builtin_tools/write.py`
+
+**Notable behavior**:
+- Works outside `.sspec/` projects and accepts absolute or relative paths
+- Requires explicit `--mode create|append|overwrite`
+- Supports `--stdin` for multi-line piped content and `--text` for short inline writes
+- Preserves existing newline style during append/overwrite when it can decode the target file
 
 ### `mdtoc` — Markdown TOC Pre-Scan
 
@@ -177,7 +208,7 @@ Never test destructive or archive-writing paths in project root.
 
 **Manual registration over auto-discovery (now)**:
 - **Trade-off**: explicit code vs automatic discovery
-- **Decision**: manual for now (current set = 4 tools)
+- **Decision**: manual for now (current set remains small enough for explicit registration)
 - **Rationale**: the registry is still small enough that explicit imports in `commands/tool.py` are clearer than discovery magic
 - **Future**: auto-discovery when tool count or plugin needs justify it
 

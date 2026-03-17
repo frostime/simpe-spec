@@ -53,7 +53,7 @@ Quantify impact: "[metric] causing [impact]". Simple → single paragraph. Compl
 
 ### Section B — Proposed Solution
 
-Section B has three parts. Approach and Key Design are flexible; **Key Change and Scope Summary are mandatory**.
+Section B has three parts. Approach and Key Design are flexible; **Key Change and Scope Summary are mandatory** (but scale with complexity — a single-line each is fine for simple changes).
 
 ```
 ### Approach          — core idea + rationale (always)
@@ -125,7 +125,9 @@ Safe defaults (adjust as needed):
 
 Custom dimensions allowed — note rationale in Approach.
 
-Per-dimension writing specs: `sspec howto list --type design-dimension` / `sspec howto [write-dim-<name>]`. Note that howto can read in batch.
+Per-dimension writing specs — two-step workflow:
+1. `sspec howto list --type design-dimension` — confirm which dimensions you need
+2. `sspec howto read write-dim-<a> write-dim-<b>` — batch-read chosen dimensions in one call
 
 Hard format constraints:
 - Interface Contract / Data Architecture → fenced typed code blocks

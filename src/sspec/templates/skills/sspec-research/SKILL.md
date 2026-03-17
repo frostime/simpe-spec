@@ -3,7 +3,7 @@ name: sspec-research
 description: "Investigate the problem space, read code, build understanding. Use when starting new work or when context is insufficient."
 metadata:
   author: frostime
-  version: 2.0.1
+  version: 2.0.2
 ---
 
 # SSPEC Research
@@ -63,6 +63,13 @@ Research is sufficient when you can articulate:
 1. What the actual problem is (first principles, not surface symptom)
 2. What parts of the codebase are affected
 3. What approach(es) could work
+4. Which uncertainties are already resolved vs still open
+
+Before leaving Research:
+- Resolve anything you can by reading code, docs, or existing changes first.
+- If a remaining uncertainty would materially change the design, ask the user one concise, targeted question set before entering Design.
+- Record assumptions and open decisions in notes so Design does not proceed on hidden guesses.
+- Do not enter Design while a design-shaping uncertainty remains implicit.
 
 → Then transition to `sspec-design` phase.
 

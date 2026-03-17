@@ -47,13 +47,22 @@ If review history matters, add `### Review Amendments` under B as part of the de
 <!-- Core idea (1-3 paragraphs) + why this over alternatives -->
 
 ### Key Design
-<!-- Interfaces, data models, key logic — scale by complexity:
-Simple (≤5 files): inline in Approach, brief mention
-Medium (5-15 files): dedicated sub-sections (### Interface Design, ### Data Flow, ### Key Logic)
-Complex (>15 files): detailed design here or in reference/design.md
+<!-- Scale-aware guidance (see SKILL.md):
+- Simple (<=3 files): keep Key Design inline in Approach unless a dedicated sub-section materially helps
+- Medium (4-15 files): choose 1-4 predictability dimensions as sub-sections
+- Complex (>15 files): keep B as an executive summary; move full detail to `reference/design.md`
 
-Presentation Rules (see SKILL.md for full examples):
-Rule 1: interfaces/types → typed code block (not prose)
-Rule 2: data flow → ASCII tree (`│ ├── └──` notation) + explanatory text
-Rule 3: ≥3 files → Scope Summary Table at end (| File | Change |)
-Rule 4: ≥3 independent items → label each (Fix A / Feat B / Refactor C…) -->
+Ask: what does the user need to predict to feel in control of this change?
+Browse dimensions: `sspec howto list --type design-dimension`
+Read the chosen dimension HOWTO(s) before drafting.
+
+Dimension-specific writing norms are in each dimension's howto. -->
+
+### Key Change
+<!-- MANDATORY. Label each independent change item with its core decision, constraints,
+and boundary conditions. Use **Type Label: Title** format (e.g. Fix A, Feat B, Refactor C).
+tasks.md references these labels — never copy the logic description into tasks.
+If scope boundaries are non-obvious, add a short `What Stays Unchanged` block after Scope Summary. -->
+
+### Scope Summary
+<!-- MANDATORY. File | Change table — every spec must end with this. -->

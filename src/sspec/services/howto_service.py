@@ -23,6 +23,7 @@ class HowtoInfo:
     path: Path
     source: HowtoSource
     file: str
+    type: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,6 +70,8 @@ def _build_howto_info(
         return None
 
     description = str(meta.get('desc') or meta.get('description') or '').strip()
+    howto_type_raw = meta.get('type')
+    howto_type = str(howto_type_raw).strip() or None if howto_type_raw else None
     try:
         relative_file = howto_path.relative_to(root_dir).as_posix()
     except ValueError:
@@ -81,6 +84,7 @@ def _build_howto_info(
         path=howto_path,
         source=source,
         file=relative_file,
+        type=howto_type,
     )
 
 

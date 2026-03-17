@@ -1,10 +1,12 @@
 # Design Examples — Root Change
 
 Concrete examples of spec.md (A + B) for root changes (multi-phase coordinators).
-Root spec describes scope and phase decomposition — NOT file-level interface detail.
-File-level interface design belongs in each sub-change's own spec.md.
+Root spec describes scope and phase decomposition — NOT file-level implementation detail.
+File-level design detail belongs in each sub-change's own spec.md.
 
-**📚 Standards**: See [SKILL.md](./SKILL.md) for Presentation Rules 1–4 (Root Change adaptations) and workflow.
+Path note: when a sample includes `reference.source`, it is workspace-relative and normally starts with `.sspec/`.
+
+**📚 Standards**: See [SKILL.md](./SKILL.md) for Section B structure and workflow.
 
 ---
 
@@ -27,7 +29,7 @@ status: PLANNING
 change-type: root
 created: 2026-02-15T10:00:00
 reference:
-  - source: "requests/260210_auth-rewrite.md"
+  - source: ".sspec/requests/260210_auth-rewrite.md"
     type: "request"
 ---
 
@@ -83,7 +85,7 @@ status: PLANNING
 change-type: root
 created: 2026-02-15T10:00:00
 reference:
-  - source: "requests/260210_platform-perf.md"
+  - source: ".sspec/requests/260210_platform-perf.md"
     type: "request"
 ---
 
@@ -143,16 +145,16 @@ Root spec describes phases; sub-change specs describe the **implementation desig
 Sub-change spec.md must:
 - Reference the root change in frontmatter (`type: root-change`)
 - Have a scoped Section A (just this phase's problem, not the full root scope)
-- Have a full Section B with all applicable Presentation Rules (Rules 1–4 from SKILL.md Step 3A)
-- Include a Scope Summary Table (Rule 3) for its own file set
+- Have a full Section B with Key Design dimensions, Key Change, and Scope Summary (see SKILL.md Step 3A)
 
 ### What the Root spec does NOT include
 
-| ❌ Not in root spec | ✅ Goes in sub-change spec |
+| Not in root spec | Goes in sub-change spec |
 |--------------------|--------------------------|
-| Function/class signatures per phase | Each sub-change's Interface Design section |
-| Data models for each phase | Each sub-change's Data Model section |
-| File-level Scope Summary (per phase) | Each sub-change's Scope Summary Table |
+| Function/class signatures per phase | Each sub-change's Key Design dimensions |
+| Data models for each phase | Each sub-change's Key Design dimensions |
+| Per-item decisions and constraints | Each sub-change's Key Change |
+| File-level Scope Summary (per phase) | Each sub-change's Scope Summary |
 | Task lists | Each sub-change's tasks.md |
 
 ### Example Sub-change spec.md Reference
@@ -164,7 +166,7 @@ status: PLANNING
 change-type: sub
 created: 2026-02-20T09:00:00
 reference:
-  - source: "changes/26-02-15T10-00_auth-overhaul"
+  - source: ".sspec/changes/26-02-15T10-00_auth-overhaul"
     type: "root-change"
     note: "Phase 1: Auth Backend"
 ---
@@ -183,14 +185,14 @@ a service layer with Redis caching. Target: auth latency <1s.
 
 ### Key Design
 
-#### Interface Design
+#### Interface Contract
 \`\`\`python
 class AuthService:
     def authenticate(self, token: str) -> User: ...
     def invalidate(self, user_id: str) -> None: ...
 \`\`\`
 
-#### Data Flow
+#### Behavioral Spec
 \`\`\`
 Request → AuthMiddleware
   └── AuthService.authenticate(token)
@@ -198,11 +200,16 @@ Request → AuthMiddleware
         └── MISS: db.get_user() → cache.set(token_hash, user, ttl=300) → return User
 \`\`\`
 
-#### Scope Summary
+Note: cache lookup stays on the hot path, while database work only happens on misses and immediately repopulates the cache for the next request.
+
+### Key Change
+
+**Refactor A: Extract auth service** — Split monolithic `auth.py` into `AuthService` behind a clean interface. Redis caching moves to dedicated cache layer. Middleware calls `AuthService` only — no direct JWT or cache access.
+
+### Scope Summary
 | File | Change |
 |------|--------|
 | `src/services/auth.py` | New — `AuthService` class |
 | `src/middleware/auth.py` | Refactor to call `AuthService` |
 | `src/auth.py` | Remove — logic moved to service |
-\`\`\`
 ```

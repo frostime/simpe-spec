@@ -82,17 +82,17 @@ def _print_warnings(warnings: tuple[str, ...], *, output_format: OutputFormat) -
             click.echo(f'WARNING: {warning}')
 
 
-def _render_plain_list(catalog) -> None:
+def _render_plain_list(items, *, show_type: bool = False) -> None:
     """Render HOWTO list in YAML-like plain text."""
 
-    for _, item in enumerate(catalog.items):
+    for item in items:
         description = item.description.replace('\n', ' ').strip()
         click.echo(f'- name: {item.name}')
         click.echo(f'  source: {item.source}')
+        if show_type and item.type:
+            click.echo(f'  type: {item.type}')
         if description:
             click.echo(f'  desc: {description}')
-        # if index < len(catalog.items) - 1:
-        #     click.echo('')
     click.echo('')
     click.echo('Run `sspec howto [<name>...]` to read HOWTO. Multi-names are supported.')
 
@@ -150,8 +150,14 @@ def howto(ctx: click.Context, list_only: bool, output_format: str | None) -> Non
     default=None,
     help='Override output format for this command.',
 )
+@click.option(
+    '--type',
+    'howto_type',
+    default=None,
+    help='Filter HOWTOs by type (e.g. design-dimension).',
+)
 @click.pass_context
-def list_cmd(ctx: click.Context, output_format: str | None) -> None:
+def list_cmd(ctx: click.Context, output_format: str | None, howto_type: str | None) -> None:
     """List all available HOWTO documents."""
 
     sspec_root = find_sspec_dir()
@@ -159,27 +165,39 @@ def list_cmd(ctx: click.Context, output_format: str | None) -> None:
     effective_format = _resolve_output_format(ctx, output_format)
     _print_warnings(catalog.warnings, output_format=effective_format)
 
-    if not catalog.items:
+    items = catalog.items
+    if howto_type:
+        items = tuple(item for item in items if item.type == howto_type)
+
+    if not items:
         if effective_format == 'rich':
             console.print('[dim]No HOWTO documents found.[/dim]')
         else:
             click.echo('No HOWTO documents found.')
         return
 
+    has_types = any(item.type for item in items)
+
     if effective_format == 'plain':
-        _render_plain_list(catalog)
+        _render_plain_list(items, show_type=has_types)
         return
 
     table = Table(title='Available HOWTO documents')
     table.add_column('Name', style='cyan')
     table.add_column('Description', style='dim')
+    if has_types:
+        table.add_column('Type', style='green')
     table.add_column('Source', style='magenta')
 
-    for item in catalog.items:
-        table.add_row(item.name, item.description, item.source)
+    for item in items:
+        row = [item.name, item.description]
+        if has_types:
+            row.append(item.type or '')
+        row.append(item.source)
+        table.add_row(*row)
 
     console.print(table)
-    console.print(f'[dim]{len(catalog.items)} HOWTO document(s)[/dim]')
+    console.print(f'[dim]{len(items)} HOWTO document(s)[/dim]')
 
 
 @howto.command(name='read')

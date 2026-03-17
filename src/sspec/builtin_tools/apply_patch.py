@@ -765,100 +765,89 @@ def apply_patches(patch_text: str, *, project_root: Path | None = None) -> Batch
 
 # ============ Prompt 模板 ============
 
-PATCH_PROMPT = """# patch - SEARCH/REPLACE file editing helper
+PATCH_PROMPT = r"""# patch — SEARCH/REPLACE Format Specification
 
 `sspec tool patch` is a helper for editing existing files with structured SEARCH/REPLACE patch blocks.
 
-## Patch Format
+## Block Structure
 
-### Single Patch Block
+Each patch block consists of three parts:
 
-- Header: `# <path>` or `# <path>:<range>`
-- Range syntax: `L10-L25`, `L10-`, `-L25`
-- Paths: relative paths resolve from project root / cwd; absolute paths are also allowed
-- Absolute paths outside the current workspace require confirmation, or `--unsafe` to bypass
+1. **Header line**: `# <path>` or `# <path>:<range>`
+2. **SEARCH section**: content to find (between `<<<<<<< SEARCH` and `=======`)
+3. **REPLACE section**: replacement content (between `=======` and `>>>>>>> REPLACE`)
 
 ```patch
+# <path>[:<range>]
+<<<<<<< SEARCH
+old content
+=======
+new content
+>>>>>>> REPLACE
+```
+
+## Header Syntax
+
+**Path**: relative (resolved from project root / cwd) or absolute.
+
+**Line range** (optional, narrows search scope):
+- `L10-L25` — lines 10 to 25
+- `L10-` — line 10 to end of file
+- `-L25` — start of file to line 25
+
+Examples:
+
+```text
+# src/utils.py
 # src/utils.py:L10-L25
-<<<<<<< SEARCH
-return x * 2
-=======
-return x * 3
->>>>>>> REPLACE
+# C:\My Project\docs\my file.md:L3-
 ```
 
-Example with an absolute path that contains spaces:
+## Bundle Multiple Blocks
 
-```patch
-# C:\\My Project\\docs\\my file.md:L3-
-<<<<<<< SEARCH
-old text
-=======
-new text
->>>>>>> REPLACE
+Multi-blocks patch is allowed to include concise human-readable explanations before, after, or between patch blocks, as long as each patch block remains structurally valid, arbitrary text between blocks is ignored by parser.
+
+
+````markdown
+First, do xxx, this patch will xxx
+
+<Patch Block>
+
+Next, do xxx
+
+<Patch Block>
+````
+
+## Marker Rules
+
+The three markers must each appear alone on their own line, with no extra characters:
+- `<<<<<<< SEARCH`
+- `=======`
+- `>>>>>>> REPLACE`
+
+## Matching Behavior
+
+1. **Exact match first**: content and whitespace must match perfectly
+2. **Loose fallback**: ignores trailing spaces/tabs and blank-line-only differences
+3. **Unique match required**: multiple matches → patch fails; add a line range to disambiguate
+4. **Already applied**: if SEARCH is absent but REPLACE exists uniquely in scope, status is `already_applied` (not an error)
+
+## Path and Safety Rules
+
+- Target files must already exist
+- Relative paths must stay within the project root / cwd
+- Absolute paths are allowed; those outside the workspace require confirmation or `--unsafe`
+- SEARCH content must not be empty
+
+## CLI Quick Reference
+
+```text
+sspec tool patch [PATCH_FILE] [--file PATH] [--stdin] [--input]
+                 [--dry-run] [--yes] [--unsafe] [--output-failed PATH]
+                 [--prompt] [--help]
 ```
 
-### Multiple Patch Blocks
-
-- Multiple patch blocks can be combined in one input
-- You may insert arbitrary explanation text between patch blocks
-- Each patch block only needs to keep its own format valid
-
-## Apply Patch via CLI
-
-### Basic command
-
-```bash
-sspec tool patch [OPTIONS]
-```
-
-### Input methods
-
-1. `--stdin` - recommended for agents
-2. `PATCH_FILE` or `--file PATCH_FILE`
-3. `--input` - interactive input
-
-### Safety flag
-
-- `--unsafe` bypasses the outside-workspace absolute path confirmation
-
-### `--stdin` example (bash)
-
-```bash
-cat <<'EOF' | sspec tool patch --stdin --yes
-# src/utils.py
-<<<<<<< SEARCH
-return x * 2
-=======
-return x * 3
->>>>>>> REPLACE
-EOF
-```
-
-### `--stdin` example (powershell)
-
-```powershell
-@'
-# src/utils.py
-<<<<<<< SEARCH
-return x * 2
-=======
-return x * 3
->>>>>>> REPLACE
-'@ | sspec tool patch --stdin --yes
-```
-
-## Important Rules
-
-1. SEARCH must match exactly first; loose fallback ignores trailing whitespace and blank-line-only differences
-2. If SEARCH matches multiple locations, add a narrower line range
-3. Use just-enough context: for a single-line change, usually include about 1-2 surrounding lines; for multi-line changes, include only the extra context needed to make the match unique
-4. Avoid SEARCH blocks that are too short to match reliably, or so large that they waste tokens and become brittle
-5. Target files must already exist
-6. Relative paths must stay under the detected project root / current working directory; absolute paths are allowed
-7. If SEARCH is missing but REPLACE exists uniquely in scope, the patch is treated as already applied
-8. Failed patch output may contain explanation text outside fenced `patch` blocks; those fenced blocks remain directly reusable as later patch input
-9. Absolute paths outside the current workspace require explicit confirmation unless `--unsafe` is provided
+Use `--help` for full option descriptions.
 """
 
 # Alias for Tool Interface

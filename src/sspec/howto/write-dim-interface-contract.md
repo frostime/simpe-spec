@@ -51,5 +51,5 @@ def create_change(
 ## Pairs Well With
 
 - Behavioral Spec (interfaces define "what exists", behavior defines "how it's used")
-- Impact Map (interface changes usually need explicit blast radius)
 - Data Architecture (when the interface exposes or consumes data models)
+- Scope Summary / What Stays Unchanged blocks (when interface blast radius needs explicit boundaries)

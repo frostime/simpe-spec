@@ -3,7 +3,7 @@
 Scenario examples for changes that restructure code or migrate data/schemas.
 These are **references, not prescriptions** — adapt dimensions to your specific change.
 
-**Typical dimensions**: Structural Blueprint + Migration Path + Impact Map
+**Typical dimensions**: Structural Blueprint + Migration Path
 
 Path note: when a sample includes `reference.source`, it is workspace-relative and normally starts with `.sspec/`.
 
@@ -11,7 +11,7 @@ Path note: when a sample includes `reference.source`, it is workspace-relative a
 
 ## Refactor Example: Extract auth into service layer
 
-Dimensions chosen: Structural Blueprint (before/after module layout), Behavioral Spec (new call chain), Impact Map (scope table).
+Dimensions chosen: Structural Blueprint (before/after module layout), Behavioral Spec (new call chain).
 
 ```markdown
 ---
@@ -131,7 +131,7 @@ class AuthClaims:
     roles: list[str]
 \`\`\`
 
-#### Impact Map
+#### Scope Summary
 
 | File | Change |
 |------|--------|
@@ -144,7 +144,7 @@ class AuthClaims:
 
 ## Migration Example: Add `type` field to HOWTO frontmatter
 
-Dimensions chosen: Migration Path (before/after format, compatibility), Interface Contract (changed dataclass), Impact Map (scope table).
+Dimensions chosen: Migration Path (before/after format, compatibility), Interface Contract (changed dataclass).
 
 ```markdown
 ---

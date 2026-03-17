@@ -73,4 +73,4 @@ Migration steps:
 
 - Data Architecture (migration changes the data shape)
 - Outcome Preview (shows the target state after migration)
-- Impact Map (migration touches specific files/records)
+- Scope Summary / What Stays Unchanged blocks (when migration touches specific files or compatibility surfaces)

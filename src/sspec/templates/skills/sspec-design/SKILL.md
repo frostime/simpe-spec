@@ -76,7 +76,7 @@ Follow the guidance below and the `@RULE` blocks in the generated `spec.md` temp
 | Complexity | Design Depth |
 |------------|-------------|
 | Simple (≤3 files) | Keep Key Design inline in Approach unless a dedicated sub-section materially improves clarity |
-| Medium (4-15 files) | Choose 2-4 dedicated dimension sub-sections |
+| Medium (4-15 files) | Choose 1-4 dedicated dimension sub-sections |
 | Complex (>15 files) | Keep B as a predictive summary; move full design to `reference/design.md` and link from B |
 
 ### Choosing Dimensions
@@ -87,7 +87,7 @@ Before writing Key Design sub-sections, ask yourself:
 
 1. What kind of change is this? (feature / fix / refactor / docs / ...)
 2. What does the user need to predict to feel in control?
-3. Which 2-4 dimensions best serve that prediction?
+3. Which 1-4 dimensions best serve that prediction?
 
 Your choice is reflected in the sub-section headings you use. No need to write a "dimension selection rationale" - the structure speaks for itself.
 If the change is simple enough to stay inline, treat the dimensions as a mental checklist rather than mandatory headings.
@@ -102,7 +102,6 @@ If you need a safe starting point, use one of these default combinations, then a
 | Migration / compatibility | Migration Path + Interface Contract |
 
 These are starter combinations, not a substitute for thinking.
-Add `Impact Map` when scope boundaries are non-obvious, user anxiety is high, or the change spans 3+ files/modules.
 
 ### Predictability Dimensions
 
@@ -115,7 +114,6 @@ Add `Impact Map` when scope boundaries are non-obvious, user anxiety is high, or
 | Data Architecture | "What does the data look like and how does it flow?" | Involves schemas, storage structures, data pipelines |
 | Content Outline | "What will the content structure be?" | Changes target documents, templates, or specs |
 | Migration Path | "How do we get from here to there?" | Needs migration, compatibility, or rollback strategy |
-| Impact Map | "What changes and what doesn't?" | Scope needs explicit boundaries |
 
 The menu is open — custom dimensions are allowed if none of the above fit. Briefly note the rationale in Approach.
 
@@ -152,6 +150,15 @@ These rules apply to **every** spec regardless of which dimensions are chosen.
 | `src/api/users.py` | Add new handler `GET /users/{id}` |
 | `src/services/cache.py` | Add `get_cached_user()` + TTL jitter |
 | `tests/test_users_api.py` | Add tests for cache hit/miss |
+```
+
+**Boundary Note** — If scope boundaries are non-obvious or user anxiety is high, add a short `### What Stays Unchanged` block after the scope table. Use it to name nearby surfaces that are intentionally untouched.
+
+```markdown
+### What Stays Unchanged
+- Existing auth token format
+- Public `GET /users/{id}` response shape
+- Cache TTL defaults outside the new user lookup path
 ```
 
 **Item Labeling** — For changes with ≥3 independent items (fixes, features, or refactors), label each item in Section B. This creates stable cross-references for tasks.md.

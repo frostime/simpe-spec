@@ -30,7 +30,7 @@ src/sspec/
 │   └── howto_service.py  # CHANGED: HowtoInfo.type field
 ├── howto/             # Builtin HOWTO files
 │   ├── resume-change.md
-│   └── write-dim-*.md    # NEW: 8 dimension cards
+│   └── write-dim-*.md    # NEW: 7 dimension cards
 └── templates/
     └── skills/
         └── sspec-design/
@@ -60,4 +60,4 @@ the information; annotations clarify intent, not implementation.
 ## Pairs Well With
 
 - Migration Path (structure shows "where things end up", migration shows "how to get there")
-- Impact Map (structure change implies file moves/renames worth listing)
+- Scope Summary / What Stays Unchanged blocks (when file moves or boundaries need explicit listing)

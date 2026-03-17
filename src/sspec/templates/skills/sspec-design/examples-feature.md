@@ -3,7 +3,7 @@
 Scenario examples for changes that add new functionality or fix bugs.
 These are **references, not prescriptions** — adapt dimensions to your specific change.
 
-**Typical dimensions**: Interface Contract + Behavioral Spec + Impact Map
+**Typical dimensions**: Interface Contract + Behavioral Spec
 
 Path note: when a sample includes `reference.source`, it is workspace-relative and normally starts with `.sspec/`.
 
@@ -11,7 +11,7 @@ Path note: when a sample includes `reference.source`, it is workspace-relative a
 
 ## Feature Example: Add `--tag` to `sspec change new`
 
-Dimensions chosen: Interface Contract (new CLI option + data field), Behavioral Spec (tag validation flow), Impact Map (scope table).
+Dimensions chosen: Interface Contract (new CLI option + data field), Behavioral Spec (tag validation flow).
 
 ```markdown
 ---

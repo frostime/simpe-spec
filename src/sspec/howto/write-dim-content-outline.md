@@ -70,5 +70,5 @@ structure; let the headings speak.
 
 ## Pairs Well With
 
-- Impact Map (content changes still need scope boundaries)
 - Migration Path (when restructuring existing documents)
+- Scope Summary / What Stays Unchanged blocks (when content scope needs explicit boundaries)

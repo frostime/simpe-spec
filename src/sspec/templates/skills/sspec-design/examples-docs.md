@@ -3,7 +3,7 @@
 Scenario examples for changes that target documentation, SKILL files, templates, or protocol definitions.
 These are **references, not prescriptions** — adapt dimensions to your specific change.
 
-**Typical dimensions**: Content Outline + Impact Map
+**Typical dimensions**: Content Outline
 
 Path note: when a sample includes `reference.source`, it is workspace-relative and normally starts with `.sspec/`.
 
@@ -11,7 +11,7 @@ Path note: when a sample includes `reference.source`, it is workspace-relative a
 
 ## Protocol Example: Simplify @align to two levels
 
-Dimensions chosen: Content Outline (protocol structure changes), Impact Map (scope + what stays unchanged).
+Dimensions chosen: Content Outline (protocol structure changes).
 
 ```markdown
 ---
@@ -112,7 +112,7 @@ sspec-align SKILL — revised structure:
 
 ## Documentation Example: Refresh project spec-docs
 
-Dimensions chosen: Content Outline (what docs to fix/add), Impact Map (file-level scope).
+Dimensions chosen: Content Outline (what docs to fix/add).
 
 ```markdown
 ---

@@ -10,9 +10,13 @@ metadata:
 
 ## Workflow
 
-1. **Generate patch file** (e.g., `fix-typo.patch.md`)
-2. **Apply**: `sspec tool patch fix-typo.patch.md`
-3. **Verify**: Check output, inspect failed patches if any
+1. Write one or more SEARCH/REPLACE patch blocks
+2. Apply with one of:
+   - `sspec tool patch PATCH_FILE`
+   - `sspec tool patch --file PATCH_FILE`
+   - `sspec tool patch --stdin --yes`
+3. Verify output, especially `already_applied`, ambiguity, and failed bundle messages
+4. If patch application fails, refine the failed markdown bundle and apply it again
 
 ### Example Session
 
@@ -37,6 +41,19 @@ DEBUG = False
 Agent: Apply with: `sspec tool patch fix-imports.patch.md`
 ```
 
+### Example via stdin
+
+```bash
+cat <<'EOF' | sspec tool patch --stdin --yes
+# src/utils.py
+<<<<<<< SEARCH
+from typing import List
+=======
+from typing import List, Dict
+>>>>>>> REPLACE
+EOF
+```
+
 ## Patch Format
 
 Each patch block consists of:
@@ -58,7 +75,7 @@ new_code_here()
 ### With Line Range (Reduce Ambiguity)
 
 ```text
-# src/utils.py:10-25
+# src/utils.py:L10-L25
 <<<<<<< SEARCH
 old_code_here()
 =======
@@ -66,15 +83,49 @@ new_code_here()
 >>>>>>> REPLACE
 ```
 
-Line range formats: `:10-25` or `:L10-L25` (both 1-based, inclusive)
+Preferred line range formats:
+- `:L10-L25`
+- `:L10-`
+- `:-L25`
+
+Legacy `:10-25` is still accepted, but do not use it as the default style.
+
+### Multiple Patch Blocks
+
+Multiple patch blocks can be combined in one file or stdin payload.
+
+You may insert explanation text between patch blocks. Each patch block only needs to keep its own format valid.
+
+```text
+Notes for the next patch block.
+
+# server.py:L10-L20
+<<<<<<< SEARCH
+PORT = 8080
+=======
+PORT = 3000
+>>>>>>> REPLACE
+
+This second patch updates logging.
+
+# server.py:L45-L60
+<<<<<<< SEARCH
+log.info("Starting")
+=======
+log.info("Server starting on port %d", PORT)
+>>>>>>> REPLACE
+```
 
 ## Critical Rules
 
 1. **Exact Match Required**: SEARCH content must match file exactly (including indentation)
 2. **Unique Match**: If SEARCH matches multiple locations → patch fails (use line range)
 3. **Non-Empty SEARCH**: Empty SEARCH blocks are rejected (avoid accidental changes)
-4. **Relative Paths Only**: Must be relative to project root or absolute path, no `..` traversal
-5. **Marker Precision**: Markers `<<<<<<< SEARCH`, `=======`, `>>>>>>> REPLACE` must be alone on their line
+4. **Path Resolution**: Relative paths resolve from workspace root; absolute paths are allowed
+5. **Outside-Workspace Safety**: Absolute paths outside the current workspace require explicit confirmation, or `--unsafe` for automation
+6. **Target Files Must Exist**: `sspec tool patch` edits existing files only
+7. **Already Applied Is Not Fatal**: If SEARCH is missing but REPLACE exists uniquely in scope, status becomes `already_applied`
+8. **Marker Precision**: Markers `<<<<<<< SEARCH`, `=======`, `>>>>>>> REPLACE` must be alone on their line
 
 ## Common Patterns
 
@@ -111,14 +162,14 @@ DEBUG = True
 Create separate SEARCH/REPLACE blocks:
 
 ```text
-# server.py:10-20
+# server.py:L10-L20
 <<<<<<< SEARCH
 PORT = 8080
 =======
 PORT = 3000
 >>>>>>> REPLACE
 
-# server.py:45-60
+# server.py:L45-L60
 <<<<<<< SEARCH
 log.info("Starting")
 =======
@@ -130,9 +181,21 @@ log.info("Server starting on port %d", PORT)
 
 1. **Exact match** (preferred): Whitespace and content match perfectly
 2. **Loose match** (fallback): Ignores trailing spaces/tabs, collapses blank lines
-3. **If multiple matches found**: Patch fails → add line range
+3. **Already applied**: SEARCH missing + REPLACE uniquely present → `already_applied`
+4. **If multiple matches found**: Patch fails → add line range
 
 ## Best Practices
+
+### Use Just-Enough Context
+
+Write the smallest patch that is still precise and stable.
+
+- For a **single-line replacement**, usually include about 1-2 surrounding context lines before and after
+- For a **multi-line replacement**, include the changed block and only the extra context needed to make the match unique
+- Avoid overly short SEARCH blocks that mismatch easily
+- Avoid overly large SEARCH blocks that waste tokens and become brittle
+
+Goal: precise enough to avoid mismatch, small enough to avoid unnecessary token cost
 
 ### Include Context Lines
 
@@ -162,7 +225,7 @@ def compute(x):
 
 When the same code pattern appears multiple times:
 ```text
-# utils.py:42-50
+# utils.py:L42-L50
 <<<<<<< SEARCH
 if value is None:
     return default
@@ -214,16 +277,25 @@ def foo():
 
 ❌ **Don't mix line endings** (if file uses `\r\n`, SEARCH should too)
 
+## Failure Recovery
+
+- Failed patches are saved into one markdown bundle
+- The bundle may contain explanation text outside fenced `patch` blocks
+- Those fenced `patch` blocks remain directly reusable as future patch input
+- If a patch reports `already_applied`, usually do not regenerate it unless the target is wrong
+
 ## Tool Options
 
 ```bash
 sspec tool patch [PATCH_FILE] [OPTIONS]
 
 --dry-run              # Preview without applying
+--stdin                # Read patch text from stdin
 --yes                  # Skip confirmation
---output-failed DIR    # Custom dir for failed patches
+--unsafe               # Bypass outside-workspace absolute path confirmation
+--output-failed PATH   # Custom markdown file or directory for failed patches
 --file, -f PATH        # Read patch text from file (alternative to positional PATCH_FILE)
---input, -i            # Enter patch text interactively (default when no file is provided)
+--input, -i            # Enter patch text interactively
 --prompt               # Show format specification
 ```
 

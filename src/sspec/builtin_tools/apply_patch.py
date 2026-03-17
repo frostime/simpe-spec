@@ -852,11 +852,13 @@ return x * 3
 
 1. SEARCH must match exactly first; loose fallback ignores trailing whitespace and blank-line-only differences
 2. If SEARCH matches multiple locations, add a narrower line range
-3. Target files must already exist
-4. Relative paths must stay under the detected project root / current working directory; absolute paths are allowed
-5. If SEARCH is missing but REPLACE exists uniquely in scope, the patch is treated as already applied
-6. Failed patch output may contain explanation text outside fenced `patch` blocks; those fenced blocks remain directly reusable as later patch input
-7. Absolute paths outside the current workspace require explicit confirmation unless `--unsafe` is provided
+3. Use just-enough context: for a single-line change, usually include about 1-2 surrounding lines; for multi-line changes, include only the extra context needed to make the match unique
+4. Avoid SEARCH blocks that are too short to match reliably, or so large that they waste tokens and become brittle
+5. Target files must already exist
+6. Relative paths must stay under the detected project root / current working directory; absolute paths are allowed
+7. If SEARCH is missing but REPLACE exists uniquely in scope, the patch is treated as already applied
+8. Failed patch output may contain explanation text outside fenced `patch` blocks; those fenced blocks remain directly reusable as later patch input
+9. Absolute paths outside the current workspace require explicit confirmation unless `--unsafe` is provided
 """
 
 # Alias for Tool Interface

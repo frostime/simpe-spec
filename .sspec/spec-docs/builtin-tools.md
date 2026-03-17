@@ -102,7 +102,7 @@ mdtoc.register_command(tool)
 **Notable behavior**:
 - Exactly one input source: patch file, `--file`, `--stdin`, or `--input`
 - Accepts relative targets rooted at the detected project root / cwd, plus absolute target paths
-- Patch header paths may contain spaces; the optional line-range suffix must stay as the final `:...` segment
+- Patch header paths may contain spaces, for example `# C:\My Project\docs\my file.md:L3-`
 - Absolute target paths outside the current workspace require explicit confirmation, or `--unsafe` to bypass in automation
 - Supports canonical and open-ended line ranges such as `L10-L25`, `L10-`, and `-L25`
 - Repeated apply attempts can report `already_applied` instead of a generic `SEARCH` failure

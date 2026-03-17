@@ -5,6 +5,8 @@ These are **references, not prescriptions** — adapt dimensions to your specifi
 
 **Typical dimensions**: Structural Blueprint + Migration Path + Impact Map
 
+Path note: when a sample includes `reference.source`, it is workspace-relative and normally starts with `.sspec/`.
+
 ---
 
 ## Refactor Example: Extract auth into service layer
@@ -85,6 +87,57 @@ This makes AuthService unit-testable without Redis or HTTP.
 | `src/middleware/auth.py` | Refactor to call `AuthService` instead of `auth.py` globals |
 | `src/auth.py` | Delete — logic moved to `src/auth/` package |
 | `tests/test_auth_service.py` | New — unit tests for AuthService (no Redis needed) |
+```
+
+---
+
+## Large Change Variant: Use `reference/design.md`
+
+When a refactor or migration grows beyond roughly 15 files, keep `spec.md` predictive and move exhaustive detail into `reference/design.md`.
+
+```markdown
+---
+name: multi-tenant-rbac
+status: PLANNING
+change-type: single
+created: 2026-02-15T10:00:00
+reference:
+  - source: ".sspec/requests/260210_multi-tenancy.md"
+    type: "request"
+---
+
+# multi-tenant-rbac
+
+## A. Problem Statement
+
+Single-tenant auth system. Need isolated tenant data and tenant-scoped RBAC.
+
+## B. Proposed Solution
+
+### Approach
+
+Add tenant isolation and RBAC on top of existing JWT auth.
+Full architecture, migration sequencing, and permission matrix: see [reference/design.md](reference/design.md).
+
+### Key Design
+
+#### Interface Contract
+
+\`\`\`python
+@dataclass
+class AuthClaims:
+    user_id: str
+    tenant_id: str  # NEW
+    roles: list[str]
+\`\`\`
+
+#### Impact Map
+
+| File | Change |
+|------|--------|
+| `src/auth/` | Add tenant-aware auth and RBAC flows |
+| `src/middleware/` | Inject tenant context before business handlers |
+| `reference/design.md` | Full architecture, migration, and permission matrix |
 ```
 
 ---

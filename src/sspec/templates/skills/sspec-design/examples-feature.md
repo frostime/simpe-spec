@@ -5,6 +5,8 @@ These are **references, not prescriptions** — adapt dimensions to your specifi
 
 **Typical dimensions**: Interface Contract + Behavioral Spec + Impact Map
 
+Path note: when a sample includes `reference.source`, it is workspace-relative and normally starts with `.sspec/`.
+
 ---
 
 ## Feature Example: Add `--tag` to `sspec change new`
@@ -18,7 +20,7 @@ status: PLANNING
 change-type: single
 created: 2026-02-15T10:00:00
 reference:
-  - source: "requests/260215_change-list-ux.md"
+  - source: ".sspec/requests/260215_change-list-ux.md"
     type: "request"
 ---
 

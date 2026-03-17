@@ -3,7 +3,7 @@ name: sspec-design
 description: "Assess scale, create change, fill spec.md, align with user. Use after research when ready to define the solution."
 metadata:
   author: frostime
-  version: 4.0.1
+  version: 4.0.2
 ---
 
 # SSPEC Design
@@ -71,13 +71,13 @@ Follow the guidance below and the `@RULE` blocks in the generated `spec.md` temp
 
 `### Approach`: Core idea (1-3 paragraphs) + why this over alternatives.
 
-`### Key Design`: Choose predictability dimensions as sub-sections (see below).
+`### Key Design`: Apply the scale-aware pattern below.
 
 | Complexity | Design Depth |
 |------------|-------------|
-| Simple (≤5 files) | Inline in Approach, brief mention |
-| Medium (5-15 files) | Dedicated dimension sub-sections |
-| Complex (>15 files) | Detailed design in `reference/design.md`, link from B |
+| Simple (≤3 files) | Keep Key Design inline in Approach unless a dedicated sub-section materially improves clarity |
+| Medium (4-15 files) | Choose 2-4 dedicated dimension sub-sections |
+| Complex (>15 files) | Keep B as a predictive summary; move full design to `reference/design.md` and link from B |
 
 ### Choosing Dimensions
 
@@ -90,17 +90,19 @@ Before writing Key Design sub-sections, ask yourself:
 3. Which 2-4 dimensions best serve that prediction?
 
 Your choice is reflected in the sub-section headings you use. No need to write a "dimension selection rationale" - the structure speaks for itself.
+If the change is simple enough to stay inline, treat the dimensions as a mental checklist rather than mandatory headings.
 
 If you need a safe starting point, use one of these default combinations, then adjust:
 
 | Change shape | Safe default |
 |--------------|--------------|
-| Feature / bugfix | Interface Contract + Behavioral Spec + Impact Map |
-| Refactor | Structural Blueprint + Behavioral Spec + Impact Map |
-| Docs / template / protocol | Content Outline + Impact Map |
-| Migration / compatibility | Migration Path + Interface Contract + Impact Map |
+| Feature / bugfix | Interface Contract + Behavioral Spec |
+| Refactor | Structural Blueprint + Behavioral Spec |
+| Docs / template / protocol | Content Outline |
+| Migration / compatibility | Migration Path + Interface Contract |
 
 These are starter combinations, not a substitute for thinking.
+Add `Impact Map` when scope boundaries are non-obvious, user anxiety is high, or the change spans 3+ files/modules.
 
 ### Predictability Dimensions
 
@@ -128,6 +130,12 @@ sspec howto write-dim-<n1> write-dim-<n2>   # read in batch
 Two old hard constraints still matter:
 - Interface Contract / Data Architecture -> show interfaces and types in fenced typed code blocks.
 - Behavioral Spec / Structural Blueprint -> show behavior or structure as an ASCII diagram, not prose-only narration.
+
+For complex changes (>15 files), do not expand every detail inline in Section B.
+Keep B as the prediction summary:
+- `### Approach` -> strategy and rationale
+- `### Key Design` -> core interfaces, flows, or boundaries only
+- `reference/design.md` -> full design detail
 
 ### Universal Rules
 

@@ -4,6 +4,8 @@ Concrete examples of spec.md (A + B) for root changes (multi-phase coordinators)
 Root spec describes scope and phase decomposition — NOT file-level implementation detail.
 File-level design detail belongs in each sub-change's own spec.md.
 
+Path note: when a sample includes `reference.source`, it is workspace-relative and normally starts with `.sspec/`.
+
 **📚 Standards**: See [SKILL.md](./SKILL.md) for Universal Rules and workflow.
 
 ---
@@ -27,7 +29,7 @@ status: PLANNING
 change-type: root
 created: 2026-02-15T10:00:00
 reference:
-  - source: "requests/260210_auth-rewrite.md"
+  - source: ".sspec/requests/260210_auth-rewrite.md"
     type: "request"
 ---
 
@@ -83,7 +85,7 @@ status: PLANNING
 change-type: root
 created: 2026-02-15T10:00:00
 reference:
-  - source: "requests/260210_platform-perf.md"
+  - source: ".sspec/requests/260210_platform-perf.md"
     type: "request"
 ---
 
@@ -164,7 +166,7 @@ status: PLANNING
 change-type: sub
 created: 2026-02-20T09:00:00
 reference:
-  - source: "changes/26-02-15T10-00_auth-overhaul"
+  - source: ".sspec/changes/26-02-15T10-00_auth-overhaul"
     type: "root-change"
     note: "Phase 1: Auth Backend"
 ---

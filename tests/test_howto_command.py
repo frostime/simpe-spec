@@ -68,6 +68,20 @@ def test_howto_list_type_filter_reports_empty_match(tmp_path: Path, monkeypatch)
     assert "No HOWTOs matching type 'missing-kind'." in result.output
 
 
+def test_howto_list_type_filter_can_show_builtin_typed_howtos_without_project(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    result = runner.invoke(main, ['howto', 'list', '--type', 'design-dimension'])
+
+    assert result.exit_code == 0
+    assert '- name: write-dim-interface-contract' in result.output
+    assert '  source: builtin' in result.output
+    assert '  type: design-dimension' in result.output
+
+
 def test_howto_implicit_read_renders_body_without_frontmatter(
     tmp_path: Path,
     monkeypatch,
@@ -99,6 +113,27 @@ def test_howto_rich_format_uses_pretty_rendering(tmp_path: Path, monkeypatch) ->
     assert 'HOWTO: local-guide' in result.output
     assert 'local test guide' in result.output
     assert 'source: project' not in result.output
+
+
+def test_howto_list_type_filter_shows_type_column_in_rich_output(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    sspec_root = _init_project(tmp_path)
+    (sspec_root / 'howto' / 'typed-guide.md').write_text(TYPED_GUIDE, encoding='utf-8')
+
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    result = runner.invoke(
+        main,
+        ['howto', 'list', '--type', 'design-dimension', '--format', 'rich'],
+    )
+
+    assert result.exit_code == 0
+    assert 'Available HOWTO documents' in result.output
+    assert 'Type' in result.output
+    assert 'typed-guide' in result.output
+    assert 'design-dimension' in result.output
 
 
 def test_howto_read_supports_multiple_names(tmp_path: Path, monkeypatch) -> None:

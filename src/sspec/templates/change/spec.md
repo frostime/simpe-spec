@@ -47,7 +47,11 @@ If review history matters, add `### Review Amendments` under B as part of the de
 <!-- Core idea (1-3 paragraphs) + why this over alternatives -->
 
 ### Key Design
-<!-- Choose 2-4 predictability dimensions as sub-sections (see SKILL.md).
+<!-- Scale-aware guidance (see SKILL.md):
+- Simple (<=3 files): keep Key Design inline in Approach unless a dedicated sub-section materially helps
+- Medium (4-15 files): choose 2-4 predictability dimensions as sub-sections
+- Complex (>15 files): keep B as an executive summary; move full detail to `reference/design.md`
+
 Ask: what does the user need to predict to feel in control of this change?
 Browse dimensions: `sspec howto list --type design-dimension`
 

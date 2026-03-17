@@ -12,10 +12,10 @@ User's question: "What changes and what doesn't?"
 
 ## When to Choose
 
-- Almost always. Impact Map is the most universally useful dimension.
 - Any change affecting 3 or more files
 - Changes where the blast radius is non-obvious
 - When explicitly stating "what stays unchanged" reduces user anxiety
+- When scope boundaries are themselves part of the design decision
 
 ## How to Write
 
@@ -56,6 +56,6 @@ Labels create stable cross-references for tasks.md:
 
 ## Pairs Well With
 
-- Every other dimension. Impact Map is the universal companion.
+- A common companion when boundaries matter, but not mandatory.
 - Content Outline (for document changes, Impact Map shows which files change)
 - Interface Contract (for code changes, Impact Map shows the blast radius)

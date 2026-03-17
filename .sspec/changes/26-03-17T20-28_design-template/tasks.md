@@ -55,6 +55,10 @@ updated: ""
 **Verification**: ✅ Clean lint, init produces updated template, howto filter works
 
 ### Feedback Tasks
+- [x] Tighten the simple-change threshold to `<=3 files` and make `### Key Design` guidance scale-aware in `src/sspec/templates/skills/sspec-design/SKILL.md` and `src/sspec/templates/change/spec.md`
+- [x] Align example reference paths with the `.sspec/...` convention and add an explicit large-change `reference/design.md` example in `src/sspec/templates/skills/sspec-design/examples-*.md`
+- [x] Move research-stage ambiguity cleanup into `src/sspec/templates/skills/sspec-research/SKILL.md` Exit Criteria and remove aggressive `Grill User` wording
+- [x] Expand `tests/test_howto_command.py` to cover builtin typed HOWTOs and rich output for `howto list --type`
 
 ---
 
@@ -74,3 +78,4 @@ updated: ""
 
 **Recent**:
 - Completed: All 6 phases implemented and verified
+- Completed: Audit-driven follow-up polish for scale guidance, examples, research exit criteria, and HOWTO filter coverage

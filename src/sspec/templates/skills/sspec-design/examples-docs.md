@@ -5,6 +5,8 @@ These are **references, not prescriptions** — adapt dimensions to your specifi
 
 **Typical dimensions**: Content Outline + Impact Map
 
+Path note: when a sample includes `reference.source`, it is workspace-relative and normally starts with `.sspec/`.
+
 ---
 
 ## Protocol Example: Simplify @align to two levels

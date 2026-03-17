@@ -1,6 +1,6 @@
 # Handover: design-template
 
-**Updated**: 2026-03-17T22:22
+**Updated**: 2026-03-17T22:56
 
 ---
 
@@ -40,8 +40,38 @@ A  .sspec/requests/26-03-17T19-42_design-template.md
 - [2026-03-17T20:00] [Decision] howto system gains `type` field (optional, backward compatible) + `--type` filter on `sspec howto list`.
 - [2026-03-17T22:00] [VitalFinding] examples-root.md had stale Rule 1-4 references — caught by subagent audit, fixed.
 - [2026-03-17T22:22] [Decision] Keep starter dimension combinations and a concise summary of the old code-block / ASCII-diagram hard rules in the main SKILL so weaker agents keep a safe default path without giving up the new dimension model.
+- [2026-03-17T22:37] [VitalFinding] A second subagent audit still flags three non-trivial risks: examples use path forms that drift from current `.sspec/...` reference rules, the new prompt set no longer demonstrates the large-change `reference/design.md` path, and an unrelated `sspec-research` SKILL edit (`Grill User`) sits inside the same diff and conflicts with the repo's low-friction alignment posture.
+- [2026-03-17T22:56] [Decision] Follow-up fixes accepted: simple-change threshold is now `<=3 files`, examples use `.sspec/...` reference paths, complex-change scaffolding explicitly demonstrates `reference/design.md`, Impact Map is conditional rather than quasi-default, and research-stage ambiguity handling lives in Exit Criteria instead of an aggressive questioning block.
 
 ## Session Log (Append-Only)
+
+### 2026-03-17T22:56 [work-log] Audit follow-up implementation
+
+**Accomplished**
+- Made `### Key Design` scale-aware in both template comment and `sspec-design` SKILL (`<=3` simple, `4-15` medium, `>15` complex with `reference/design.md`)
+- Demoted Impact Map from hidden-default language to a conditional companion dimension
+- Aligned example reference paths to `.sspec/...` and added a large-change variant showing `reference/design.md`
+- Reworked `sspec-research` ambiguity handling into Exit Criteria and removed the `Grill User` block
+- Added builtin/rich coverage for `howto list --type`
+- Re-ran lint, reinstall, template sync, focused pytest, rich HOWTO smoke test, and sandbox `sspec project init`
+
+**Next**
+- User review on whether the prompt surface now feels both flexible and safe for weaker agents
+
+### 2026-03-17T22:37 [review-log] Subagent audit round 2
+
+**Accomplished**
+- Ran 3 independent subagent audits against `git diff d2d496efc7e92ddcf52c43d68eca3b091d9f7200..HEAD`
+- Covered code/runtime behavior, prompt/RULE design, and product-level Pareto impact
+
+**Key findings**
+- Prompt/RULE risk: examples still use `requests/...` / `changes/...` style paths instead of the current `.sspec/...` convention, which weak models may copy into invalid references
+- Prompt scaffolding risk: the new scenario examples removed the old explicit complex-change example, so the `>15 files -> reference/design.md` pattern is now underspecified
+- Scope-control risk: the diff includes an unrelated `src/sspec/templates/skills/sspec-research/SKILL.md` edit (`Grill User`) that pushes agent behavior toward over-questioning
+- Runtime/test quality is otherwise solid; remaining code-side issue is a low-priority coverage gap for builtin typed HOWTOs / rich output
+
+**Next**
+- Decide whether to fix the three prompt-surface issues now or keep this change as a strong-but-not-Pareto improvement
 
 ### 2026-03-17T22:22 [work-log] Review follow-up polish
 

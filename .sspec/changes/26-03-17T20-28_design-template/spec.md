@@ -1,6 +1,6 @@
 ---
 name: design-template
-status: DONE
+status: REVIEW
 type: ''
 change-type: single
 created: 2026-03-17 20:28:51
@@ -244,7 +244,16 @@ Current `examples-single.md` (organized by complexity: Simple/Medium/Complex) sp
 - `examples-docs.md`: Protocol/Template/Docs scenario (Content Outline + Impact Map)
 - `examples-refactor.md`: Refactor/Migration scenario (Structural Blueprint + Migration Path + Impact Map)
 
-`examples-root.md` stays unchanged.
+`examples-root.md` keeps its root-change structure, but its sample headings and reference paths align with the new naming/rules.
+
+#### Review Amendments
+
+Post-implementation audit feedback tightened the weak-agent safety story without rolling back the dimension model:
+
+- **Amendment H: Scale-aware Key Design rule** — Simple change threshold drops to `<=3 files`, so only medium changes (`4-15 files`) are nudged toward 2-4 dimension sub-sections. Complex changes keep the `reference/design.md` path explicit.
+- **Amendment I: Conditional Impact Map** — Impact Map stays available, but no longer reads like a hidden mandatory dimension. It is added when scope boundaries are non-obvious or user anxiety is high.
+- **Amendment J: Example path alignment** — All example frontmatter references use the current workspace-relative `.sspec/...` convention to avoid copy-paste drift from examples into real specs.
+- **Amendment K: Research ambiguity gate** — The risky `Grill User` wording is replaced with Research exit criteria: resolve what can be resolved from code first, then ask one targeted question set only if remaining uncertainty would materially change Design.
 
 ### Scope Summary
 
@@ -256,6 +265,7 @@ Current `examples-single.md` (organized by complexity: Simple/Medium/Complex) sp
 | `src/sspec/templates/skills/sspec-design/examples-feature.md` | New: Feature/Bugfix scenario examples |
 | `src/sspec/templates/skills/sspec-design/examples-docs.md` | New: Protocol/Template/Docs scenario examples |
 | `src/sspec/templates/skills/sspec-design/examples-refactor.md` | New: Refactor/Migration scenario examples |
+| `src/sspec/templates/skills/sspec-design/examples-root.md` | Update root examples to use current dimension names and `.sspec/...` reference paths |
 | `src/sspec/services/howto_service.py` | Add `type` field to `HowtoInfo`; parse `type` in `collect_howtos` |
 | `src/sspec/commands/howto.py` | Add `--type` filter to `list_cmd`; show type column when applicable |
 | `src/sspec/howto/write-dim-outcome-preview.md` | New: Outcome Preview dimension card |
@@ -265,12 +275,14 @@ Current `examples-single.md` (organized by complexity: Simple/Medium/Complex) sp
 | `src/sspec/howto/write-dim-data-architecture.md` | New: Data Architecture dimension card |
 | `src/sspec/howto/write-dim-content-outline.md` | New: Content Outline dimension card |
 | `src/sspec/howto/write-dim-migration-path.md` | New: Migration Path dimension card |
-| `src/sspec/howto/write-dim-impact-map.md` | New: Impact Map dimension card (absorbs old Rule 3 Scope Summary as its primary form) |
+| `src/sspec/howto/write-dim-impact-map.md` | New: Impact Map dimension card (absorbs old Rule 3 Scope Summary as its primary form, but remains conditional rather than hidden-mandatory) |
+| `src/sspec/templates/skills/sspec-research/SKILL.md` | Move ambiguity cleanup into Exit Criteria; remove aggressive `Grill User` wording |
+| `tests/test_howto_command.py` | Cover project-local, builtin, and rich-output paths for `howto list --type` |
 
 ### What Stays Unchanged
 
 - Root change Step 3B (already has its own structure, no dimension-ization needed)
-- `examples-root.md` (root scenario unchanged)
+- Root change examples keep their phase-oriented structure (only naming/path alignment changes)
 - Section A writing norms (Problem Statement unaffected)
 - Template file structure, `change-root/spec.md`
 - Existing howto files (`type` is optional, backward compatible)

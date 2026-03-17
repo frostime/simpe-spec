@@ -1,8 +1,8 @@
 # Design Examples — Root Change
 
 Concrete examples of spec.md (A + B) for root changes (multi-phase coordinators).
-Root spec describes scope and phase decomposition — NOT file-level interface detail.
-File-level interface design belongs in each sub-change's own spec.md.
+Root spec describes scope and phase decomposition — NOT file-level implementation detail.
+File-level design detail belongs in each sub-change's own spec.md.
 
 **📚 Standards**: See [SKILL.md](./SKILL.md) for Universal Rules and workflow.
 
@@ -183,14 +183,14 @@ a service layer with Redis caching. Target: auth latency <1s.
 
 ### Key Design
 
-#### Interface Design
+#### Interface Contract
 \`\`\`python
 class AuthService:
     def authenticate(self, token: str) -> User: ...
     def invalidate(self, user_id: str) -> None: ...
 \`\`\`
 
-#### Data Flow
+#### Behavioral Spec
 \`\`\`
 Request → AuthMiddleware
   └── AuthService.authenticate(token)

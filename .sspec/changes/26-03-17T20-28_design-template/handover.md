@@ -1,6 +1,6 @@
 # Handover: design-template
 
-**Updated**: 2026-03-17T22:00
+**Updated**: 2026-03-17T22:22
 
 ---
 
@@ -39,8 +39,21 @@ A  .sspec/requests/26-03-17T19-42_design-template.md
 - [2026-03-17T20:00] [Decision] Template files not split — single `change/spec.md` with updated comment. Agent decides dimensions at design time, not at `sspec change new` time.
 - [2026-03-17T20:00] [Decision] howto system gains `type` field (optional, backward compatible) + `--type` filter on `sspec howto list`.
 - [2026-03-17T22:00] [VitalFinding] examples-root.md had stale Rule 1-4 references — caught by subagent audit, fixed.
+- [2026-03-17T22:22] [Decision] Keep starter dimension combinations and a concise summary of the old code-block / ASCII-diagram hard rules in the main SKILL so weaker agents keep a safe default path without giving up the new dimension model.
 
 ## Session Log (Append-Only)
+
+### 2026-03-17T22:22 [work-log] Review follow-up polish
+
+**Accomplished**
+- Added starter dimension combinations to `sspec-design` SKILL for feature/bugfix, refactor, docs/template/protocol, and migration/compatibility shapes
+- Reintroduced a concise summary of the code-block / ASCII-diagram hard constraints in the main SKILL
+- Renamed residual `examples-root.md` sub-change headings to `Interface Contract` / `Behavioral Spec`
+- Added `howto list --type` coverage in `tests/test_howto_command.py`
+- Re-ran install/sync, focused pytest, direct HOWTO smoke test, and sandbox `sspec project init`
+
+**Next**
+- User review on whether the added defaults improve the design workflow without reintroducing rigidity
 
 ### 2026-03-17T22:00 [work-log] Subagent audit fixes
 

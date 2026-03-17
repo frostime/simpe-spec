@@ -3,7 +3,7 @@ name: sspec-design
 description: "Assess scale, create change, fill spec.md, align with user. Use after research when ready to define the solution."
 metadata:
   author: frostime
-  version: 4.0.0
+  version: 4.0.1
 ---
 
 # SSPEC Design
@@ -89,7 +89,18 @@ Before writing Key Design sub-sections, ask yourself:
 2. What does the user need to predict to feel in control?
 3. Which 2-4 dimensions best serve that prediction?
 
-Your choice is reflected in the sub-section headings you use. No need to write a "dimension selection rationale" — the structure speaks for itself.
+Your choice is reflected in the sub-section headings you use. No need to write a "dimension selection rationale" - the structure speaks for itself.
+
+If you need a safe starting point, use one of these default combinations, then adjust:
+
+| Change shape | Safe default |
+|--------------|--------------|
+| Feature / bugfix | Interface Contract + Behavioral Spec + Impact Map |
+| Refactor | Structural Blueprint + Behavioral Spec + Impact Map |
+| Docs / template / protocol | Content Outline + Impact Map |
+| Migration / compatibility | Migration Path + Interface Contract + Impact Map |
+
+These are starter combinations, not a substitute for thinking.
 
 ### Predictability Dimensions
 
@@ -111,7 +122,12 @@ Each dimension has a detailed writing spec and snippet examples available as a h
 ```
 sspec howto list --type design-dimension    # browse all dimension cards
 sspec howto write-dim-<name>                # read a specific dimension
+sspec howto write-dim-<n1> write-dim-<n2>   # read in batch
 ```
+
+Two old hard constraints still matter:
+- Interface Contract / Data Architecture -> show interfaces and types in fenced typed code blocks.
+- Behavioral Spec / Structural Blueprint -> show behavior or structure as an ASCII diagram, not prose-only narration.
 
 ### Universal Rules
 

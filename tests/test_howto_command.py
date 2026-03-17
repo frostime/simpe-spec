@@ -11,6 +11,9 @@ from sspec.services.howto_service import collect_howtos
 from sspec.services.project_init_service import initialize_project
 
 LOCAL_GUIDE = '---\nname: local-guide\ndesc: local test guide\n---\n\nFollow the steps.\n'
+TYPED_GUIDE = (
+    '---\nname: typed-guide\ndesc: typed test guide\ntype: design-dimension\n---\n\nTyped steps.\n'
+)
 
 
 def _init_project(tmp_path: Path) -> Path:
@@ -36,6 +39,33 @@ def test_howto_list_uses_plain_text_default_output(tmp_path: Path, monkeypatch) 
     assert '  source: project' in result.output
     assert '  desc: local test guide' in result.output
     assert '- name:' in result.output
+
+
+def test_howto_list_can_filter_by_type_in_plain_output(tmp_path: Path, monkeypatch) -> None:
+    sspec_root = _init_project(tmp_path)
+    (sspec_root / 'howto' / 'local-guide.md').write_text(LOCAL_GUIDE, encoding='utf-8')
+    (sspec_root / 'howto' / 'typed-guide.md').write_text(TYPED_GUIDE, encoding='utf-8')
+
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    result = runner.invoke(main, ['howto', 'list', '--type', 'design-dimension'])
+
+    assert result.exit_code == 0
+    assert '- name: typed-guide' in result.output
+    assert '  type: design-dimension' in result.output
+    assert '  desc: typed test guide' in result.output
+    assert 'local-guide' not in result.output
+
+
+def test_howto_list_type_filter_reports_empty_match(tmp_path: Path, monkeypatch) -> None:
+    _init_project(tmp_path)
+
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    result = runner.invoke(main, ['howto', 'list', '--type', 'missing-kind'])
+
+    assert result.exit_code == 0
+    assert "No HOWTOs matching type 'missing-kind'." in result.output
 
 
 def test_howto_implicit_read_renders_body_without_frontmatter(

@@ -74,6 +74,8 @@ sspec-align SKILL — revised structure:
 ## Recording Decisions        — spec.md for design, handover.md for direction changes
 \`\`\`
 
+### Key Change
+
 **Change A: @align two levels** — Replace single mandatory-stop with report/gate split.
 
 **Change B: Remove @force-end-align** — Delete from AGENTS.md, SKILL, and HOWTO.
@@ -86,7 +88,7 @@ sspec-align SKILL — revised structure:
 **Change E: Remove Copilot-specific HOWTOs** — Delete `force-end-align`, `use-sspec-ask`,
 `write-sspec-ask`.
 
-#### Scope Summary
+### Scope Summary
 
 | File | Change |
 |------|--------|
@@ -141,6 +143,12 @@ then add a small set of new spec-docs for stable contracts that currently live o
 
 #### Content Outline
 
+Six items across two categories: drift repair (Fix A–B) and new contracts (Doc C–F).
+Fix items correct stale facts in existing docs. Doc items create new spec-docs for
+stable contracts that currently live only in code.
+
+### Key Change
+
 **Fix A: Project context refresh** — Update `.sspec/project.md` so the stable identity
 layer matches the actual stack, command surface, and platform behavior.
 
@@ -159,7 +167,7 @@ and script strategy semantics.
 **Doc F: Root AGENTS sync contract** — New spec-doc for the managed `SSPEC:START/END`
 block ownership and update behavior.
 
-#### Scope Summary
+### Scope Summary
 
 | File | Change |
 |------|--------|

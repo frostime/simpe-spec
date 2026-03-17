@@ -6,7 +6,7 @@ File-level design detail belongs in each sub-change's own spec.md.
 
 Path note: when a sample includes `reference.source`, it is workspace-relative and normally starts with `.sspec/`.
 
-**📚 Standards**: See [SKILL.md](./SKILL.md) for Universal Rules and workflow.
+**📚 Standards**: See [SKILL.md](./SKILL.md) for Section B structure and workflow.
 
 ---
 
@@ -145,16 +145,16 @@ Root spec describes phases; sub-change specs describe the **implementation desig
 Sub-change spec.md must:
 - Reference the root change in frontmatter (`type: root-change`)
 - Have a scoped Section A (just this phase's problem, not the full root scope)
-- Have a full Section B with appropriate predictability dimensions (see SKILL.md Step 3A)
-- Include a Scope Summary Table for its own file set (Universal Rule)
+- Have a full Section B with Key Design dimensions, Key Change, and Scope Summary (see SKILL.md Step 3A)
 
 ### What the Root spec does NOT include
 
 | Not in root spec | Goes in sub-change spec |
 |--------------------|--------------------------|
-| Function/class signatures per phase | Each sub-change's relevant design dimensions |
-| Data models for each phase | Each sub-change's relevant design dimensions |
-| File-level Scope Summary (per phase) | Each sub-change's Scope Summary Table |
+| Function/class signatures per phase | Each sub-change's Key Design dimensions |
+| Data models for each phase | Each sub-change's Key Design dimensions |
+| Per-item decisions and constraints | Each sub-change's Key Change |
+| File-level Scope Summary (per phase) | Each sub-change's Scope Summary |
 | Task lists | Each sub-change's tasks.md |
 
 ### Example Sub-change spec.md Reference
@@ -202,11 +202,14 @@ Request → AuthMiddleware
 
 Note: cache lookup stays on the hot path, while database work only happens on misses and immediately repopulates the cache for the next request.
 
-#### Scope Summary
+### Key Change
+
+**Refactor A: Extract auth service** — Split monolithic `auth.py` into `AuthService` behind a clean interface. Redis caching moves to dedicated cache layer. Middleware calls `AuthService` only — no direct JWT or cache access.
+
+### Scope Summary
 | File | Change |
 |------|--------|
 | `src/services/auth.py` | New — `AuthService` class |
 | `src/middleware/auth.py` | Refactor to call `AuthService` |
 | `src/auth.py` | Remove — logic moved to service |
-\`\`\`
 ```

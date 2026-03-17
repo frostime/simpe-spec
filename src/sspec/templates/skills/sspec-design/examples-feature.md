@@ -92,7 +92,11 @@ sspec change list --filter-tag frontend
 
 Note: tag validation happens before any change files are written, so invalid input fails fast and never leaves a partial change directory behind.
 
-#### Scope Summary
+### Key Change
+
+**Feat A: Tag-based change filtering** — Add optional `tags: []` to change frontmatter. CLI exposes `--tag <label>` on `change new` and `--filter-tag <label>` on `change list`. Tag validation happens before any files are written so invalid input fails fast. Tags are multi-valued and machine-parseable, consistent with existing `type` field pattern.
+
+### Scope Summary
 
 | File | Change |
 |------|--------|
@@ -167,7 +171,15 @@ _build_howto_info(path)
   └── return HowtoInfo(...)                   # never None for parse issues
 \`\`\`
 
-Note: parse failures stay local to `_build_howto_info()`, so one malformed project HOWTO no longer takes down the whole list command.
+### Key Change
+
+**Fix A: Resilient frontmatter parsing** — Make `_build_howto_info` fall back to file stem for `name` and empty string for `desc` when frontmatter is missing or malformed. Log a warning instead of crashing. Parse failures stay local so one bad file never takes down the whole list command.
+
+### Scope Summary
+
+| File | Change |
+|------|--------|
+| `src/sspec/services/howto_service.py` | Add fallback logic in `_build_howto_info` |
 ```
 
 ---
@@ -180,5 +192,6 @@ B defines *how it should work*. tasks.md defines *what to do*. Tasks reference B
 |---------|-------|---------|
 | **Why** this approach | spec.md B → Approach | "Tags over free-text because multi-valued" |
 | **What** the design is | spec.md B → Key Design | Interface signatures, behavior diagrams |
+| **What** each item does and why | spec.md B → Key Change | Per-item decisions and constraints |
 | **What to do** (file-level) | tasks.md phases | `- [ ] Add tags field to ChangeMeta in core.py` |
 | **How to verify** | tasks.md verification | `sspec change new foo --tag x && sspec change list --filter-tag x shows foo` |

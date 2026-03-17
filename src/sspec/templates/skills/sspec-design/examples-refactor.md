@@ -77,7 +77,11 @@ Request → AuthMiddleware
 AuthService is the only public interface. Middleware never touches JWT or cache directly.
 This makes AuthService unit-testable without Redis or HTTP.
 
-#### Scope Summary
+### Key Change
+
+**Refactor A: Extract auth service layer** — Split monolithic `auth.py` (2,400 LOC) into three focused modules behind `AuthService` interface. Redis caching moves from inline calls to dedicated `cache.py`. Middleware calls `AuthService` only — no direct JWT or cache access. The old `auth.py` is deleted entirely.
+
+### Scope Summary
 
 | File | Change |
 |------|--------|
@@ -131,7 +135,11 @@ class AuthClaims:
     roles: list[str]
 \`\`\`
 
-#### Scope Summary
+### Key Change
+
+**Refactor A: Tenant isolation + RBAC** — Add tenant-scoped data isolation and role-permission matrix on top of existing JWT auth. Full architecture, migration sequencing, and permission matrix in [reference/design.md](reference/design.md).
+
+### Scope Summary
 
 | File | Change |
 |------|--------|
@@ -218,7 +226,11 @@ def list_cmd(howto_type: str | None, ...):
         items = [h for h in items if h.type == howto_type]
 \`\`\`
 
-#### Scope Summary
+### Key Change
+
+**Feat A: HOWTO type classification** — Add optional `type` field to HOWTO frontmatter. Backward compatible: existing files without `type` default to `None` and require zero changes. `sspec howto list` gains `--type` filtering. No data migration needed; rollback = ignore the field.
+
+### Scope Summary
 
 | File | Change |
 |------|--------|

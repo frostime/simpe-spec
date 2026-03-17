@@ -33,13 +33,13 @@ should be able to predict what each section will contain.
 ## Step 3A: Fill Single Change
   ### Choosing Dimensions      — NEW: meta-thinking guidance
   ### Predictability Dimensions — NEW: dimension menu table
-  ### Universal Rules          — Scope Summary + Item Labeling (from old Rules 3-4)
+  ### Writing Rules            — dimension howto + B vs tasks.md boundary
 ## Step 3B: Fill Root Change   — unchanged
 ## Step 4: @align              — unchanged
 ## References                  — updated links to new example files
 ```
 
-**Change inventory pattern** — best for multi-item content changes:
+**Change inventory pattern** — best for multi-item content changes (used in `### Key Change`):
 
 ```markdown
 **Change A: Refresh project.md** — Update stack description, key paths,

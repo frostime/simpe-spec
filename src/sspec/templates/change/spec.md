@@ -56,9 +56,13 @@ Ask: what does the user need to predict to feel in control of this change?
 Browse dimensions: `sspec howto list --type design-dimension`
 Read the chosen dimension HOWTO(s) before drafting.
 
-Universal rules:
-- ≥3 files → end with Scope Summary table (| File | Change |)
-- ≥3 independent items → label each (Fix A / Feat B / Refactor C…)
-- If scope boundaries are non-obvious, add a short `What Stays Unchanged` block.
-
 Dimension-specific writing norms are in each dimension's howto. -->
+
+### Key Change
+<!-- MANDATORY. Label each independent change item with its core decision, constraints,
+and boundary conditions. Use **Type Label: Title** format (e.g. Fix A, Feat B, Refactor C).
+tasks.md references these labels — never copy the logic description into tasks.
+If scope boundaries are non-obvious, add a short `What Stays Unchanged` block after Scope Summary. -->
+
+### Scope Summary
+<!-- MANDATORY. File | Change table — every spec must end with this. -->

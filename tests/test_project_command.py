@@ -8,8 +8,10 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from sspec.cli import main
+from sspec.commands import project as project_cmd
 from sspec.core import SCHEMA_VERSION, SSPEC_DIR
 from sspec.services.project_init_service import initialize_project
+from sspec.services.project_update_service import MissingSkillLocationRecovery
 
 
 def _init_project(tmp_path: Path) -> Path:
@@ -120,3 +122,49 @@ def test_project_update_not_up_to_date_when_blocked_by_unknown(tmp_path: Path, m
     assert result.exit_code == 0
     assert 'All files are up to date' not in result.output
     assert 'No updates applied' in result.output
+
+
+def test_project_update_reports_missing_skill_location_recovery(tmp_path: Path, monkeypatch):
+    sspec_root = _init_project(tmp_path)
+    meta_path = sspec_root / '.meta.json'
+    meta = json.loads(meta_path.read_text(encoding='utf-8'))
+    meta['skill_locations'] = ['.sspec/skills', '.github/skills']
+    meta_path.write_text(json.dumps(meta), encoding='utf-8')
+
+    calls: list[tuple[Path, Path, bool]] = []
+
+    def _fake_recover_missing_skill_locations(
+        *,
+        project_root: Path,
+        sspec_root: Path,
+        meta: dict,
+        dry_run: bool = False,
+    ):
+        del meta
+        calls.append((project_root, sspec_root, dry_run))
+        return [
+            MissingSkillLocationRecovery(
+                location='.github/skills',
+                dominate_dir=project_root / '.github',
+                status='linked',
+                link_kind='link/copy',
+            )
+        ]
+
+    monkeypatch.setattr(
+        project_cmd,
+        'recover_missing_skill_locations',
+        _fake_recover_missing_skill_locations,
+    )
+
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    result = runner.invoke(main, ['project', 'update', '--dry-run'])
+
+    assert result.exit_code == 0
+    assert 'Missing Skill Location Recovery' in result.output
+    assert 'Would recover 1 missing skill location(s)' in result.output
+    assert len(calls) == 1
+    assert calls[0][0] == tmp_path
+    assert calls[0][1] == sspec_root
+    assert calls[0][2] is True

@@ -12,11 +12,13 @@ from sspec.core import SCHEMA_VERSION, SSPEC_DIR, get_template_dir, list_templat
 from sspec.services.project_init_service import initialize_project
 from sspec.services.project_update_service import (
     MetaMigrationError,
+    MissingSkillLocationRecovery,
     OrphanedSkill,
     collect_orphaned_skills,
     collect_update_candidates,
     migrate_legacy_skill_layouts,
     prepare_meta_for_project_update,
+    recover_missing_skill_locations,
     remove_orphaned_skill,
     sync_hub_skills_gitignore,
 )
@@ -275,3 +277,71 @@ def test_sync_hub_skills_gitignore_dry_run_does_not_write(tmp_path: Path):
     assert changed is True
     after = hub_gitignore.read_text(encoding='utf-8') if hub_gitignore.exists() else ''
     assert after == before
+
+
+def test_recover_missing_skill_locations_dry_run_reports_without_writing(tmp_path: Path):
+    sspec_root = _init_project(tmp_path)
+    meta = {
+        'skill_locations': ['.sspec/skills', '.github/skills'],
+    }
+
+    recoveries = recover_missing_skill_locations(
+        project_root=tmp_path,
+        sspec_root=sspec_root,
+        meta=meta,
+        dry_run=True,
+    )
+
+    assert len(recoveries) == 1
+    rec = recoveries[0]
+    assert rec.location == '.github/skills'
+    assert rec.status == 'linked'
+    assert rec.link_kind == 'link/copy'
+    assert not (tmp_path / '.github' / 'skills').exists()
+
+
+def test_recover_missing_skill_locations_apply_uses_dominate_flow(tmp_path: Path, monkeypatch):
+    sspec_root = _init_project(tmp_path)
+    meta = {
+        'skill_locations': ['.sspec/skills', '.github/skills'],
+    }
+
+    calls: list[Path] = []
+    gitignore_targets: list[Path] = []
+
+    def _fake_dominate(*, sspec_root: Path, dominate_dir: Path, force_relink: bool = False):
+        del sspec_root, force_relink
+        calls.append(dominate_dir)
+        return MissingSkillLocationRecovery(
+            location='.github/skills',
+            dominate_dir=dominate_dir,
+            status='linked',
+            link_kind='junction',
+        )
+
+    def _fake_add_skill_to_gitignore(path: Path) -> None:
+        gitignore_targets.append(path)
+
+    # Patch import targets used by recover function.
+    monkeypatch.setattr(
+        'sspec.services.skill_service.dominate_skills_location',
+        _fake_dominate,
+    )
+    monkeypatch.setattr(
+        'sspec.skill_installer.SkillInstaller.add_skill_to_gitignore',
+        _fake_add_skill_to_gitignore,
+    )
+
+    recoveries = recover_missing_skill_locations(
+        project_root=tmp_path,
+        sspec_root=sspec_root,
+        meta=meta,
+        dry_run=False,
+    )
+
+    assert len(recoveries) == 1
+    assert calls == [tmp_path / '.github']
+    assert gitignore_targets == [tmp_path / '.github' / 'skills']
+    assert recoveries[0].location == '.github/skills'
+    assert recoveries[0].status == 'linked'
+    assert recoveries[0].link_kind == 'junction'

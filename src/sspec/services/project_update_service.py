@@ -56,6 +56,16 @@ class LegacySkillMigration:
     merged_custom_skills: list[str]
 
 
+@dataclass(frozen=True, slots=True)
+class MissingSkillLocationRecovery:
+    """Recovery result for a missing external skill location."""
+
+    location: str
+    dominate_dir: Path
+    status: str
+    link_kind: str
+
+
 class MetaMigrationError(RuntimeError):
     """Raised when project update cannot migrate .meta.json safely."""
 
@@ -67,6 +77,68 @@ class MetaUpdateState:
     meta: dict[str, Any]
     old_hashes: dict[str, str]
     migration_needed: bool
+
+
+def recover_missing_skill_locations(
+    *,
+    project_root: Path,
+    sspec_root: Path,
+    meta: dict[str, Any],
+    dry_run: bool = False,
+) -> list[MissingSkillLocationRecovery]:
+    """Recover missing external skill locations from `.meta.json`.
+
+    Only non-hub missing locations are recovered. Existing locations are left as-is.
+    """
+
+    skill_locations: list[str] = meta.get('skill_locations', []) or []
+    recoveries: list[MissingSkillLocationRecovery] = []
+
+    for loc in skill_locations:
+        location = (loc or '').strip()
+        if not location or location == '.sspec/skills':
+            continue
+
+        location_path = Path(location)
+        if not location_path.is_absolute():
+            location_path = project_root / location_path
+
+        # Existing locations (real dir or link) are not auto-modified here.
+        if location_path.exists() or check_path_link(location_path):
+            continue
+
+        dominate_dir = location_path.parent
+
+        if dry_run:
+            recoveries.append(
+                MissingSkillLocationRecovery(
+                    location=location,
+                    dominate_dir=dominate_dir,
+                    status='linked',
+                    link_kind='link/copy',
+                )
+            )
+            continue
+
+        from sspec.services.skill_service import dominate_skills_location
+        from sspec.skill_installer import SkillInstaller
+
+        result = dominate_skills_location(
+            sspec_root=sspec_root,
+            dominate_dir=dominate_dir,
+        )
+        SkillInstaller.add_skill_to_gitignore(dominate_dir / 'skills')
+
+        recoveries.append(
+            MissingSkillLocationRecovery(
+                location=location,
+                dominate_dir=dominate_dir,
+                status=result.status,
+                link_kind=result.link_kind,
+            )
+        )
+
+    return recoveries
 
 
 def prepare_meta_for_project_update(*, sspec_root: Path) -> MetaUpdateState:

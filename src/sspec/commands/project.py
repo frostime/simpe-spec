@@ -34,6 +34,7 @@ from sspec.services.project_update_service import (
     collect_update_candidates,
     migrate_legacy_skill_layouts,
     prepare_meta_for_project_update,
+    recover_missing_skill_locations,
     remove_orphaned_skill,
     sync_hub_skills_gitignore,
 )
@@ -314,6 +315,32 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
 
     common_replacements = {'SCHEMA_VERSION': SCHEMA_VERSION, 'SCHEMA': SCHEMA_VERSION}
 
+    # -----------------------------------------------------------------
+    # Phase 0.4: Recover missing external skill locations from meta
+    # -----------------------------------------------------------------
+    try:
+        recovered_locations = recover_missing_skill_locations(
+            project_root=project_root,
+            sspec_root=sspec_root,
+            meta=meta,
+            dry_run=dry_run,
+        )
+    except (OSError, RuntimeError, ValueError) as err:
+        raise click.ClickException(
+            f'Failed to recover missing skill locations: {err}'
+        ) from None
+
+    if recovered_locations:
+        console.print()
+        recover_table = Table(title='Missing Skill Location Recovery')
+        recover_table.add_column('Location', style='cyan')
+        recover_table.add_column('Status', style='yellow')
+        recover_table.add_column('Mode', style='green')
+        for rec in recovered_locations:
+            mode = 'dry-run' if dry_run else rec.link_kind
+            recover_table.add_row(rec.location, rec.status, mode)
+        console.print(recover_table)
+
     if meta_state.migration_needed and dry_run:
         console.print(
             f'[cyan]Would migrate {sspec_root / ".meta.json"} to meta_schema {META_SCHEMA}[/cyan]'
@@ -481,9 +508,19 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
     )
 
     if dry_run:
-        console.print(f'[cyan]Would update {len(actions) + gitignore_updated_count} item(s)[/cyan]')
+        recover_count = len(recovered_locations)
+        console.print(
+            '[cyan]Would update '
+            f'{len(actions) + gitignore_updated_count + recover_count} item(s)[/cyan]'
+        )
         if migrations:
-            console.print(f'[cyan]Would migrate {len(migrations)} legacy skill location(s)[/cyan]')
+            console.print(
+                f'[cyan]Would migrate {len(migrations)} legacy skill location(s)[/cyan]'
+            )
+        if recover_count:
+            console.print(
+                f'[cyan]Would recover {recover_count} missing skill location(s)[/cyan]'
+            )
         if agents_needs_update:
             console.print('[cyan]Would update root AGENTS.md block[/cyan]')
         if blockers:
@@ -499,6 +536,7 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
         and not orphans
         and not migrations
         and not gitignore_updated_count
+        and not recovered_locations
     ):
         if meta_state.migration_needed or hash_backfill:
             meta['file_hashes'] = {**old_hashes, **hash_backfill}
@@ -589,6 +627,7 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
         or skill_updated_count
         or orphans
         or migrations
+        or recovered_locations
         or agents_needs_update
         or meta_state.migration_needed
         or gitignore_updated_count
@@ -617,8 +656,14 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
         total_updated += 1
     if migrations:
         total_updated += len(migrations)
+    if recovered_locations:
+        total_updated += len(recovered_locations)
     if orphans:
         console.print(f'[red]-[/red] Removed {len(orphans)} orphaned skill(s)')
     if migrations:
         console.print(f'[green]+[/green] Migrated {len(migrations)} legacy skill location(s)')
+    if recovered_locations:
+        console.print(
+            f'[green]+[/green] Recovered {len(recovered_locations)} skill location(s)'
+        )
     console.print(f'[green]+[/green] Updated {total_updated} item(s)')

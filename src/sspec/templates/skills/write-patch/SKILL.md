@@ -1,12 +1,19 @@
 ---
 name: write-patch
-description: Use patch files + `sspec tool patch` for code modifications instead of direct file edits. Trigger when user requests patch-based workflow.
+description: Use patch files + `sspec tool patch` for code modifications instead of direct file edits. Trigger when user requests patch-based workflow, or the Agent system lacks built-in capability for fine-grained file modification.
 metadata:
   author: frostime
   version: 1.1.0
 ---
 
 # Write-Patch Skill
+
+GATE: Want to write a complete file instead of fine-grained edits? → Use other methods like built in tool, `sspec tool write` or bash/shell etc.
+`sspec tool patch` is only for local patch edits of complete file.
+
+---
+
+## Builtin Prompt
 
 > Format reference: `sspec tool patch --prompt`
 

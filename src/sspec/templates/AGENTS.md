@@ -156,12 +156,23 @@ Run `sspec <command> --help` for full options. Keep this list minimal:
 | Command | Use |
 |---------|-----|
 | `sspec change new <name> [--from <REQUEST>]` | Create a change |
-| `sspec change status <name>` | Inspect current change state |
+| `sspec change find/status <name>` | Inspect current change state |
 | `sspec doc new "<name>"` | Create spec-doc |
-| `sspec tool ask --prompt` | Show fallback ask workflow when no `question` tool exists |
-| `sspec tool mdtoc <file>` | Pre-scan Markdown |
-| `sspec tool now [--date|--utc|--json]` | Show current time when timestamps matter |
-| `sspec howto list` | Browse operational micro-guides |
+| `sspec howto [options]` | See "HOWTO System" |
+| `sspec tool <tool-name> [options]` | Use CLI tool complement |
+
+**sspec tool**
+
+`sspec` cli offers some CLI tool complements if agent system lacks relative capabilities. Check `sspec tool --help`. Invoke with `sspec tool <tool-name> [options]`. Examples:
+
+- `patch/write`: Edit / Write text file. (Only use it when lacking built-in capabilities.)
+- `now`: Get current time. (Always invoke when handover, needs check time)
+- `fileinfo`: Inspect size / encoding /newline style etc.
+- `mdtoc`: Print outline of md files structure.
+- `view-tree`: View directory tree.
+- `ask`: `question` user.
+
+Read detailed usage: `sspec tool <tool-name> --prompt`
 
 ### HOWTO System
 

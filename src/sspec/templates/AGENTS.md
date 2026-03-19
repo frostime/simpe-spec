@@ -171,6 +171,7 @@ Run `sspec <command> --help` for full options. Keep this list minimal:
 - `mdtoc`: Print outline of md files structure.
 - `view-tree`: View directory tree.
 - `ask`: `question` user.
+- `treesitter`: Analyze py/ts/js code.
 
 Read detailed usage: `sspec tool <tool-name> --prompt`
 

@@ -16,6 +16,94 @@ ISO_SECOND_RE = re.compile(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}
 DATE_RE = re.compile(r'^\d{4}-\d{2}-\d{2}\n?$')
 
 
+def test_tool_treesitter_prompt_output() -> None:
+    runner = CliRunner()
+    result = runner.invoke(main, ['tool', 'treesitter', '--prompt'])
+
+    assert result.exit_code == 0
+    assert '# treesitter - Python Symbol Outline' in result.output
+
+
+def test_tool_treesitter_returns_dependency_hint_when_missing(monkeypatch) -> None:
+    from sspec.builtin_tools import treesitter
+
+    runner = CliRunner()
+
+    with runner.isolated_filesystem():
+        target = Path('demo.py')
+        target.write_text('def demo():\n    return 1\n', encoding='utf-8')
+
+        monkeypatch.setattr(
+            treesitter,
+            '_check_tree_sitter_dependency',
+            lambda lang: (
+                False,
+                f'missing deps for {lang}',
+            ),
+        )
+
+        result = runner.invoke(main, ['tool', 'treesitter', str(target)])
+
+        assert result.exit_code != 0
+        assert 'missing deps for py' in result.output
+
+
+def test_tool_treesitter_supports_depth_option(monkeypatch) -> None:
+    from sspec.builtin_tools import treesitter
+
+    runner = CliRunner()
+
+    with runner.isolated_filesystem():
+        target = Path('demo.py')
+        target.write_text('def demo():\n    return 1\n', encoding='utf-8')
+
+        monkeypatch.setattr(
+            treesitter,
+            '_check_tree_sitter_dependency',
+            lambda lang: (True, None),
+        )
+        monkeypatch.setattr(
+            treesitter,
+            'pyfile_symbols_outline',
+            lambda file_path, max_depth: (
+                f'outline depth={max_depth} file={Path(file_path).name}'
+            ),
+        )
+
+        result = runner.invoke(main, ['tool', 'treesitter', str(target), '--depth', '2'])
+
+        assert result.exit_code == 0
+        assert 'outline depth=2 file=demo.py' in result.output
+
+
+def test_tool_treesitter_supports_ts_with_orthogonal_dependency(monkeypatch) -> None:
+    from sspec.builtin_tools import treesitter
+
+    runner = CliRunner()
+
+    with runner.isolated_filesystem():
+        target = Path('demo.ts')
+        target.write_text('const id = 1\n', encoding='utf-8')
+
+        monkeypatch.setattr(
+            treesitter,
+            '_check_tree_sitter_dependency',
+            lambda lang: (lang == 'ts', 'missing deps for ts'),
+        )
+        monkeypatch.setattr(
+            treesitter,
+            'jstsfile_symbols_outline',
+            lambda file_path, max_depth, lang: (
+                f'outline depth={max_depth} lang={lang} file={Path(file_path).name}'
+            ),
+        )
+
+        result = runner.invoke(main, ['tool', 'treesitter', str(target), '--depth', '1'])
+
+        assert result.exit_code == 0
+        assert 'outline depth=1 lang=ts file=demo.ts' in result.output
+
+
 def test_tool_now_outputs_local_iso_timestamp() -> None:
     runner = CliRunner()
     result = runner.invoke(main, ['tool', 'now'])

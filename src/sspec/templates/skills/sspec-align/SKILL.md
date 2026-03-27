@@ -10,7 +10,7 @@ metadata:
 
 Before continuing execution, choose whether the current moment only needs a summary or truly needs a user decision.
 
-**Core principle**: `@align` is not automatically a hard stop. Use a hard stop only when the user must decide something before safe progress can continue.
+**Core principle**: `@align` is not automatically a hard stop. Use a hard stop only when the user MUST decide something before safe progress can continue.
 
 ---
 
@@ -21,7 +21,7 @@ Before continuing execution, choose whether the current moment only needs a summ
 | `report` | Summarize current state and continue execution | Plan done, progress update, low-risk confirmation, lightweight preference |
 | `gate` | Present the decision or review target, then stop and wait for user response | Design gate, implement complete / review request, blocker, wrong assumption, rejected tool call, scope or direction change, irreversible action, split / replace current change |
 
-**Rule**: If safe progress depends on a user decision, use `gate`. Otherwise prefer `report`.
+**Rule**: If safe progress depends on a user decision, the agent MUST use `gate`. Otherwise prefer `report`.
 
 ---
 
@@ -33,7 +33,7 @@ Before continuing execution, choose whether the current moment only needs a summ
 
 For large context, write analysis to `.sspec/tmp/` and link it instead of pasting everything inline.
 
-**Question-tool rule**: do not stuff long context, tradeoff tables, or multi-paragraph analysis into the `question` tool payload. Show the summary first; let the tool carry only the decision prompt.
+**Question-tool rule**: the agent MUST NOT stuff long context, tradeoff tables, or multi-paragraph analysis into the `question` tool payload. Show the summary first; let the tool carry only the decision prompt.
 
 Fallback tool usage reference: `sspec tool ask --prompt`
 

@@ -45,11 +45,11 @@ open `examples.md` and search for the heading text in the link label, or use `rg
 
 ## Step 2A: Single/Sub Planning (Phases + File-Level Tasks)
 
-Keep the generated `tasks.md` frontmatter as-is. `change` must match `spec.md` `name`.
+Keep the generated `tasks.md` frontmatter as-is. `change` MUST match `spec.md` `name`.
 
 ### Standards
 
-Each task should be:
+Each task SHOULD be:
 - **Specific**: names exact file path + action
 - **Small**: <2 hours
 - **Independently testable**: has an obvious check
@@ -89,7 +89,7 @@ Use [examples.md](./examples.md#root-tasksmd) as the reference format.
 
 Rules of thumb:
 - No file-level tasks in root tasks.md
-- Each phase must include **Deliverable** + **Sub-change** link placeholder
+- Each phase MUST include **Deliverable** + **Sub-change** link placeholder
 - Root stays active until all sub-changes complete
 
 ## Step 3: Progress Tracking

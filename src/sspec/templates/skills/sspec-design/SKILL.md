@@ -8,7 +8,7 @@ metadata:
 
 # SSPEC Design
 
-Define the problem, design the solution, create the change. **User must confirm design before planning** — never auto-advance without **align**.
+Define the problem, design the solution, create the change. **The user MUST confirm the design before planning** — never auto-advance without **align**.
 
 ---
 
@@ -18,7 +18,7 @@ Define the problem, design the solution, create the change. **User must confirm 
 1. Assess scale → micro / single / multi
 2. Create change (CLI)
 3. Fill spec.md → Type A (single/sub) or Type B (root)
-4. @align user (MANDATORY gate)
+4. @align user (gate)
 ```
 
 ## Step 1: Assess Scale
@@ -53,7 +53,7 @@ Quantify impact: "[metric] causing [impact]". Simple → single paragraph. Compl
 
 ### Section B — Proposed Solution
 
-Section B has three parts. Approach and Key Design are flexible; **Key Change and Scope Summary are mandatory** (but scale with complexity — a single-line each is fine for simple changes).
+Section B has three parts. Approach and Key Design are flexible; **Key Change and Scope Summary are REQUIRED** (but scale with complexity — a single-line each is fine for simple changes).
 
 ```
 ### Approach          — core idea + rationale (always)
@@ -83,7 +83,7 @@ Section B has three parts. Approach and Key Design are flexible; **Key Change an
 
 tasks.md references these labels: "Implement Fix A per spec §B". Never copy the logic description into tasks.
 
-`### Scope Summary`: File | Change table — every spec must end with this.
+`### Scope Summary`: File | Change table — every spec MUST end with this.
 
 ```markdown
 | File | Change |
@@ -98,7 +98,7 @@ If scope boundaries are non-obvious, add `### What Stays Unchanged` after the ta
 
 A spec is a **prediction contract** — the user reads it and predicts what the change will produce. Pick 1-4 dimensions that best serve that prediction.
 
-Think: (1) What kind of change? (2) What must the user predict to feel in control? (3) Which dimensions serve that?
+Think: (1) What kind of change? (2) What does the user need to predict to feel in control? (3) Which dimensions serve that?
 
 Structure speaks for itself — no need for a "dimension selection rationale". Simple changes: treat dimensions as mental checklist, not mandatory headings.
 
@@ -137,7 +137,7 @@ Hard format constraints:
 
 **Read dimension howto before writing** — `sspec howto write-dim-<name>` defines writing norms for each dimension.
 
-**B vs tasks.md boundary** — B = *how it should work* (design). tasks.md = *what to do* (execution). Tasks reference B labels (e.g. "Implement Fix A per spec §B"), never copy. Execution order and file-level task lists do NOT belong in B.
+**B vs tasks.md boundary** — B = *how it should work* (design). tasks.md = *what to do* (execution). Tasks reference B labels (e.g. "Implement Fix A per spec §B") and MUST NOT copy the logic description. Execution order and file-level task lists MUST NOT appear in B.
 
 📚 Examples: [examples-feature.md](./examples-feature.md) | [examples-docs.md](./examples-docs.md) | [examples-refactor.md](./examples-refactor.md)
 
@@ -184,9 +184,9 @@ Key Change and Scope Summary rules from 3A apply, adapted:
 
 📚 [examples-root.md](./examples-root.md)
 
-## Step 4: @align (MANDATORY)
+## Step 4: @align
 
-**Hard gate** — user must confirm before planning proceeds.
+**Hard gate** — the user MUST confirm before planning proceeds.
 
 Present: problem summary, approach + rationale, key design decisions, (root) phase breakdown. Use `question-like` tool if available, otherwise present clearly and stop.
 

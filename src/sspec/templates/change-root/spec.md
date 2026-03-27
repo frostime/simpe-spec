@@ -60,9 +60,9 @@ Coordination Notes:
 - Cross-phase constraints, shared interfaces, integration handoffs
 - Which phases can run in parallel
 
-When a sub-change is created, sync references in BOTH directions:
+When a sub-change is created, the agent MUST sync references in BOTH directions:
 - Root `spec.md` adds `type: sub-change` entry for the sub-change
 - Sub `spec.md` adds `type: root-change` entry back to this root
 
-Note: root spec does NOT include file-level interface/data-model detail.
+Note: root spec MUST NOT include file-level interface/data-model detail.
 File-level design belongs in each sub-change's own spec.md Section B. -->

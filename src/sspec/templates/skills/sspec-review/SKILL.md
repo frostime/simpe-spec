@@ -62,7 +62,7 @@ When non-trivial fixes stay in the current change, add them to tasks.md:
 
 Then implement these tasks following `sspec-implement` workflow.
 
-Do **not** use `Feedback Tasks` as a dumping ground for work that should become a follow-up or replacement change.
+Do **not** use `Feedback Tasks` as a dumping ground for work that belongs in a follow-up or replacement change.
 
 ### Git-Aware Review
 
@@ -80,7 +80,7 @@ Directive shortcut: `@subagent-audits`
 
 If user strongly disagrees (`@argue`):
 
-1. **STOP immediately** — don't continue current work
+1. **Stop immediately** — do not continue current work
 2. **Assess scope** using the table above
 3. **Acknowledge** the disagreement explicitly
 4. **Act** based on scope:
@@ -100,7 +100,7 @@ When user is satisfied:
    - Archive the change if work is complete
    - `@handover` if session is ending
 
-**FORBIDDEN transitions**: PLANNING→DONE, DOING→DONE — never skip REVIEW.
+**Status rule**: the change MUST NOT transition directly from `PLANNING` → `DONE` or from `DOING` → `DONE`; it MUST pass through `REVIEW`.
 
 ## Status Flow
 

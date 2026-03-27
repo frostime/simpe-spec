@@ -1,6 +1,6 @@
 ---
 name: sspec-handover
-description: "Save session state. Update handover.md, project.md, and spec-docs index. MANDATORY at session end, recommended mid-session."
+description: "Save session state. Update handover.md, project.md, and spec-docs index. REQUIRED at session end, recommended mid-session."
 metadata:
   author: frostime
   version: 3.3.0
@@ -16,9 +16,9 @@ Persist session knowledge so any agent can resume within 30 seconds.
 
 ## When to Trigger
 
-### End of Session (MANDATORY)
+### End of Session (Required)
 
-Before ending ANY session, perform the full procedure below. No exceptions.
+Before ending any session, the agent MUST perform the full procedure below.
 
 ### Mid-Session (Proactive)
 
@@ -30,7 +30,7 @@ Update handover.md when:
 - Any user interaction that changes direction (feedback, @align gate, @argue)
 - About to switch between major phases (e.g. design -> plan)
 
-**Rule**: If you'd struggle to reconstruct info after context compression → write it NOW.
+**Rule**: If you'd struggle to reconstruct info after context compression, you MUST write it now.
 
 ## Procedure
 
@@ -40,7 +40,7 @@ handover.md is the resume entry point.
 
 **Timestamp rule**: Use ISO timestamps with at least minute precision (example: `2026-03-06T20:39`). If current time is uncertain, use `sspec tool now` instead of guessing.
 
-**Updated field**: Set `**Updated**:` to the current timestamp (should match your newest Session Log entry).
+**Updated field**: Set `**Updated**:` to the current timestamp (it SHOULD match your newest Session Log entry).
 
 **Session Log (Append-Only)**:
 - Add a new Session Log entry (newest-first)
@@ -57,7 +57,7 @@ handover.md is the resume entry point.
 - Use a custom type only when none of the canonical types fit; keep custom labels short and rare
 - Promote only facts still useful after the current batch ends; keep batch-local progress, review outcomes, and reminders in `Session Log`
 - If something becomes obsolete, default to marking it obsolete with a timestamp; delete only pure noise or obvious duplicates with no lasting value
-- If handover has a `Git Baseline (Immutable)` section, treat it as **read-only** origin context from change creation; do not refresh, rewrite, or "fix" it during later handovers
+- If handover has a `Git Baseline (Immutable)` section, treat it as **read-only** origin context from change creation; MUST NOT refresh, rewrite, or "fix" it during later handovers
 - Need durable-memory type choice or examples? → `sspec howto write-handover-memory`
 - Need obsolete-memory cleanup rules? → `sspec howto handle-obsolete-memory`
 
@@ -68,7 +68,7 @@ handover.md is the resume entry point.
 
 ### 2. Sync tasks.md
 
-Verify tasks.md progress percentage matches reality. All completed tasks marked `[x]`.
+Verify `tasks.md` progress percentage matches reality. All completed tasks MUST be marked `[x]`.
 
 ### 3. Promote to project.md (if applicable)
 
@@ -109,7 +109,7 @@ Use the template structure. Keep Durable Memory compact and keep Session Log ent
 
 | Bad | Good |
 |-----|------|
-| Skip handover at session end | ALWAYS handover — no exceptions |
+| Skip handover at session end | Handover MUST happen at session end |
 | Only update at session end | Update Working Memory DURING work |
 | Promote batch-local status into Durable Memory | Keep transient progress, review outcomes, and reminders in Session Log |
 | No file paths in Key Files | List files you'd need to re-find after compression |

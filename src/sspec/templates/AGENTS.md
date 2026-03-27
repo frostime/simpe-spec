@@ -9,6 +9,8 @@ SSPEC is a doc-driven workflow. Planning, tracking, and handover live in `.sspec
 
 **Goal**: Any Agent resumes in 30 seconds from `.sspec/`.
 
+**Normative language**: The key words **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHALL NOT**, **SHOULD**, **SHOULD NOT**, **RECOMMENDED**, **MAY**, and **OPTIONAL** in SSPEC Rule text are to be interpreted as described in BCP 14 (RFC 2119, RFC 8174) when, and only when, they appear in all capitals.
+
 ```
 .sspec/
 ├── project.md     # Identity, conventions, notes
@@ -39,7 +41,7 @@ Resume tip: Run `sspec howto resume-change`
 - Important discovery → write to `handover.md` immediately
 - Long session (>30 exchanges) → checkpoint `handover.md`
 - Uncertain → `@align` (30s alignment < hours of rework)
-- User rejects tool call → STOP → `@align` reason
+- User rejects tool call → `@align` reason, then stop
 - Current date/time uncertain → use sspec tool now instead of guessing → `sspec howto get-current-time`
 
 → **HOWTOs**: narrow operational guides for specific operations. `sspec howto list` to browse; batch-read: `sspec howto n1 n2`.
@@ -59,13 +61,13 @@ Each phase has a dedicated SKILL. Read it before starting.
 [Research]  (understand + clarify; @align mid-research for ambiguities)
    |
    v
-[Design]    -- @align gate (MANDATORY) + [Handover] --> "User confirms design"
+[Design]    -- @align gate (MUST) + [Handover] --> "User confirms design"
    |
    v
 [Plan]      -- @align report --> "Output summary, continue to implement"
    |
    v
-[Implement] -- @align gate (MANDATORY) --> "Done for this round, please review"
+[Implement] -- @align gate (MUST) --> "Done for this round, please review"
    |
    v
 [Review]    -- user feedback + [Handover] --> (if not satisfied, return to Implement)
@@ -73,9 +75,9 @@ Each phase has a dedicated SKILL. Read it before starting.
    +-- satisfied --> [Handover]
 ```
 
-**Flow rules**: Follow phase order. `gate` = hard stop, must pass before proceeding. `report` = output summary, keep going. Failed gate → return to phase, update, realign. `Implement` and `Review` loop until user satisfied.
+**Flow rules**: Follow phase order. `gate` = hard stop and MUST pass before proceeding. `report` = output summary, keep going. Failed gate → return to phase, update, realign. `Implement` and `Review` loop until user satisfied.
 
-**Handover** is lifecycle-critical — mandatory at session end, also at long sessions (>30 exchanges), major phase switches, and before context-losing events.
+**Handover** is lifecycle-critical — it MUST happen at session end, and SHOULD also happen during long sessions (>30 exchanges), major phase switches, and before context-losing events.
 
 ### Phase Contracts
 
@@ -84,11 +86,11 @@ Read the SKILL for the current phase. Unless the SKILL says otherwise, each phas
 | Phase | SKILL | Main output | Gate |
 |-------|-------|-------------|------|
 | **Research** | `sspec-research` | `reference/`, `handover.md` notes | optional `question` |
-| **Design** | `sspec-design` | `spec.md` | **gate** (mandatory) |
+| **Design** | `sspec-design` | `spec.md` | **gate** (MUST wait) |
 | **Plan** | `sspec-plan` | `tasks.md` | **report** (continue) |
-| **Implement** | `sspec-implement` | code, `tasks.md` progress | **gate** (mandatory) |
+| **Implement** | `sspec-implement` | code, `tasks.md` progress | **gate** (MUST wait) |
 | **Review** | `sspec-review` | feedback tasks / acceptance loop | rejected -> Implement |
-| **Handover** | `sspec-handover` | `handover.md`, `project.md` | session end required |
+| **Handover** | `sspec-handover` | `handover.md`, `project.md` | MUST happen at session end |
 ### Scale Assessment (in Design phase)
 
 | Scale | Criteria | Path |
@@ -99,7 +101,7 @@ Read the SKILL for the current phase. Unless the SKILL says otherwise, each phas
 
 ### Status Guardrails
 
-`Status` key in `spec.md` should follow a state machine rule, see
+`Status` key in `spec.md` MUST follow the state-machine rule, see
 → `sspec howto update-change-status`
 
 ---
@@ -145,9 +147,9 @@ When change is DONE with architecture impact → proactively `@align` user: "Sho
 | `@change <n>` | Load `handover→tasks→spec`, continue; OR create if not exists `<n>` |
 | `@resume` | Same as `@change` for active change |
 | `@handover` | Execute `sspec-handover` |
-| `@sync` | Update spec.md/tasks.md/handover.md to match reality; never split or replace a change without `@align` |
+| `@sync` | Update spec.md/tasks.md/handover.md to match reality; MUST NOT split or replace a change without `@align` |
 | `@subagent-audits` | Run independent subagent reviews for the current diff; see `sspec howto make-subagent-audit` |
-| `@argue` | **STOP** -> assess scope (§2 Review) |
+| `@argue` | stop -> assess scope (§2 Review) |
 
 ### CLI Quick Reference
 

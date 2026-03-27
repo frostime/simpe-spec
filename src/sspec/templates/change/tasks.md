@@ -22,7 +22,7 @@ Phase emoji: ⏳ pending | 🚧 in progress | ✅ done
 ### Feedback Tasks
 Use this section for review/feedback tasks that still belong to the current change.
 If accepted feedback changes scope/design, update `spec.md` first, then add the execution work here.
-If the work should become a new follow-up or replacement change, do not put it here unless the user has first approved that direction via `@align`.
+If the work belongs in a new follow-up or replacement change, the agent MUST NOT put it here unless the user has first approved that direction via `@align`.
 -->
 
 ---

@@ -33,7 +33,7 @@ For each pending task:
 5. Update Progress section
 6. Continue to next task
 
-**Update after EACH task** — not in batches.
+**Update after EACH task** — do not batch these updates.
 
 ### When to Pause
 
@@ -45,13 +45,13 @@ For each pending task:
 | Multiple valid approaches for a task | → Pick the simpler one, note in handover |
 | Design assumption was wrong | → `@align` user: "Design says X but I found Y. Revise?" Update `spec.md` / `tasks.md` after the decision |
 
-**Don't guess on blockers.** One `@align` < one rework cycle.
+**Do not guess on blockers.** One `@align` < one rework cycle.
 
 ### Keep Changes Focused
 
 - Only modify files relevant to the current task
 - Preserve existing code style, comments, and structure
-- Don't refactor unrelated code
+- The agent MUST NOT refactor unrelated code
 - If a task grows but still belongs to the current change → split it, add new tasks to tasks.md
 - If the work now belongs in a follow-up or replacement change → `@align` user before creating a new change or marking the current one `BLOCKED`
 
@@ -83,7 +83,7 @@ For long implementation sessions (>30 exchanges or multi-file work):
 
 **Test**: "Would I struggle to continue if context was compressed right now?" → Write to handover.
 
-## Exit: @align User (MANDATORY)
+## Exit: @align User
 
 When all tasks are complete:
 
@@ -91,6 +91,6 @@ When all tasks are complete:
 2. Summarize what was implemented
 3. `@align` user: "Implementation complete. Please review. Any issues or feedback?"
 
-This is a hard gate. If a `question`-like tool is available, use it. Otherwise state the review request clearly in normal output and stop.
+This is a hard gate. If a `question`-like tool is available, the agent SHOULD use it. Otherwise state the review request clearly in normal output and stop.
 
 → Transition to `sspec-review` phase.

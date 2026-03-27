@@ -10,7 +10,7 @@ Update only if scope fundamentally changes. Details belong in spec.md. -->
 
 ## Git Baseline (Immutable)
 <!-- Captured during `sspec change new` before any change files are written.
-This section records the change starting point in git and must not be edited or refreshed later. -->
+This section records the change starting point in git and MUST NOT be edited or refreshed later. -->
 
 {{GIT}}
 
@@ -36,7 +36,7 @@ Project-wide items -> ALSO append to project.md Notes. -->
 Header format:
 ### 2026-03-06T20:39 [work-log] <short title>
 
-Tags are freeform but must be readable. Examples: work-log, user-feedback, argue, risk.
+Tags are freeform but SHOULD be readable. Examples: work-log, user-feedback, argue, risk.
 Any user interaction (feedback, @align, @argue) MUST start a new log entry. -->
 
 ### <ISO timestamp> [tag] <short title>

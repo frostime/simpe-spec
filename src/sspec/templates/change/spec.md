@@ -59,10 +59,10 @@ Read the chosen dimension HOWTO(s) before drafting.
 Dimension-specific writing norms are in each dimension's howto. -->
 
 ### Key Change
-<!-- MANDATORY. Label each independent change item with its core decision, constraints,
+<!-- REQUIRED. Label each independent change item with its core decision, constraints,
 and boundary conditions. Use **Type Label: Title** format (e.g. Fix A, Feat B, Refactor C).
-tasks.md references these labels — never copy the logic description into tasks.
+tasks.md references these labels — MUST NOT copy the logic description into tasks.
 If scope boundaries are non-obvious, add a short `What Stays Unchanged` block after Scope Summary. -->
 
 ### Scope Summary
-<!-- MANDATORY. File | Change table — every spec must end with this. -->
+<!-- REQUIRED. File | Change table — every spec MUST end with this. -->

@@ -142,7 +142,7 @@ def convert_newlines(text: str, newline: str) -> str:
 def read_text_robust(file_path: Path) -> str:
     """
     健壮地读取文本文件，处理编码和换行符问题：
-    - 保留原始换行符（\\r\\n, \\n, \\r）
+    - 保留原始换行符（\r\n, \n, \r）
     - 尝试多种编码（UTF-8, UTF-8-SIG, GBK, Latin1）
     - 自动去除 BOM（Byte Order Mark）
     """
@@ -165,6 +165,33 @@ def read_text_robust(file_path: Path) -> str:
         if text.startswith('\ufeff'):
             text = text[1:]
         return text
+
+
+def read_target_text_with_encoding(file_path: Path) -> tuple[str, str]:
+    """Read a target file while preserving a writable text encoding hint."""
+    raw = file_path.read_bytes()
+
+    if raw.startswith(b'\xef\xbb\xbf'):
+        text = raw.decode('utf-8-sig')
+        if text.startswith('\ufeff'):
+            text = text[1:]
+        return text, 'utf-8-sig'
+
+    encodings = ['utf-8', 'gbk', 'cp936', 'latin1']
+
+    for encoding in encodings:
+        try:
+            text = raw.decode(encoding)
+            if text.startswith('\ufeff'):
+                text = text[1:]
+            return text, encoding
+        except (UnicodeDecodeError, LookupError):
+            continue
+
+    text = raw.decode('utf-8', errors='replace')
+    if text.startswith('\ufeff'):
+        text = text[1:]
+    return text, 'utf-8'
 
 
 def read_patch_text_interactive() -> str:
@@ -304,17 +331,22 @@ def find_external_absolute_patches(
     return external
 
 
-def is_patch_header_line(line: str) -> bool:
-    """Return whether a line looks like a patch file header."""
-    stripped = strip_line_ending(line)
+def is_patch_header_line(lines: list[str], index: int) -> bool:
+    """Return whether a line is a patch header followed by a SEARCH block."""
+    stripped = strip_line_ending(lines[index])
     if not stripped.startswith('# '):
         return False
 
     try:
         _parse_patch_header_text(stripped[2:].strip())
-        return True
     except ValueError:
         return False
+
+    next_index = index + 1
+    while next_index < len(lines) and strip_line_ending(lines[next_index]).strip() == '':
+        next_index += 1
+
+    return next_index < len(lines) and strip_line_ending(lines[next_index]) == SEARCH_MARK
 
 
 def atomic_write_text(path: Path, text: str, *, encoding: str = 'utf-8') -> None:
@@ -353,7 +385,7 @@ DELIM_MARK = '======='
 REPLACE_MARK = '>>>>>>> REPLACE'
 
 
-def classify_line(line: str) -> str:
+def classify_line(lines: list[str], index: int) -> str:
     """
     分类规则：
     F - File path (# path/to/file[:L10-L25])
@@ -363,10 +395,10 @@ def classify_line(line: str) -> str:
     B - Blank line (仅空白)
     C - Content (其他所有内容)
     """
-    stripped = strip_line_ending(line)
+    stripped = strip_line_ending(lines[index])
 
     # 文件路径行（允许行尾空格）
-    if is_patch_header_line(stripped):
+    if is_patch_header_line(lines, index):
         return 'F'
 
     # 标记行必须精确匹配（不允许额外空格）
@@ -405,7 +437,7 @@ class LRRResult:
 
 def lrr_scan(text: str) -> LRRResult:
     lines = text.splitlines(keepends=True)
-    roles = [classify_line(line) for line in lines]
+    roles = [classify_line(lines, index) for index in range(len(lines))]
     schema = ''.join(roles)  # 1 char per line -> match.span 可直接映射回行数组
     return LRRResult(lines=lines, roles=roles, schema=schema)
 
@@ -470,6 +502,11 @@ def parse_patches(patch_text: str, *, project_root: Path | None = None) -> Patch
 
         except Exception as e:
             errors.append(f'Failed to parse patch block: {e}')
+
+    if patch_text.strip() and not patches and not errors:
+        errors.append(
+            "No valid patch blocks found. Ensure each block starts with '# <path>' followed by a SEARCH/REPLACE block."
+        )
 
     return PatchParseResult(patches=patches, errors=errors)
 
@@ -575,16 +612,24 @@ def format_line_range(line_range: tuple[int | None, int | None] | None) -> str:
     return 'Full file'
 
 
-def apply_patch(patch: PatchBlock) -> PatchApplyResult:
-    """应用单个 patch"""
+def apply_patch(patch: PatchBlock, *, dry_run: bool = False) -> PatchApplyResult:
+    """应用单个 patch。"""
     try:
-        # 保留原文件换行
-        with patch.file_path.open('r', encoding='utf-8', newline='') as f:
-            content = f.read()
+        # 保留原文件换行，并尽量保留原编码写回能力
+        content, file_encoding = read_target_text_with_encoding(patch.file_path)
 
         file_newline = detect_newline_style(content)
         file_lines = split_lines_keepends(content)
         total_lines = len(file_lines)
+
+        if content == '' and patch.line_range:
+            return PatchApplyResult(
+                patch=patch,
+                success=False,
+                status='out_of_range',
+                error=f'Line range {format_line_range(patch.line_range)} is outside file bounds (empty file)',
+                source_line_start=patch.source_line_start,
+            )
 
         # 确定搜索范围
         if patch.line_range:
@@ -628,14 +673,39 @@ def apply_patch(patch: PatchBlock) -> PatchApplyResult:
 
         search_lines = split_lines_keepends(search_text)
         replace_lines = split_lines_keepends(replace_text)
+        is_empty_file = content == ''
+        is_empty_search = len(search_lines) == 0
 
-        if not search_lines:
+        if is_empty_search and not is_empty_file:
             return PatchApplyResult(
                 patch=patch,
                 success=False,
                 status='parse_error',
-                error='SEARCH content is empty',
+                error='SEARCH content is empty, this is not allowed when the target file is non-empty (ambiguous match)',
                 source_line_start=patch.source_line_start,
+                replace_line_count=len(replace_lines),
+            )
+
+        if is_empty_search and is_empty_file:
+            if replace_text == content:
+                return PatchApplyResult(
+                    patch=patch,
+                    success=True,
+                    status='no_change_patch',
+                    error='SEARCH is empty and REPLACE would not change the file',
+                    source_line_start=patch.source_line_start,
+                    replace_line_count=len(replace_lines),
+                )
+
+            if not dry_run:
+                atomic_write_text(patch.file_path, replace_text, encoding=file_encoding)
+
+            return PatchApplyResult(
+                patch=patch,
+                success=True,
+                status='applied',
+                source_line_start=patch.source_line_start,
+                replace_line_count=len(replace_lines),
             )
 
         if search_text == replace_text:
@@ -718,7 +788,8 @@ def apply_patch(patch: PatchBlock) -> PatchApplyResult:
         new_region = region[:match_start] + replace_lines + region[match_end:]
         new_content = ''.join(prefix + new_region + suffix)
 
-        atomic_write_text(patch.file_path, new_content, encoding='utf-8')
+        if not dry_run:
+            atomic_write_text(patch.file_path, new_content, encoding=file_encoding)
         return PatchApplyResult(
             patch=patch,
             success=True,
@@ -747,8 +818,13 @@ def format_patch_header(patch: PatchBlock) -> str:
     return header
 
 
-def apply_patches(patch_text: str, *, project_root: Path | None = None) -> BatchApplyResult:
-    """解析并批量应用 patches（保持原语义：解析阶段出现错误则不应用）"""
+def apply_patches(
+    patch_text: str,
+    *,
+    project_root: Path | None = None,
+    dry_run: bool = False,
+) -> BatchApplyResult:
+    """解析并批量应用 patches（解析阶段出现错误则不应用）。"""
     parse_result = parse_patches(patch_text, project_root=project_root)
 
     if parse_result.errors:
@@ -759,7 +835,7 @@ def apply_patches(patch_text: str, *, project_root: Path | None = None) -> Batch
             ]
         )
 
-    results = [apply_patch(p) for p in parse_result.patches]
+    results = [apply_patch(p, dry_run=dry_run) for p in parse_result.patches]
     return BatchApplyResult(results=results)
 
 
@@ -794,6 +870,8 @@ new content
 - `L10-L25` — lines 10 to 25
 - `L10-` — line 10 to end of file
 - `-L25` — start of file to line 25
+
+If the exact line range is uncertain, it SHOULD NOT be provided to avoid potential mismatches within a narrow scope.
 
 Examples:
 
@@ -837,7 +915,7 @@ The three markers must each appear alone on their own line, with no extra charac
 - Target files must already exist
 - Relative paths must stay within the project root / cwd
 - Absolute paths are allowed; those outside the workspace require confirmation or `--unsafe`
-- SEARCH content must not be empty
+- SEARCH content may be empty only when the target file is empty
 
 ## CLI Quick Reference
 
@@ -893,7 +971,7 @@ def register_command(group):
     @click.option(
         '--dry-run',
         is_flag=True,
-        help='Preview patches without applying changes',
+        help='Simulate patch application without modifying files',
     )
     @click.option(
         '--unsafe',
@@ -1057,19 +1135,21 @@ def register_command(group):
 
         if dry_run:
             console.print('[yellow]Dry-run mode:[/yellow] no changes will be applied')
-            return
-
-        if not yes:
+        elif not yes:
             if not click.confirm('Apply these patches?', default=False):
                 console.print('[yellow]Aborted.[/yellow]')
                 raise click.Abort()
 
         # Apply patches
-        console.print('[cyan]Applying patches...[/cyan]')
-        results = [apply_patch(p) for p in parse_result.patches]
+        console.print(
+            '[cyan]Applying patches...[/cyan]'
+            if not dry_run
+            else '[cyan]Simulating patches...[/cyan]'
+        )
+        results = [apply_patch(p, dry_run=dry_run) for p in parse_result.patches]
 
         # Display results
-        _display_results(console, results)
+        _display_results(console, results, dry_run=dry_run)
 
         # Save failed patches
         failed_results = [r for r in results if not r.success]
@@ -1091,7 +1171,12 @@ def register_command(group):
             raise click.exceptions.Exit(code=1)
 
 
-def _display_results(console: Console, results: list[PatchApplyResult]) -> None:
+def _display_results(
+    console: Console,
+    results: list[PatchApplyResult],
+    *,
+    dry_run: bool = False,
+) -> None:
     """Display patch application results in a table."""
     from rich.table import Table
 
@@ -1125,7 +1210,7 @@ def _display_results(console: Console, results: list[PatchApplyResult]) -> None:
                 match = f'{match} @L{result.match_line}'
 
             status_label = '[green][OK][/green]'
-            note = 'Applied'
+            note = 'Would apply' if dry_run and result.status == 'applied' else 'Applied'
             if result.status == 'already_applied':
                 already_applied += 1
                 status_label = '[cyan][=][/cyan]'
@@ -1160,15 +1245,16 @@ def _display_results(console: Console, results: list[PatchApplyResult]) -> None:
     console.print()
 
     # Summary
+    action_label = 'Would apply' if dry_run else 'Applied'
     if failed == 0:
         console.print(
             '[green]Summary:[/green] '
-            f'Applied: {applied} | Already applied: {already_applied} | No change: {no_change}'
+            f'{action_label}: {applied} | Already applied: {already_applied} | No change: {no_change}'
         )
     else:
         console.print(
             '[yellow]Summary:[/yellow] '
-            f'Applied: {applied} | Already applied: {already_applied} | '
+            f'{action_label}: {applied} | Already applied: {already_applied} | '
             f'No change: {no_change} | Failed: {failed}'
         )
 

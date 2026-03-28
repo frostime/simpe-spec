@@ -106,6 +106,10 @@ mdtoc.register_command(tool)
 - Absolute target paths outside the current workspace require explicit confirmation, or `--unsafe` to bypass in automation
 - Supports canonical and open-ended line ranges such as `L10-L25`, `L10-`, and `-L25`
 - Repeated apply attempts can report `already_applied` instead of a generic `SEARCH` failure
+- Patch headers are recognized only when followed by a SEARCH marker (after optional blank lines), reducing false positives in markdown/prose bundles
+- Empty SEARCH is allowed only when the target file is empty; this supports initializing existing empty files without creating ambiguous matches
+- Non-empty input with zero valid patch blocks is treated as a parse error instead of a no-op
+- `--dry-run` performs full match simulation and reports apply/already-applied/failure outcomes without writing files
 - `--dry-run` still surfaces outside-workspace absolute path warnings even though no write occurs
 - Rich preview before apply
 - Failed patches are bundled into one markdown file; inside `.sspec/tmp/failed-patches/` for sspec projects or system temp otherwise

@@ -25,6 +25,7 @@ from sspec.services.change_service import (
     find_change_matches,
     list_changes,
     parse_change,
+    scaffold_change_file,
     summarize_change,
     validate_change,
 )
@@ -147,12 +148,32 @@ def _resolve_from_request(sspec_root: Path, from_value: str) -> Path:
     return selected
 
 
+def _parse_scaffold_option(value: tuple[str, ...]) -> list[str]:
+    """Parse --scaffold values: supports comma-separated and repeated flags."""
+    result: list[str] = []
+    for v in value:
+        result.extend(part.strip() for part in v.split(',') if part.strip())
+    return result
+
+
 @change.command()
 @click.argument('name', required=False)
 @click.option('--from', 'from_request', help='Link to existing request (name or path)')
 @click.option('--root', is_flag=True, default=False, help='Create root change for multi-change')
-def new(name: str | None = None, from_request: str | None = None, root: bool = False) -> None:
-    """Create a new change proposal (spec, tasks, handover).
+@click.option(
+    '--scaffold',
+    multiple=True,
+    help='Additional files to scaffold (tasks, design). Comma-separated or repeated.',
+)
+def new(
+    name: str | None = None,
+    from_request: str | None = None,
+    root: bool = False,
+    scaffold: tuple[str, ...] = (),
+) -> None:
+    """Create a new change proposal.
+
+    Creates spec.md + handover.md by default. Use --scaffold to add more files.
 
     NAME is optional when --from is provided; the change name will be
     derived from the request name.
@@ -184,8 +205,10 @@ def new(name: str | None = None, from_request: str | None = None, root: bool = F
 
     assert name is not None  # guaranteed by the check above
 
+    scaffold_list = _parse_scaffold_option(scaffold)
+
     try:
-        change_path = create_change(sspec_root, name, is_root=root)
+        change_path = create_change(sspec_root, name, is_root=root, scaffold=scaffold_list)
     except (InvalidChangeNameError, ChangeExistsError) as e:
         raise click.ClickException(str(e)) from e
 
@@ -211,18 +234,73 @@ def new(name: str | None = None, from_request: str | None = None, root: bool = F
     branch_prefix, last_prefix = _change_tree_prefixes()
     console.print('[cyan]Files:[/cyan]')
     console.print(f'  {rel_path}/')
-    console.print(f'  {branch_prefix} spec.md      # Proposal and context')
-    console.print(f'  {branch_prefix} tasks.md     # Executable tasks and progress')
-    console.print(f'  {branch_prefix} handover.md  # Session continuity (update every session!)')
+    console.print(f'  {branch_prefix} spec.md      # Change definition')
+    console.print(f'  {branch_prefix} handover.md  # Session continuity')
+    # Show scaffolded files
+    extra_files = []
+    for s in scaffold_list:
+        if s == 'tasks':
+            extra_files.append('tasks.md     # Execution plan')
+        elif s == 'design':
+            extra_files.append('design.md    # Technical design')
+        elif s == 'revision':
+            extra_files.append('revisions/   # Design amendments')
+    for _i, ef in enumerate(extra_files):
+        console.print(f'  {branch_prefix} {ef}')
     console.print(
-        f'  {last_prefix} reference/   # Use if need to keep auxiliary design/research files'
+        f'  {last_prefix} reference/   # Auxiliary files'
     )
     console.print()
     console.print('[yellow]Next:[/yellow]')
-    console.print('  0. Read sspec-design skill for standards and best practices')
-    console.print('  1. Read spec.md / tasks.md, follow templates format and @RULE Hints')
-    console.print('  2. Fill spec.md/tasks.md, then align with the user before implementation')
-    console.print('  3. Update handover.md at end of each session (Consult sspec-handover skill)')
+    console.print('  1. Read sspec-design skill')
+    console.print('  2. Fill spec.md, then @align with the user before implementation')
+    console.print('  3. Use `sspec change scaffold` to add tasks/design/revision when needed')
+
+
+# ============================================================================
+# Subcommand: scaffold
+# ============================================================================
+
+
+@change.command()
+@click.argument('file_type', type=click.Choice(['spec', 'tasks', 'design', 'revision']))
+@click.argument('name')
+@click.option('--title', help='Title for revision file (required for revision type)')
+def scaffold(file_type: str, name: str, title: str | None = None) -> None:
+    """Scaffold a file into an existing change.
+
+    FILE_TYPE: spec | tasks | design | revision
+    NAME: change name (fuzzy matched)
+    """
+    try:
+        sspec_root = get_sspec_root()
+    except SspecNotFoundError:
+        raise click.ClickException("Not a sspec project.") from None
+
+    changes_dir = sspec_root / 'changes'
+    matches = find_change_matches(changes_dir, name)
+
+    if not matches:
+        raise click.ClickException(f"Change '{name}' not found")
+
+    if len(matches) > 1:
+        change_path = _interactive_select_change(matches, name)
+    else:
+        change_path = matches[0]
+
+    if file_type == 'revision' and not title:
+        title = click.prompt('Revision title')
+
+    try:
+        created = scaffold_change_file(
+            sspec_root, change_path, file_type, title=title
+        )
+        rel = created.relative_to(sspec_root.parent)
+        console.print(f'[green][OK][/green] Scaffolded: {rel}')
+    except ChangeExistsError as e:
+        raise click.ClickException(str(e)) from e
+    except InvalidChangeNameError as e:
+        raise click.ClickException(str(e)) from e
 
 
 # ============================================================================

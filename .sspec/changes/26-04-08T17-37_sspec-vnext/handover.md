@@ -1,6 +1,6 @@
 # Handover: sspec-vnext
 
-**Updated**: 2026-04-08T19:02
+**Updated**: 2026-04-08T20:47
 
 ---
 
@@ -26,7 +26,8 @@ sspec vNext 重构：重新设计 change 文件结构（revision 机制、design
 | Phase | Sub-Change | Status | Notes |
 |-------|------------|--------|-------|
 | Phase 1: Template & Change Structure | `26-04-08T17-47_template-change-structure` | DONE | 6 个模板文件已完成 |
-| Phase 2: SKILL Slim-down | `26-04-08T18-15_skill-slimdown` | DONE | 7 SKILL + 2 HOWTO 已实施 |
+| Phase 2: SKILL Slim-down | `26-04-08T18-15_skill-slimdown` | DONE | 7 SKILL + 2 HOWTO |
+| Phase 3: AGENTS.md Rewrite | `26-04-08T19-53_agents-rewrite` | DONE | 5.3K, Constitution→Core Principle |
 | Phase 3: AGENTS.md Rewrite | (not created) | ⏳ | 依赖 Phase 1 + 2 |
 | Phase 4: CLI Adaptation | (not created) | ⏳ | 依赖 Phase 1 |
 | Phase 5: Integration & Self-host | (not created) | ⏳ | 依赖全部 |
@@ -35,7 +36,8 @@ sspec vNext 重构：重新设计 change 文件结构（revision 机制、design
 
 ### Key Sub-Changes
 - `changes/26-04-08T17-47_template-change-structure/` — Phase 1 DONE: 模板文件重构
-- `changes/26-04-08T18-15_skill-slimdown/` — Phase 2 REVIEW: SKILL 瘦身
+- `changes/26-04-08T18-15_skill-slimdown/` — Phase 2 DONE: SKILL 瘦身
+- `changes/26-04-08T19-53_agents-rewrite/` — Phase 3 DONE: AGENTS.md 重写
 
 ### Key Files
 - `src/sspec/templates/change/` — single-change 模板目录，Phase 1 主要修改区
@@ -61,7 +63,28 @@ sspec vNext 重构：重新设计 change 文件结构（revision 机制、design
 - [2026-04-08T19:02] [CoordinationDecision] Examples 文件更新延后到 Phase 5 或 follow-up，不在 Phase 2 处理
 - [2026-04-08T19:02] [CrossChangeFinding] SKILL 修改后模板注释中引用的 SKILL 内容已变更，Phase 3 AGENTS.md 重写时需确保一致
 
+- [2026-04-08T20:47] [Alignment] AGENTS.md Constitution 只保留 Core Principle（可预测性+对齐），Immutable baseline 下沉到 Design phase note，Change evolution 下沉到 Review 出口分支
+- [2026-04-08T20:47] [CrossChangeFinding] Phase 4 CLI 需解决盲点：最小创建后 Agent 如何获取 tasks.md/design.md/revision.md 的模板结构
+
 ## Session Log (Append-Only)
+
+### 2026-04-08T20:47 [coordination] Phase 3 complete
+
+**Accomplished**
+- Phase 2 confirmed DONE
+- Created Phase 3 sub-change `agents-rewrite`
+- AGENTS.md 三轮迭代：10.6K → 6.1K → 5.3K
+  - 第一轮: 加入 Constitution 4 条 + 结构化 lifecycle
+  - 用户反馈: Presentation Rules 属于 Design 阶段不是全局 constitution
+  - 第二轮: 删除 Presentation Rules，压缩到 6.1K
+  - 用户反馈: Immutable baseline 和 Change evolution 也是 change-specific，不是 constitution
+  - 第三轮: Constitution→Core Principle（一句话），baseline 移到 Design note，evolution 移到 Review 出口
+- 最终结构: §0 Overview → §1 Core Principle → §2 Agent Procedure → §3 Change Workflow → §4 Alignment → §5 Reference
+
+**Next**
+- Phase 4: CLI Adaptation — 需深入分析最小创建盲点
+- 用户已指出：模板最小创建后 Agent 怎么知道其他文件的格式？
+- 不排除大幅调整 CLI 命令结构
 
 ### 2026-04-08T19:02 [coordination] Phase 1 DONE + Phase 2 complete, pending review
 

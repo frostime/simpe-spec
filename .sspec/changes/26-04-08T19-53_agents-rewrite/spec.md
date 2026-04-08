@@ -1,6 +1,6 @@
 ---
 name: agents-rewrite
-status: DOING
+status: DONE
 change-type: sub
 created: 2026-04-08T19:53:24
 reference:

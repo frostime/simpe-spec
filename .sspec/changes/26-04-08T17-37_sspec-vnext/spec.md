@@ -14,6 +14,9 @@ reference:
   - source: ".sspec/changes/26-04-08T19-53_agents-rewrite"
     type: "sub-change"
     note: "Phase 3: AGENTS.md Rewrite"
+  - source: ".sspec/changes/26-04-08T21-03_cli-adaptation"
+    type: "sub-change"
+    note: "Phase 4: CLI Adaptation"
 ---
 
 # sspec-vnext

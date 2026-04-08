@@ -70,6 +70,7 @@ sspec change scaffold design <change>  # create design.md from template
 The design.md template contains the Quality Bar and reference organization patterns. Key principle: **use semi-structured, formal expression over flat prose — increase information density, reduce ambiguity, improve comprehension efficiency.**
 
 For writing guidance on specific design aspects: `sspec howto list --type design-dimension`
+(These HOWTOs show concrete writing patterns for specific artifact types — use them as references, not mandatory steps.)
 
 **Minimum quality bar**: When design.md exists, it MUST contain at least one structured artifact (code block, diagram, table, or labeled items). Pure prose design is not acceptable.
 

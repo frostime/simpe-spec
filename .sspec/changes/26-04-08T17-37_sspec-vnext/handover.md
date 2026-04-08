@@ -1,6 +1,6 @@
 # Handover: sspec-vnext
 
-**Updated**: 2026-04-08T21:15
+**Updated**: 2026-04-08T22:24
 
 ---
 
@@ -28,7 +28,7 @@ sspec vNext 重构：重新设计 change 文件结构（revision 机制、design
 | Phase 1: Template & Change Structure | `26-04-08T17-47_template-change-structure` | DONE | 6 个模板文件已完成 |
 | Phase 2: SKILL Slim-down | `26-04-08T18-15_skill-slimdown` | DONE | 7 SKILL + 2 HOWTO |
 | Phase 3: AGENTS.md Rewrite | `26-04-08T19-53_agents-rewrite` | DONE | 5.3K, Constitution→Core Principle |
-| Phase 4: CLI Adaptation | `26-04-08T21-03_cli-adaptation` | REVIEW | scaffold 命令 + 最小创建 |
+| Phase 4: CLI Adaptation | `26-04-08T21-03_cli-adaptation` | DONE | scaffold 命令 + 最小创建 |
 | Phase 3: AGENTS.md Rewrite | (not created) | ⏳ | 依赖 Phase 1 + 2 |
 | Phase 4: CLI Adaptation | (not created) | ⏳ | 依赖 Phase 1 |
 | Phase 5: Integration & Self-host | (not created) | ⏳ | 依赖全部 |
@@ -72,6 +72,36 @@ sspec vNext 重构：重新设计 change 文件结构（revision 机制、design
 
 - [2026-04-08T21:15] [Decision] `change new` 最小创建 = spec.md + handover.md，其他文件通过 `--scaffold` 或 `sspec change scaffold` 按需创建
 - [2026-04-08T21:15] [Decision] scaffold 支持 spec/tasks/design/revision 四种类型，root change 不支持 design/revision
+
+- [2026-04-08T22:24] [CoordinationDecision] Subagent 审查结论：当前不是严格帕累托优势，主要问题是 tasks.md 可选语义未传播 + immutable baseline 不一致
+- [2026-04-08T22:24] [Decision] 修复 5 个问题：tasks.md 恢复默认创建、HOWTO 一致性、@sync guard、design.md 质量门槛、Research Outputs
+- [2026-04-08T22:24] [Decision] 全部 5 个 examples 文件更新完毕：旧结构(A/B/C + dimension)→新结构(Problem/Proposed + design.md 分离)
+
+### 2026-04-08T22:24 [coordination] ALL 5 PHASES COMPLETE — pending user review
+
+**Accomplished**
+- Phase 5: `sspec project update` 执行完毕，7 个 SKILL + AGENTS.md 已同步到项目自身
+- Subagent 审查发现的 5 个问题全部修复
+- 5 个 examples 文件更新完毕：旧 A/B/C + dimension → 新 Problem/Proposed + design.md 分离
+- Root change 状态更新为 REVIEW
+
+**Next**
+- 用户 review 整个 sspec-vnext 变更
+- 确认后标记 root change DONE
+- 可选：提交 git commit
+
+### 2026-04-08T22:24 [coordination] Phase 4 DONE + examples 更新完毕
+
+**Accomplished**
+- Subagent 审查发现 5 个问题，全部修复
+- tasks.md 恢复为默认创建
+- 5 个 examples 文件更新：旧 A/B/C + dimension 结构 → 新 Problem/Proposed + design.md 分离展示
+- artifacts vs dimension 术语桥接说明加入 SKILL
+- 最终状态：AGENTS.md 5.5K，全部 SKILL 总计 571 行，全部 examples 更新
+
+**Next**
+- Phase 5: `uv run sspec project update` 同步模板到项目自身
+- 然后标记 root change DONE
 
 ### 2026-04-08T21:15 [coordination] Phase 3 DONE + Phase 4 complete, pending review
 

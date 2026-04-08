@@ -1,6 +1,6 @@
 ---
 name: sspec-vnext
-status: PLANNING
+status: REVIEW
 type: ""
 change-type: root
 created: 2026-04-08 17:37:48

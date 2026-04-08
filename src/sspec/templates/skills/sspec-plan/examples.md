@@ -1,7 +1,7 @@
 # Plan Examples
 
 Concrete examples of tasks.md at different complexity levels.
-Shows how tasks.md references spec.md B without repeating design content.
+Shows how tasks.md references spec.md without repeating design content.
 
 **📚 Standards**: See [SKILL.md](./SKILL.md) for rules and workflow.
 
@@ -9,10 +9,10 @@ Shows how tasks.md references spec.md B without repeating design content.
 
 ## Table of Contents
 
-- [Simple tasks.md](#simple-tasksmd) (L15) — Single phase, ≤5 files
-- [Medium tasks.md](#medium-tasksmd) (L52) — Multi-phase, cross-module
-- [Root tasks.md](#root-tasksmd) (L108) — Milestones, not file-level
-- [Complete Flow: B → tasks.md](#complete-flow-b--tasksmd) (L145) — End-to-end example
+- [Simple tasks.md](#simple-tasksmd) — Single phase, ≤5 files
+- [Medium tasks.md](#medium-tasksmd) — Multi-phase, cross-module
+- [Root tasks.md](#root-tasksmd) — Milestones, not file-level
+- [Complete Flow: spec → tasks.md](#complete-flow-spec--tasksmd) — End-to-end example
 
 ---
 
@@ -34,7 +34,7 @@ updated: ""
 ## Tasks
 
 ### Phase 1: Token Refresh ⏳
-- [ ] Modify `src/auth/jwt.py` — add refresh logic to `validate_token()` per spec.md B
+- [ ] Modify `src/auth/jwt.py` — add refresh logic to `validate_token()` per spec.md
 - [ ] Modify `src/middleware/auth.py` — set `X-Refreshed-Token` header when refresh occurs
 - [ ] Add tests `tests/test_jwt_refresh.py` — cover: valid token, near-expiry refresh, expired token
 **Verification**: `pytest tests/test_jwt_refresh.py` passes; manual test confirms header appears for tokens expiring within 5 min
@@ -57,7 +57,7 @@ updated: ""
 
 ## Medium tasks.md
 
-Multi-phase, references spec.md B's design sections.
+Multi-phase, references spec.md Key Change labels and design.md.
 
 ```markdown
 ---
@@ -73,14 +73,14 @@ updated: ""
 ## Tasks
 
 ### Phase 1: Cache Module ⏳
-- [ ] Create `src/services/cache.py` — implement interface per spec.md B
+- [ ] Create `src/services/cache.py` — implement interface per design.md
 - [ ] Add `REDIS_URL` to `.env.example` and `config.py` (with `localhost:6379` fallback)
-- [ ] Implement stampede prevention: `SET NX` lock per spec.md B Key Logic
+- [ ] Implement stampede prevention: `SET NX` lock per design.md Behavior section
 - [ ] Add TTL jitter (±10%) to `set_cached_user()`
 **Verification**: Unit tests for get/set/invalidate pass; stampede lock verified with concurrent test
 
 ### Phase 2: Auth Integration ⏳
-- [ ] Modify `src/services/auth.py:authenticate()` — add cache lookup following B's data flow
+- [ ] Modify `src/services/auth.py:authenticate()` — add cache lookup per design.md call chain
 - [ ] Modify `src/services/user.py:update_user()` — call `invalidate_user_cache()` after write
 - [ ] Add fallback: if Redis unreachable, skip cache and query DB directly (try-except in cache.py)
 **Verification**: Auth flow works with Redis up/down; user update invalidates cache within 1s
@@ -129,19 +129,19 @@ updated: ""
 
 ### Phase 1: Auth Backend ⏳
 - [ ] Sub-change created and linked
-- [ ] Sub-change completed and archived
+- [ ] Sub-change completed
 **Deliverable**: Auth service layer with JWT + Redis cache, <1s response
 **Sub-change**: (link when created)
 
 ### Phase 2: Token Refresh ⏳
 - [ ] Sub-change created and linked
-- [ ] Sub-change completed and archived
+- [ ] Sub-change completed
 **Deliverable**: Silent token refresh, no client changes required
 **Sub-change**: (link when created)
 
 ### Phase 3: RBAC ⏳
 - [ ] Sub-change created and linked
-- [ ] Sub-change completed and archived
+- [ ] Sub-change completed
 **Deliverable**: Tenant-scoped role-permission matrix
 **Sub-change**: (link when created)
 
@@ -163,69 +163,103 @@ updated: ""
 
 ---
 
-## Complete Flow: B → tasks.md
+## Complete Flow: spec → tasks.md
 
-End-to-end example showing the auth-cache change from design to plan. Demonstrates how tasks.md references B without duplication.
+End-to-end example showing the auth-cache change from design to plan.
 
-### Step 1: spec.md B (Design Phase Output)
+### Step 1: spec.md (Design Phase Output)
 
 ```markdown
-## B. Proposed Solution
+## Problem Statement
+
+DB load is 500 QPS during peak. Auth service queries DB on every request.
+No caching layer exists. Target: reduce DB QPS to <50.
+
+## Proposed Solution
 
 ### Approach
-Redis-based user cache to reduce DB load (500 QPS → <50 QPS).
-Why Redis: multiple app instances share one cache; per-key TTL prevents stale sessions.
 
-### Interface Design
-**New**: `src/services/cache.py`
-- `get_cached_user(user_id: str) -> Optional[User]`
-- `set_cached_user(user: User, ttl: int = 300)`
-- `invalidate_user_cache(user_id: str)`
+Redis-based user cache to reduce DB load. Multiple app instances share one cache;
+per-key TTL prevents stale sessions.
 
-**Modified**: `src/services/auth.py`
-- `authenticate(token: str) -> User` — add cache lookup before DB
+### Key Change
 
-### Data Model
-Cache key: `user:{user_id}` → JSON User. TTL 300s ±10% jitter.
+**Cache A: User cache module** — New `src/services/cache.py` with get/set/invalidate
+interface. TTL 300s ±10% jitter. SET NX lock prevents cache stampede on concurrent misses.
 
-### Key Logic
-cache.get → HIT: return | MISS: db.get → cache.set → return
-On user update → cache.invalidate
-Concurrent misses share one DB query via SET NX lock.
+**Cache B: Auth integration** — `authenticate()` checks cache before DB. `update_user()`
+invalidates cache after write. Redis-down fallback: skip cache, query DB directly.
+
+### Scope Summary
+
+| File | Change |
+|------|--------|
+| `src/services/cache.py` | New — user cache module |
+| `src/services/auth.py` | Add cache lookup in `authenticate()` |
+| `src/services/user.py` | Add cache invalidation in `update_user()` |
+| `tests/test_cache.py` | New — cache unit tests |
+
+### Design Reference
+
+→ 详细技术设计见 [design.md](./design.md)
 ```
 
-### Step 2: tasks.md (Plan Phase Output)
+### Step 2: design.md (Technical Detail)
 
 ```markdown
-## Tasks
+## Interface
 
-### Phase 1: Cache Module ⏳
-- [ ] Create `src/services/cache.py` — implement interface per spec.md B
-- [ ] Add Redis config to `config.py` with fallback
-- [ ] Implement SET NX stampede lock per B's Key Logic
-- [ ] Add TTL jitter to `set_cached_user()`
-**Verification**: `pytest tests/test_cache.py` — get/set/invalidate/stampede
-
-### Phase 2: Auth Integration ⏳
-- [ ] Modify `src/services/auth.py:authenticate()` — cache lookup per B's data flow
-- [ ] Modify `src/services/user.py:update_user()` — add invalidation call
-- [ ] Add Redis-down fallback (try-except, skip cache on ConnectionError)
-**Verification**: Auth works with Redis up and down
-
-### Phase 3: Testing ⏳
-- [ ] Create `tests/test_cache.py` — hit, miss, invalidation, TTL, Redis-down
-- [ ] Add cache paths to `tests/test_auth.py`
-- [ ] Load test: confirm <50 QPS to DB
-**Verification**: All tests pass, load test meets target
+```python
+# src/services/cache.py
+def get_cached_user(user_id: str) -> User | None: ...
+def set_cached_user(user: User, ttl: int = 300) -> None: ...
+def invalidate_user_cache(user_id: str) -> None: ...
 ```
 
-### What Happened
+## Behavior
 
-| In B (design) | In tasks.md (plan) | Relationship |
-|---|---|---|
-| `get_cached_user(user_id: str) -> Optional[User]` | `implement interface per spec.md B` | Reference, not repeat |
-| SET NX lock mechanism explained | `Implement SET NX stampede lock per B's Key Logic` | Reference |
-| TTL 300s ±10% jitter | `Add TTL jitter to set_cached_user()` | Distill to action |
-| Cache miss → DB query → populate | `cache lookup per B's data flow` | Reference |
+```
+authenticate(token)
+  │
+  ├── cache.get(user_id)   → HIT: return User
+  └── MISS:
+        ├── db.get_user(user_id)
+        ├── cache.set(user, ttl=300 ± jitter)
+        └── return User
 
-**Design** stays in B. **Actions** go in tasks.md. tasks.md tells you *what to do*; B tells you *how it should work*.
+update_user(user)
+  ├── db.update(user)
+  └── cache.invalidate(user.id)
+```
+
+Concurrent misses: SET NX lock ensures only one DB query per key.
+Redis-down: ConnectionError caught in cache.py → skip cache, query DB directly.
+```
+
+### Step 3: tasks.md (Plan Phase Output)
+
+```markdown
+### Phase 1: Cache Module ⏳
+- [ ] Create `src/services/cache.py` — implement interface per design.md
+- [ ] Add Redis config to `config.py` with `localhost:6379` fallback
+- [ ] Implement SET NX stampede lock per design.md Behavior
+- [ ] Add TTL jitter (±10%) to `set_cached_user()`
+**Verification**: `pytest tests/test_cache.py` — get/set/invalidate/stampede/Redis-down
+
+### Phase 2: Auth Integration ⏳
+- [ ] Modify `src/services/auth.py:authenticate()` — cache lookup per design.md call chain
+- [ ] Modify `src/services/user.py:update_user()` — add invalidation call (Cache B)
+- [ ] Add Redis-down fallback (try-except ConnectionError)
+**Verification**: Auth works with Redis up and down; update invalidates within 1s
+```
+
+### The boundary in practice
+
+| In spec.md / design.md | In tasks.md | Relationship |
+|------------------------|-------------|--------------|
+| `get_cached_user(user_id: str) -> User \| None` | `implement interface per design.md` | reference, not repeat |
+| SET NX lock mechanism | `Implement SET NX stampede lock per design.md Behavior` | reference |
+| TTL 300s ±10% jitter | `Add TTL jitter (±10%) to set_cached_user()` | distill to action |
+| call chain diagram | `cache lookup per design.md call chain` | reference |
+
+Design stays in spec.md/design.md. Actions go in tasks.md.

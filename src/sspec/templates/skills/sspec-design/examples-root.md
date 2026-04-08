@@ -1,26 +1,22 @@
 # Design Examples — Root Change
 
-Concrete examples of spec.md (A + B) for root changes (multi-phase coordinators).
+Concrete examples of spec.md for root changes (multi-phase coordinators).
 Root spec describes scope and phase decomposition — NOT file-level implementation detail.
-File-level design detail belongs in each sub-change's own spec.md.
+File-level design detail belongs in each sub-change's own spec.md + design.md.
 
 Path note: when a sample includes `reference.source`, it is workspace-relative and normally starts with `.sspec/`.
-
-**📚 Standards**: See [SKILL.md](./SKILL.md) for Section B structure and workflow.
 
 ---
 
 ## Table of Contents
 
-- [Root Example (3-phase, linear)](#root-example-3-phase-linear) (L22)
-- [Root Example (4-phase, branching dependencies)](#root-example-4-phase-branching-dependencies) (L87)
-- [Sub-change Section B Guidance](#sub-change-section-b-guidance) (L163)
+- [Root Example (3-phase, linear)](#root-example-3-phase-linear)
+- [Root Example (4-phase, branching dependencies)](#root-example-4-phase-branching-dependencies)
+- [Sub-change spec.md guidance](#sub-change-specmd-guidance)
 
 ---
 
 ## Root Example (3-phase, linear)
-
-Three phases with clear sequential dependencies. Use dependency-annotated list + ASCII tree.
 
 ```markdown
 ---
@@ -35,16 +31,16 @@ reference:
 
 # auth-overhaul
 
-## A. Problem Statement
+## Problem Statement
 
 Current auth system is a monolithic module (2,400 LOC in `auth.py`) with no caching,
 no token refresh, and hard-coded permissions. Auth latency is 5s on cold start,
 contributing to 12% conversion drop. Needs complete overhaul to support multi-tenancy
 requirement by Q3.
 
-## B. Proposed Solution
+## Proposed Solution
 
-### Overall Approach
+### Approach
 
 Break the auth overhaul into three sequential phases. Each phase delivers independently
 testable value. Phase 1 is foundational — Phases 2 and 3 depend on it and should
@@ -61,22 +57,27 @@ not start until Phase 1 is in REVIEW or DONE.
 - **Phase 3: RBAC** — Role-permission matrix, tenant-scoped. Depends on Phase 1.
   Independent of Phase 2. Scope: `src/models/`, `src/auth/rbac.py`, `src/middleware/rbac.py`.
 
-Dependency tree:
-\`\`\`
+```text
 Phase 1: Auth Backend
-  ├── Phase 2: Token Refresh  (can start once Phase 1 API is stable)
-  └── Phase 3: RBAC           (can start once Phase 1 API is stable)
-\`\`\`
+  ├── Phase 2: Token Refresh  (start once Phase 1 API is stable)
+  └── Phase 3: RBAC           (start once Phase 1 API is stable, parallel with Phase 2)
+```
 
 Coordination note: Phase 1 must expose a stable `AuthService` interface before
 Phases 2 and 3 begin. Phases 2 and 3 can run in parallel after that point.
+
+### Scope Summary
+
+| Phase | Sub-Change | Scope |
+|-------|------------|-------|
+| Phase 1: Auth Backend | `auth-overhaul--phase1` | `src/auth/`, `src/middleware/` |
+| Phase 2: Token Refresh | `auth-overhaul--phase2` | `src/auth/jwt.py`, `src/middleware/auth.py` |
+| Phase 3: RBAC | `auth-overhaul--phase3` | `src/models/`, `src/auth/rbac.py` |
 ```
 
 ---
 
 ## Root Example (4-phase, branching dependencies)
-
-Four or more phases with a branching dependency graph. Use a dependency table.
 
 ```markdown
 ---
@@ -91,21 +92,17 @@ reference:
 
 # platform-perf-overhaul
 
-## A. Problem Statement
-
-### Current Situation
+## Problem Statement
 
 API p95 latency is 4.2s. Page load time is 8.1s on cold cache.
 DB CPU is at 85% during peak. No CDN or asset pipeline.
 
-### User Requirement
-
 Target: p95 API latency <200ms, page load <2s. Deliver in two calendar months
 across the full stack — DB, API, static assets, and infrastructure.
 
-## B. Proposed Solution
+## Proposed Solution
 
-### Overall Approach
+### Approach
 
 Address bottlenecks in priority order: DB first (foundational), then API caching
 (unlocked by DB improvements), then CDN (independent track), then auto-scaling
@@ -116,48 +113,43 @@ Address bottlenecks in priority order: DB first (foundational), then API caching
 | Phase | Goal | Depends On | Scope |
 |-------|------|-----------|-------|
 | **Phase 1: DB Optimization** | Eliminate N+1 queries, add missing indexes. Target: DB CPU <40%. | — | `src/models/`, `migrations/` |
-| **Phase 2: API Response Cache** | Redis-backed cache for read-heavy endpoints. Target: p95 <200ms. | Phase 1 (stable query perf) | `src/api/`, `src/services/cache.py` |
-| **Phase 3: CDN + Asset Pipeline** | Vite build pipeline + CloudFront distribution. Target: page load <2s. | — (independent track) | `frontend/`, `infra/cdn/` |
-| **Phase 4: Auto-scaling** | ECS task auto-scaling + connection pooling. Target: no manual scale events. | Phase 1 + Phase 2 (stable backend) | `infra/ecs/`, `src/db/pool.py` |
+| **Phase 2: API Response Cache** | Redis-backed cache for read-heavy endpoints. Target: p95 <200ms. | Phase 1 | `src/api/`, `src/services/cache.py` |
+| **Phase 3: CDN + Asset Pipeline** | Vite build pipeline + CloudFront distribution. Target: page load <2s. | — (independent) | `frontend/`, `infra/cdn/` |
+| **Phase 4: Auto-scaling** | ECS task auto-scaling + connection pooling. Target: no manual scale events. | Phase 1 + Phase 2 | `infra/ecs/`, `src/db/pool.py` |
 
-Dependency tree:
-\`\`\`
-Phase 1: DB Optimization  ──────────────────────────────────────────┐
-  └── Phase 2: API Response Cache                                   │
-        └── Phase 4: Auto-scaling  ←────────────────────────────────┘
+```text
+Phase 1: DB Optimization ──────────────────────────────────┐
+  └── Phase 2: API Response Cache                          │
+        └── Phase 4: Auto-scaling ←────────────────────────┘
 Phase 3: CDN + Asset Pipeline  (parallel independent track)
-\`\`\`
+```
 
 Coordination notes:
 - Phase 1 and Phase 3 can start immediately in parallel.
 - Phase 2 starts after Phase 1 reaches REVIEW.
-- Phase 4 starts after Phase 2 is DONE (requires stable cache layer).
-- Each phase creates its own sub-change with full design → plan → implement → review.
+- Phase 4 starts after Phase 2 is DONE.
+
+### Scope Summary
+
+| Phase | Sub-Change | Scope |
+|-------|------------|-------|
+| Phase 1 | `perf--db-optimization` | `src/models/`, `migrations/` |
+| Phase 2 | `perf--api-cache` | `src/api/`, `src/services/cache.py` |
+| Phase 3 | `perf--cdn-pipeline` | `frontend/`, `infra/cdn/` |
+| Phase 4 | `perf--auto-scaling` | `infra/ecs/`, `src/db/pool.py` |
 ```
 
 ---
 
-## Sub-change Section B Guidance
+## Sub-change spec.md guidance
 
-Each sub-change gets its own spec.md.
-Root spec describes phases; sub-change specs describe the **implementation design** for each phase.
+Each sub-change gets its own spec.md (and design.md if needed).
+Root spec describes phases; sub-change specs describe the implementation design for each phase.
 
 Sub-change spec.md must:
 - Reference the root change in frontmatter (`type: root-change`)
-- Have a scoped Section A (just this phase's problem, not the full root scope)
-- Have a full Section B with Key Design dimensions, Key Change, and Scope Summary (see SKILL.md Step 3A)
-
-### What the Root spec does NOT include
-
-| Not in root spec | Goes in sub-change spec |
-|--------------------|--------------------------|
-| Function/class signatures per phase | Each sub-change's Key Design dimensions |
-| Data models for each phase | Each sub-change's Key Design dimensions |
-| Per-item decisions and constraints | Each sub-change's Key Change |
-| File-level Scope Summary (per phase) | Each sub-change's Scope Summary |
-| Task lists | Each sub-change's tasks.md |
-
-### Example Sub-change spec.md Reference
+- Have a scoped Problem Statement (just this phase's problem, not the full root scope)
+- Have a full Proposed Solution with Key Change labels and Scope Summary
 
 ```markdown
 ---
@@ -173,43 +165,46 @@ reference:
 
 # auth-overhaul--phase1-auth-backend
 
-## A. Problem Statement
+## Problem Statement
 
 Phase 1 of `auth-overhaul`: extract the monolithic `auth.py` (2,400 LOC) into
 a service layer with Redis caching. Target: auth latency <1s.
 
-## B. Proposed Solution
+## Proposed Solution
 
 ### Approach
-...
 
-### Key Design
-
-#### Interface Contract
-\`\`\`python
-class AuthService:
-    def authenticate(self, token: str) -> User: ...
-    def invalidate(self, user_id: str) -> None: ...
-\`\`\`
-
-#### Behavioral Spec
-\`\`\`
-Request → AuthMiddleware
-  └── AuthService.authenticate(token)
-        ├── cache.get(token_hash)    → HIT: return cached User
-        └── MISS: db.get_user() → cache.set(token_hash, user, ttl=300) → return User
-\`\`\`
-
-Note: cache lookup stays on the hot path, while database work only happens on misses and immediately repopulates the cache for the next request.
+Split monolith into three focused modules behind `AuthService`. Redis caching
+moves from inline calls to a dedicated cache layer. Middleware calls `AuthService`
+only — no direct JWT or cache access.
 
 ### Key Change
 
-**Refactor A: Extract auth service** — Split monolithic `auth.py` into `AuthService` behind a clean interface. Redis caching moves to dedicated cache layer. Middleware calls `AuthService` only — no direct JWT or cache access.
+**Refactor A: Extract auth service** — Split monolithic `auth.py` into `AuthService`
+behind a clean interface. Redis caching moves to dedicated `cache.py`. Middleware
+calls `AuthService` only — no direct JWT or cache access.
 
 ### Scope Summary
+
 | File | Change |
 |------|--------|
-| `src/services/auth.py` | New — `AuthService` class |
+| `src/auth/service.py` | New — `AuthService` class |
+| `src/auth/jwt.py` | New — JWT encode/decode |
+| `src/auth/cache.py` | New — Redis cache layer |
 | `src/middleware/auth.py` | Refactor to call `AuthService` |
-| `src/auth.py` | Remove — logic moved to service |
+| `src/auth.py` | Delete — logic moved to service |
+
+### Design Reference
+
+→ 详细技术设计见 [design.md](./design.md)
 ```
+
+### What root spec does NOT include
+
+| Not in root spec | Goes in sub-change |
+|------------------|--------------------|
+| Function/class signatures | sub-change design.md |
+| Data models per phase | sub-change design.md |
+| Per-item decisions | sub-change Key Change |
+| File-level Scope Summary | sub-change Scope Summary |
+| Task lists | sub-change tasks.md |

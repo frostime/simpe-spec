@@ -128,7 +128,8 @@ Architecture knowledge that outlives a single change. When change is DONE with a
 
 | Command | Use |
 |---------|-----|
-| `sspec change new <name> [--from <REQ>]` | Create change (add `--root` for multi) |
+| `sspec change new <name> [--from <REQ>]` | Create change (add `--root` for multi, `--scaffold tasks,design` for extras) |
+| `sspec change scaffold <type> <change>` | Add file to change: tasks, design, revision |
 | `sspec change find/status <name>` | Inspect change state |
 | `sspec doc new "<name>"` | Create spec-doc |
 | `sspec howto [name...]` | Read HOWTOs (batch supported) |

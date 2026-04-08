@@ -1,6 +1,6 @@
 ---
 name: cli-adaptation
-status: DOING
+status: REVIEW
 change-type: sub
 created: 2026-04-08T21:03
 reference:

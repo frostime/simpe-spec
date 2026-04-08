@@ -40,9 +40,11 @@ This is a lightweight discussion, not a document. The goal is to avoid writing a
 ## Step 3: Create Change
 
 ```bash
-sspec change new <name>            # single/sub change
-sspec change new --from <request>  # create + link request
-sspec change new <name> --root     # root coordinator
+sspec change new <name>                         # minimal: spec.md + handover.md
+sspec change new <name> --scaffold tasks         # also create tasks.md
+sspec change new <name> --scaffold tasks,design  # also create design.md
+sspec change new --from <request>                # create + link request
+sspec change new <name> --root                   # root coordinator
 ```
 
 ## Step 4: Fill spec.md + design.md
@@ -60,6 +62,10 @@ Follow the template `@RULE` blocks. Key sections:
 ### design.md — when to create
 
 Create `design.md` when the change involves new interface definitions, data model changes, or architectural logic changes. Simple bugfixes and text changes don't need it.
+
+```bash
+sspec change scaffold design <change>  # create design.md from template
+```
 
 The design.md template contains the Quality Bar and reference organization patterns. Key principle: **use semi-structured, formal expression over flat prose — increase information density, reduce ambiguity, improve comprehension efficiency.**
 

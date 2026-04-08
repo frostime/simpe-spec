@@ -1,6 +1,6 @@
 # Handover: sspec-vnext
 
-**Updated**: 2026-04-08T20:47
+**Updated**: 2026-04-08T21:15
 
 ---
 
@@ -28,6 +28,7 @@ sspec vNext 重构：重新设计 change 文件结构（revision 机制、design
 | Phase 1: Template & Change Structure | `26-04-08T17-47_template-change-structure` | DONE | 6 个模板文件已完成 |
 | Phase 2: SKILL Slim-down | `26-04-08T18-15_skill-slimdown` | DONE | 7 SKILL + 2 HOWTO |
 | Phase 3: AGENTS.md Rewrite | `26-04-08T19-53_agents-rewrite` | DONE | 5.3K, Constitution→Core Principle |
+| Phase 4: CLI Adaptation | `26-04-08T21-03_cli-adaptation` | REVIEW | scaffold 命令 + 最小创建 |
 | Phase 3: AGENTS.md Rewrite | (not created) | ⏳ | 依赖 Phase 1 + 2 |
 | Phase 4: CLI Adaptation | (not created) | ⏳ | 依赖 Phase 1 |
 | Phase 5: Integration & Self-host | (not created) | ⏳ | 依赖全部 |
@@ -38,6 +39,7 @@ sspec vNext 重构：重新设计 change 文件结构（revision 机制、design
 - `changes/26-04-08T17-47_template-change-structure/` — Phase 1 DONE: 模板文件重构
 - `changes/26-04-08T18-15_skill-slimdown/` — Phase 2 DONE: SKILL 瘦身
 - `changes/26-04-08T19-53_agents-rewrite/` — Phase 3 DONE: AGENTS.md 重写
+- `changes/26-04-08T21-03_cli-adaptation/` — Phase 4 REVIEW: CLI 适配
 
 ### Key Files
 - `src/sspec/templates/change/` — single-change 模板目录，Phase 1 主要修改区
@@ -67,6 +69,28 @@ sspec vNext 重构：重新设计 change 文件结构（revision 机制、design
 - [2026-04-08T20:47] [CrossChangeFinding] Phase 4 CLI 需解决盲点：最小创建后 Agent 如何获取 tasks.md/design.md/revision.md 的模板结构
 
 ## Session Log (Append-Only)
+
+- [2026-04-08T21:15] [Decision] `change new` 最小创建 = spec.md + handover.md，其他文件通过 `--scaffold` 或 `sspec change scaffold` 按需创建
+- [2026-04-08T21:15] [Decision] scaffold 支持 spec/tasks/design/revision 四种类型，root change 不支持 design/revision
+
+### 2026-04-08T21:15 [coordination] Phase 3 DONE + Phase 4 complete, pending review
+
+**Accomplished**
+- Phase 3 DONE: AGENTS.md 10.6K→5.3K
+  - Constitution 精简为 Core Principle（一句话）
+  - Immutable baseline 下沉到 Design phase note
+  - Change evolution 下沉到 Review 出口分支
+- Phase 4 实施完成:
+  - core.py: 新增 CHANGE_BASE_FILES + SCAFFOLD_* 常量
+  - change_service.py: create_change() 支持 scaffold 参数，新增 scaffold_change_file()
+  - commands/change.py: new 命令增加 --scaffold，新增 scaffold 子命令
+  - validate_change() 支持新旧 spec 结构
+  - 3 个 SKILL 更新了 scaffold 命令引用
+  - AGENTS.md CLI 表增加 scaffold 命令
+
+**Next**
+- 用户 review Phase 4 CLI 变更
+- 确认后推进 Phase 5: Integration & Self-host
 
 ### 2026-04-08T20:47 [coordination] Phase 3 complete
 

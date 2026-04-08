@@ -247,9 +247,7 @@ def new(
             extra_files.append('revisions/   # Design amendments')
     for _i, ef in enumerate(extra_files):
         console.print(f'  {branch_prefix} {ef}')
-    console.print(
-        f'  {last_prefix} reference/   # Auxiliary files'
-    )
+    console.print(f'  {last_prefix} reference/   # Auxiliary files')
     console.print()
     console.print('[yellow]Next:[/yellow]')
     console.print('  1. Read sspec-design skill')
@@ -275,7 +273,7 @@ def scaffold(file_type: str, name: str, title: str | None = None) -> None:
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException("Not a sspec project.") from None
+        raise click.ClickException('Not a sspec project.') from None
 
     changes_dir = sspec_root / 'changes'
     matches = find_change_matches(changes_dir, name)
@@ -292,9 +290,7 @@ def scaffold(file_type: str, name: str, title: str | None = None) -> None:
         title = click.prompt('Revision title')
 
     try:
-        created = scaffold_change_file(
-            sspec_root, change_path, file_type, title=title
-        )
+        created = scaffold_change_file(sspec_root, change_path, file_type, title=title)
         rel = created.relative_to(sspec_root.parent)
         console.print(f'[green][OK][/green] Scaffolded: {rel}')
     except ChangeExistsError as e:

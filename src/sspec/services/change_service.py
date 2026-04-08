@@ -11,8 +11,6 @@ from pathlib import Path
 from sspec.core import (
     ARCHIVE_DIR,
     CHANGE_BASE_FILES,
-    CHANGE_ROOT_TEMPLATE_FILES,
-    CHANGE_TEMPLATE_FILES,
     CHANGES_DIR,
     REQUEST_DIR,
     SCAFFOLD_FILE_MAP,
@@ -448,7 +446,7 @@ def create_change(
         if s not in allowed_types:
             raise InvalidChangeNameError(
                 f"Scaffold type '{s}' not valid for {'root' if is_root else 'single'} change. "
-                f"Allowed: {', '.join(sorted(allowed_types))}"
+                f'Allowed: {", ".join(sorted(allowed_types))}'
             )
 
     # Generate timestamped name: <yy-MM-ddTHH-mm>_<name>
@@ -527,7 +525,7 @@ def scaffold_change_file(
     if file_type not in allowed_types:
         raise InvalidChangeNameError(
             f"Scaffold type '{file_type}' not valid for {'root' if is_root else 'single'} change. "
-            f"Allowed: {', '.join(sorted(allowed_types))}"
+            f'Allowed: {", ".join(sorted(allowed_types))}'
         )
 
     project_root = sspec_root.parent
@@ -706,7 +704,9 @@ def validate_change(change_path: Path) -> list[str]:
         has_new = any(s in body for s in new_sections)
         has_legacy = any(s in body for s in legacy_sections)
 
-        check_sections = new_sections if has_new else legacy_sections if has_legacy else new_sections
+        check_sections = (
+            new_sections if has_new else legacy_sections if has_legacy else new_sections
+        )
         for section in check_sections:
             if section in body:
                 idx = body.index(section)

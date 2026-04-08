@@ -237,11 +237,11 @@ def new(
     console.print(f'  {branch_prefix} spec.md      # Change definition')
     console.print(f'  {branch_prefix} tasks.md     # Execution plan')
     console.print(f'  {branch_prefix} handover.md  # Session continuity')
-    # Show scaffolded files
+    # Show scaffolded files (skip base files already shown above)
     extra_files = []
     for s in scaffold_list:
         if s == 'tasks':
-            extra_files.append('tasks.md     # Execution plan')
+            pass  # already shown as base file
         elif s == 'design':
             extra_files.append('design.md    # Technical design')
         elif s == 'revision':

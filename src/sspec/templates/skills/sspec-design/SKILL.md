@@ -67,12 +67,29 @@ Create `design.md` when the change involves new interface definitions, data mode
 sspec change scaffold design <change>  # create design.md from template
 ```
 
-The design.md template contains the Quality Bar and reference organization patterns. Key principle: **use semi-structured, formal expression over flat prose — increase information density, reduce ambiguity, improve comprehension efficiency.**
+### Writing design.md — Prediction Contract
 
-For writing guidance on specific design aspects: `sspec howto list --type design-dimension`
-(These HOWTOs show concrete writing patterns for specific artifact types — use them as references, not mandatory steps.)
+spec + design is a **prediction contract**: the user reads it and predicts what the code will look like. Your job is to think carefully about which dimensions to cover so the user feels in control of this change.
 
-**Minimum quality bar**: When design.md exists, it MUST contain at least one structured artifact (code block, diagram, table, or labeled items). Pure prose design is not acceptable.
+**Guiding question**: What does the user need to predict to feel in control? Answer this for the specific change, then choose dimensions accordingly.
+
+**Common dimensions** (examples, not checklist — pick what serves prediction):
+
+| Dimension | User's question | Useful when | Format constraint |
+|-----------|----------------|-------------|-------------------|
+| Interface Contract | "What are the signatures / APIs?" | New or changed function/class/endpoint | Typed code block (MUST) |
+| Behavioral Spec | "How does it behave at runtime?" | Call chains, state transitions, algorithms | ASCII diagram (MUST) |
+| Structural Blueprint | "How is it organized?" | Module splits, file trees, component hierarchy | ASCII diagram (MUST) |
+| Data Architecture | "What does the data look like?" | Schemas, storage, data pipelines | Typed code block (MUST) |
+| Outcome Preview | "What will I see?" | CLI output, UI, before/after | Example output block |
+| Content Outline | "What's the content structure?" | Documents, templates, specs | Heading tree / outline |
+| Migration Path | "How do we get from here to there?" | Compatibility, rollback, versioning | Step list + constraints |
+
+Custom dimensions are fine — use whatever makes the prediction clearer.
+
+**Minimum quality bar**: design.md MUST contain at least one structured artifact (code block, diagram, table, or labeled items). Pure prose design is not acceptable.
+
+**Key principle**: show, don't describe. `def process(x: Input) -> Output` beats "a function that accepts X and returns Y".
 
 ### spec.md vs design.md boundary
 

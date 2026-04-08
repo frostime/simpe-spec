@@ -4,7 +4,10 @@ status: PLANNING
 type: ""
 change-type: root
 created: 2026-04-08 17:37:48
-reference: null
+reference:
+  - source: ".sspec/changes/26-04-08T17-47_template-change-structure"
+    type: "sub-change"
+    note: "Phase 1: Template & Change Structure"
 ---
 
 # sspec-vnext

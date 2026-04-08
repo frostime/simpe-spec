@@ -49,7 +49,7 @@ updated: "2026-04-08T17:37"
 
 | Phase | Sub-Change | Status | Deliverable |
 |-------|------------|--------|-------------|
-| Phase 1: Template & Change Structure | (pending) | ⏳ | 新 change 模板文件集 + core.py |
+| Phase 1: Template & Change Structure | `26-04-08T17-47_template-change-structure` | 🚧 REVIEW | 新 change 模板文件集 |
 | Phase 2: SKILL Slim-down | (pending) | ⏳ | SKILL 瘦身 |
 | Phase 3: AGENTS.md Rewrite | (pending) | ⏳ | AGENTS.md 模板重写 |
 | Phase 4: CLI Adaptation | (pending) | ⏳ | CLI 最小创建 + revision 命令 |

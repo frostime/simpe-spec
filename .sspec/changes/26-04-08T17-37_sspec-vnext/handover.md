@@ -26,7 +26,7 @@ sspec vNext 重构：重新设计 change 文件结构（revision 机制、design
 | Phase | Sub-Change | Status | Notes |
 |-------|------------|--------|-------|
 | Phase 1: Template & Change Structure | `26-04-08T17-47_template-change-structure` | DONE | 6 个模板文件已完成 |
-| Phase 2: SKILL Slim-down | `26-04-08T18-15_skill-slimdown` | REVIEW | 7 SKILL + 2 HOWTO 已实施 |
+| Phase 2: SKILL Slim-down | `26-04-08T18-15_skill-slimdown` | DONE | 7 SKILL + 2 HOWTO 已实施 |
 | Phase 3: AGENTS.md Rewrite | (not created) | ⏳ | 依赖 Phase 1 + 2 |
 | Phase 4: CLI Adaptation | (not created) | ⏳ | 依赖 Phase 1 |
 | Phase 5: Integration & Self-host | (not created) | ⏳ | 依赖全部 |

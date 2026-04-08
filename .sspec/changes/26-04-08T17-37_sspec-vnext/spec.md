@@ -11,6 +11,9 @@ reference:
   - source: ".sspec/changes/26-04-08T18-15_skill-slimdown"
     type: "sub-change"
     note: "Phase 2: SKILL Slim-down"
+  - source: ".sspec/changes/26-04-08T19-53_agents-rewrite"
+    type: "sub-change"
+    note: "Phase 3: AGENTS.md Rewrite"
 ---
 
 # sspec-vnext

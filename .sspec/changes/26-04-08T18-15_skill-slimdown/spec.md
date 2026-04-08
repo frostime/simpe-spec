@@ -1,6 +1,6 @@
 ---
 name: skill-slimdown
-status: REVIEW
+status: DONE
 change-type: sub
 created: 2026-04-08 18:15:00
 reference:

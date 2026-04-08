@@ -71,6 +71,8 @@ The design.md template contains the Quality Bar and reference organization patte
 
 For writing guidance on specific design aspects: `sspec howto list --type design-dimension`
 
+**Minimum quality bar**: When design.md exists, it MUST contain at least one structured artifact (code block, diagram, table, or labeled items). Pure prose design is not acceptable.
+
 ### spec.md vs design.md boundary
 
 | Content | Where |

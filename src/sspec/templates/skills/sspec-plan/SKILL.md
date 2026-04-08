@@ -14,12 +14,6 @@ Turn the approved design into a concrete, file-level execution plan in tasks.md.
 
 ## Output Contract
 
-If tasks.md does not yet exist, scaffold it first:
-
-```bash
-sspec change scaffold tasks <change>
-```
-
 When this phase ends, tasks.md MUST contain:
 - Phases with file-level tasks (single/sub) OR milestones (root)
 - Verification criteria for each phase

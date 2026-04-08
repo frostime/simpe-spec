@@ -70,6 +70,8 @@ Before leaving Research:
 
 → Then transition to `sspec-design` phase.
 
+**Where artifacts go**: investigation notes → `reference/` or `.sspec/tmp/`; durable findings → `handover.md` Working Memory.
+
 ## Consultation During Research
 
 Research is inherently ambiguous. Don't guess, ask.

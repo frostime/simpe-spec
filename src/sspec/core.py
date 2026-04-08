@@ -19,7 +19,7 @@ SPEC_DOCS_DIR = 'spec-docs'
 ARCHIVE_DIR = 'archive'
 
 # Schema version - increment when template structure changes
-SCHEMA_VERSION = '4.0'
+SCHEMA_VERSION = '5.0'
 
 # Files tracked for updates (relative to .sspec/)
 # NOTE: Empty by design. The .sspec/ directory contains user-managed files that should
@@ -33,7 +33,7 @@ UPDATABLE_FILES: list[str] = []
 USER_FILES = ['project.md', 'spec-docs/README.md']
 
 # Change base files — always created by `change new`
-CHANGE_BASE_FILES = ['spec.md', 'handover.md']
+CHANGE_BASE_FILES = ['spec.md', 'tasks.md', 'handover.md']
 
 # Scaffoldable file types → template filenames
 # 'revision' is handled specially (auto-numbered, goes into revisions/ subdir)

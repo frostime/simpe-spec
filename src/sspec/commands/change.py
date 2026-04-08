@@ -235,6 +235,7 @@ def new(
     console.print('[cyan]Files:[/cyan]')
     console.print(f'  {rel_path}/')
     console.print(f'  {branch_prefix} spec.md      # Change definition')
+    console.print(f'  {branch_prefix} tasks.md     # Execution plan')
     console.print(f'  {branch_prefix} handover.md  # Session continuity')
     # Show scaffolded files
     extra_files = []

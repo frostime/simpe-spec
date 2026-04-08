@@ -10,7 +10,7 @@ When review feedback adds work, do not default to `handover.md` and do not open 
 | If the feedback... | Class | What to do |
 |---|---|---|
 | tweaks implementation details without changing accepted scope | `minor-fix` | keep the current change; fix directly or add `Feedback Tasks` |
-| adds acceptance work that still belongs to the current change | `current-change-amend` | update `spec.md` first, then `tasks.md`, then continue in the same change |
+| adds acceptance work that still belongs to the current change | `current-change-amend` | if post-gate: create `revisions/NNN-*.md` first, then update `tasks.md`; if pre-gate: update `spec.md` directly |
 | asks for an additional next-step after the current change can already stand on its own | `follow-up-change` | `@align` user first; if approved, create a new change with `prev-change` reference |
 | shows the current change is fundamentally wrong and should stop | `supersede-change` | `@align` user first; if approved, mark the current change `BLOCKED` and create a replacement change |
 

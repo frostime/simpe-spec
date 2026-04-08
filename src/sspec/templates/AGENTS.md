@@ -15,7 +15,7 @@ SSPEC is a doc-driven workflow. Planning, tracking, and handover live in `.sspec
 .sspec/
 ├── project.md     # Identity, conventions, notes
 ├── spec-docs/     # Formal specs (architecture, APIs)
-├── changes/<n>/   # spec.md | handover.md [+ design.md | tasks.md | revisions/ | reference/]
+├── changes/<n>/   # spec.md | tasks.md | handover.md [+ design.md | revisions/ | reference/]
 ├── requests/      # User intent records
 └── tmp/           # Informal drafts
 ```
@@ -118,7 +118,7 @@ Decisions go in their natural home: design → `spec.md`, direction changes → 
 
 ### Directives
 
-`@change <n>` load or create | `@resume` active change | `@handover` save state | `@sync` reconcile files | `@argue` stop + reassess scope | `@subagent-audits` independent review
+`@change <n>` load or create | `@resume` active change | `@handover` save state | `@sync` reconcile files (MUST NOT split/replace without @align) | `@argue` stop + reassess scope | `@subagent-audits` independent review
 
 ### Spec-Docs
 

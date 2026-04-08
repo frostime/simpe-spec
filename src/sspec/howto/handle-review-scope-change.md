@@ -17,11 +17,13 @@ When review feedback adds work, do not default to `handover.md` and do not open 
 ## Procedure
 
 1. Decide whether the current change still stands on its own.
-2. If the answer is yes and the feedback is still part of the same acceptance target, update `spec.md` / `tasks.md` inside the current change.
+2. If the answer is yes and the feedback is still part of the same acceptance target:
+   - If `spec.md` / `design.md` have already passed the design gate, create `revisions/NNN-description.md` first to record what changed and why, then update `tasks.md`.
+   - If still in PLANNING, update `spec.md` / `design.md` directly.
 3. If the answer is yes but the feedback is really "what to do next", stop and `@align` before opening a follow-up change.
 4. If the answer is no because the current direction is wrong, stop and `@align` before any `BLOCKED` + replacement-change action.
 5. Record the outcome:
-   - current-change amend -> `spec.md` + `tasks.md` + `handover.md`
+   - current-change amend -> `revisions/NNN-*.md` (if post-gate) + `tasks.md` + `handover.md`
    - follow-up / supersede -> `handover.md` plus the new change's `spec.md` reference chain
 
 ## Hard Rules

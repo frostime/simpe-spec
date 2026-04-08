@@ -1,6 +1,6 @@
 ---
 name: template-change-structure
-status: REVIEW
+status: DONE
 type: ""
 change-type: sub
 created: 2026-04-08 17:47:00

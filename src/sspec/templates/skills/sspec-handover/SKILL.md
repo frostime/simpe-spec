@@ -3,7 +3,7 @@ name: sspec-handover
 description: "Save session state. Update handover.md, project.md, and spec-docs index. REQUIRED at session end, recommended mid-session."
 metadata:
   author: frostime
-  version: 3.3.0
+  version: 4.0.0
 ---
 
 # SSPEC Handover
@@ -28,7 +28,7 @@ Update handover.md when:
 - Key file discovered that future work depends on
 - Design tradeoff resolved after discussion
 - Any user interaction that changes direction (feedback, @align gate, @argue)
-- About to switch between major phases (e.g. design -> plan)
+- About to switch between major phases (e.g. design → plan)
 
 **Rule**: If you'd struggle to reconstruct info after context compression, you MUST write it now.
 
@@ -36,84 +36,56 @@ Update handover.md when:
 
 ### 1. Update handover.md
 
-handover.md is the resume entry point.
+handover.md is the resume entry point. **Preserve causal and temporal relationships** — the reader must understand not just the current state, but how and why we got here.
 
-**Timestamp rule**: Use ISO timestamps with at least minute precision (example: `2026-03-06T20:39`). If current time is uncertain, use `sspec tool now` instead of guessing.
-
-**Updated field**: Set `**Updated**:` to the current timestamp (it SHOULD match your newest Session Log entry).
+**Timestamp rule**: ISO timestamps with minute precision. If uncertain, use `sspec tool now`.
 
 **Session Log (Append-Only)**:
-- Add a new Session Log entry (newest-first)
-- Each entry is an atomic batch (one cohesive work record)
+- Add a new entry (newest-first). Each entry = one atomic work batch.
 - Each entry MUST include both **Accomplished** and **Next**
-- Any user interaction (feedback, @align gate, @argue) MUST start a new log entry with a clear tag (for example: `user-feedback`, `argue`)
-- Need concrete log-writing rules? → `sspec howto write-handover-log`
+- User interactions (feedback, @align, @argue) MUST start a new entry
+- → `sspec howto write-handover-log`
 
 **Working Memory (Stable)**:
-- **Key Files**: List critical file paths with a 1-line why
-- **Durable Memory**: Use typed entries in the form `[YYYY-MM-DDTHH:MM] [Type] <content>`
-- For single/sub changes, prefer: `Alignment`, `Decision`, `VitalFinding`, `Constraint`, `Risk`, `VerificationShortcut`
-- For root changes, prefer: `Alignment`, `CoordinationDecision`, `Dependency`, `CrossChangeFinding`, `Constraint`, `Risk`, `VerificationShortcut`
-- Use a custom type only when none of the canonical types fit; keep custom labels short and rare
-- Promote only facts still useful after the current batch ends; keep batch-local progress, review outcomes, and reminders in `Session Log`
-- If something becomes obsolete, default to marking it obsolete with a timestamp; delete only pure noise or obvious duplicates with no lasting value
-- If handover has a `Git Baseline (Immutable)` section, treat it as **read-only** origin context from change creation; MUST NOT refresh, rewrite, or "fix" it during later handovers
-- Need durable-memory type choice or examples? → `sspec howto write-handover-memory`
-- Need obsolete-memory cleanup rules? → `sspec howto handle-obsolete-memory`
+- **Key Files**: critical file paths with a 1-line why
+- **Durable Memory**: typed, timestamped facts that survive sessions
+- Prefer types: `Alignment`, `Decision`, `VitalFinding`, `Constraint`, `Risk`, `VerificationShortcut` (single/sub) or `CoordinationDecision`, `Dependency`, `CrossChangeFinding` (root)
+- → `sspec howto write-handover-memory`
 
-**Root change only**:
-- Update `Sub-Change Status (Volatile Snapshot)` when coordination state changes
-- Record durable coordination knowledge with root-oriented types such as `CoordinationDecision`, `Dependency`, or `CrossChangeFinding`
-- Quick chooser: `CoordinationDecision` = durable orchestration choice, `Dependency` = ordering/coupling rule, `CrossChangeFinding` = one finding that matters to multiple sub-changes
+**Git Baseline (Immutable)**: MUST NOT be edited during later handovers — read-only origin snapshot.
 
 ### 2. Sync tasks.md
 
-Verify `tasks.md` progress percentage matches reality. All completed tasks MUST be marked `[x]`.
+Verify progress percentage matches reality. All completed tasks MUST be marked `[x]`.
 
 ### 3. Promote to project.md (if applicable)
 
-Two promotion targets:
-
-**Notes section**: If any discovery applies beyond this change → append with date.
-- Format: `- YYYY-MM-DD: <learning>` (project-level notes can stay date-only)
-
-**Spec-Docs Index section**: If spec-docs were created or updated during this session → update the index.
-- Format: `- [name](spec-docs/<file>) — one-line description`
+- **Notes section**: project-wide discovery → append with date
+- **Spec-Docs Index**: if spec-docs were created/updated → update index
 
 ### 4. Suggest spec-doc update (if applicable)
 
-If the change produced architectural knowledge (new interfaces, data models, patterns):
-- `@align` user: "This change produced knowledge about X. Should I create/update a spec-doc?"
-- If yes → use `write-spec-doc` SKILL
+If the change produced architectural knowledge → `@align` user: "Should I create/update a spec-doc?" → `write-spec-doc` SKILL
 
-### 5. Quick Quality Check
+### 5. Quality Check
 
 | Test | Pass? |
 |------|-------|
 | New agent reads only handover.md — can resume in <30s? | |
-| If context compressed right now — could you continue from handover.md alone? | |
-| For each durable cross-session fact — can you find it in typed Durable Memory? | |
-| Newest Session Log entry includes the real Next action (and is a single atomic batch)? | |
-| New Durable Memory entries are typed and timestamped (minute precision)? | |
+| If context compressed now — could you continue from handover.md alone? | |
+| For each durable cross-session fact — is it in Durable Memory? | |
+| Newest Session Log has a concrete **Next** action? | |
+| Durable Memory entries are typed and timestamped? | |
 
 If any test fails → update handover before ending.
 
-## handover.md Quality
-
-**Thin** (simple change, ≤5 files): 3-5 bullet points across Working Memory sections.
-**Rich** (complex change, many decisions): Numbered items with sub-structure, evidence, tradeoff analysis.
-
-Use the template structure. Keep Durable Memory compact and keep Session Log entries short and cohesive.
-
-### Anti-Patterns
+## Anti-Patterns
 
 | Bad | Good |
 |-----|------|
 | Skip handover at session end | Handover MUST happen at session end |
 | Only update at session end | Update Working Memory DURING work |
-| Promote batch-local status into Durable Memory | Keep transient progress, review outcomes, and reminders in Session Log |
+| Promote batch-local status into Durable Memory | Keep transient progress in Session Log |
 | No file paths in Key Files | List files you'd need to re-find after compression |
-| Put architecture docs in project.md | project.md ≤10s scan; use spec-docs for detailed content |
-| Split one durable fact across multiple memory buckets | Use one typed Durable Memory section and choose the clearest type |
-| Mix unrelated work in one Session Log entry | Keep each entry as one cohesive atomic batch |
+| Mix unrelated work in one Session Log entry | One entry = one atomic batch |
 | User feedback not recorded as its own entry | New log entry with `user-feedback` / `argue` tag |

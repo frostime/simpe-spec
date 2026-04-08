@@ -1,6 +1,6 @@
 # Handover: sspec-vnext
 
-**Updated**: 2026-04-08T18:09
+**Updated**: 2026-04-08T19:02
 
 ---
 
@@ -25,8 +25,8 @@ sspec vNext 重构：重新设计 change 文件结构（revision 机制、design
 
 | Phase | Sub-Change | Status | Notes |
 |-------|------------|--------|-------|
-| Phase 1: Template & Change Structure | `26-04-08T17-47_template-change-structure` | REVIEW | 6 个模板文件已实施，等用户确认 |
-| Phase 2: SKILL Slim-down | (not created) | ⏳ | 等 Phase 1 确认后开始 |
+| Phase 1: Template & Change Structure | `26-04-08T17-47_template-change-structure` | DONE | 6 个模板文件已完成 |
+| Phase 2: SKILL Slim-down | `26-04-08T18-15_skill-slimdown` | REVIEW | 7 SKILL + 2 HOWTO 已实施 |
 | Phase 3: AGENTS.md Rewrite | (not created) | ⏳ | 依赖 Phase 1 + 2 |
 | Phase 4: CLI Adaptation | (not created) | ⏳ | 依赖 Phase 1 |
 | Phase 5: Integration & Self-host | (not created) | ⏳ | 依赖全部 |
@@ -34,7 +34,8 @@ sspec vNext 重构：重新设计 change 文件结构（revision 机制、design
 ## Working Memory (Stable)
 
 ### Key Sub-Changes
-- `changes/26-04-08T17-47_template-change-structure/` — Phase 1: 模板文件重构（spec/design/revision/handover）
+- `changes/26-04-08T17-47_template-change-structure/` — Phase 1 DONE: 模板文件重构
+- `changes/26-04-08T18-15_skill-slimdown/` — Phase 2 REVIEW: SKILL 瘦身
 
 ### Key Files
 - `src/sspec/templates/change/` — single-change 模板目录，Phase 1 主要修改区
@@ -57,7 +58,25 @@ sspec vNext 重构：重新设计 change 文件结构（revision 机制、design
 - [2026-04-08T18:09] [CoordinationDecision] design.md Quality Bar 核心原则：「半结构化、形式化表达 over 平铺直叙纯文本」，artifact 类型是手段非穷举（用户修订）
 - [2026-04-08T18:09] [CrossChangeFinding] Phase 1 模板不包含 CLI 行为变更（tasks.md lazy creation），该变更属于 Phase 4
 
+- [2026-04-08T19:02] [CoordinationDecision] Examples 文件更新延后到 Phase 5 或 follow-up，不在 Phase 2 处理
+- [2026-04-08T19:02] [CrossChangeFinding] SKILL 修改后模板注释中引用的 SKILL 内容已变更，Phase 3 AGENTS.md 重写时需确保一致
+
 ## Session Log (Append-Only)
+
+### 2026-04-08T19:02 [coordination] Phase 1 DONE + Phase 2 complete, pending review
+
+**Accomplished**
+- Phase 1 confirmed DONE by user
+- Created Phase 2 sub-change `skill-slimdown`, bidirectional references established
+- First implementation attempt rejected: must analyze each SKILL's strengths before rewriting
+- Completed per-SKILL analysis (shine points / problems / keep-cut-add plan)
+- User provided 3 critical corrections: Research alignment at beginning, Design solution discovery early, Handover preserves causality
+- Implemented all 7 SKILLs + 2 HOWTOs. Total: 819→571 lines (-30%)
+- Reinstall + sandbox verification passed
+
+**Next**
+- User reviews Phase 2 SKILL content
+- After confirmation, create Phase 3 sub-change (AGENTS.md Rewrite)
 
 ### 2026-04-08T18:09 [coordination] Phase 1 implementation complete, pending review
 

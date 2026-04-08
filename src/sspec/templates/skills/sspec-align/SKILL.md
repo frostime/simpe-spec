@@ -3,7 +3,7 @@ name: sspec-align
 description: "Agent-user alignment via persistent Q&A. USE ACTIVELY — guessing wastes more tokens than aligning."
 metadata:
   author: frostime
-  version: 9.2.0
+  version: 10.0.0
 ---
 
 # SSPEC Align
@@ -14,7 +14,20 @@ Before continuing execution, choose whether the current moment only needs a summ
 
 ---
 
-## 1. Levels
+## 1. Requirement Restoration
+
+When user describes **means** rather than **goals**, probe the underlying intent before proceeding.
+
+- Ask: "What's the real problem? What would success look like?"
+- Decompose open-ended requirements into atomic choice/confirmation questions
+- Reduce user response cost — don't ask vague questions, offer structured options
+- Recommand to batch with `question-like` tool (if possible)
+
+**Posture**: Understand the "why" before designing the "how".
+
+---
+
+## 2. Levels
 
 | Level | Agent behavior | Typical situations |
 |---|---|---|
@@ -25,7 +38,7 @@ Before continuing execution, choose whether the current moment only needs a summ
 
 ---
 
-## 2. How To Gate
+## 3. How To Gate
 
 - If a built-in `question`-like tool is available, first present the context in normal output, then use the tool only for the concise question itself.
 - Otherwise, if `sspec tool ask` is available, use it as the fallback ask channel.
@@ -39,22 +52,23 @@ Fallback tool usage reference: `sspec tool ask --prompt`
 
 ---
 
-## 3. After Align — Update Records
+## 4. After Align — Update Records
 
 Alignment without record = information lost on next session.
 
 | What changed | Where to record |
 |---|---|
-| Design confirmed/revised | `spec.md` B |
+| Design confirmed/revised | `spec.md` / `design.md` |
 | Plan confirmed/revised | `tasks.md` |
 | Direction changed, key decision made | `handover.md` Durable Memory |
 | User feedback received | `handover.md` Session Log (new `user-feedback` entry) |
+| Scope/design change after gate | `revisions/NNN-*.md` + `tasks.md` |
 
 **No separate ask record is required.** Put the decision in its natural home.
 
 ---
 
-## 4. Message Shape
+## 5. Message Shape
 
 ### `report`
 
@@ -69,7 +83,6 @@ Make the stop explicit:
 - current state
 - decision / review needed
 - what changes based on the answer
-- link to `spec.md`, `tasks.md`, or `.sspec/tmp/...` if useful
+- link to `spec.md`, `design.md`, `tasks.md`, or `.sspec/tmp/...` if useful
 
 When a `question` tool is available, the normal output carries the context and the tool carries the final short ask.
-

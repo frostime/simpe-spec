@@ -8,6 +8,9 @@ reference:
   - source: ".sspec/changes/26-04-08T17-47_template-change-structure"
     type: "sub-change"
     note: "Phase 1: Template & Change Structure"
+  - source: ".sspec/changes/26-04-08T18-15_skill-slimdown"
+    type: "sub-change"
+    note: "Phase 2: SKILL Slim-down"
 ---
 
 # sspec-vnext

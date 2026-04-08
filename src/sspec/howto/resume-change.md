@@ -9,7 +9,9 @@ Do not guess state from memory. Reconstruct it from the change files.
 
 1. **handover.md** — find newest Session Log entry → read **Next** items; scan Working Memory for key file list and recent decisions
 2. **tasks.md** — locate the first unchecked `[ ]` task; skip completed `[x]` items
-3. **spec.md** — brief context scan of the Problem Statement and Approach if the task scope is unclear
+3. **revisions/** — if the directory exists, scan revision files (newest first) to understand scope/design changes since the original spec
+4. **spec.md** — brief context scan of the Problem Statement and Approach if the task scope is unclear
+5. **design.md** — read if it exists and the current task involves technical design context
 
 Stop reading when you can answer: what was I about to do next?
 

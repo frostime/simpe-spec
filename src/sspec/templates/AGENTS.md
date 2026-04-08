@@ -53,9 +53,10 @@ SSPEC is a doc-driven workflow. Planning, tracking, and handover live in `.sspec
 Each phase has a dedicated SKILL. Read it before starting.
 
 ```
-Research → sspec-research
-  output: aligned understanding, reference/ notes
-  exit: alignment checkpoint
+Clarify → sspec-clarify
+  posture, not phase — reusable when understanding drifts
+  output: Problem Statement + direction sketch, reference/ notes
+  exit: ready to formalize into spec.md
 
 Design → sspec-design
   output: spec.md [+ design.md]
@@ -103,10 +104,14 @@ Handover → sspec-handover
 
 ## 4. Alignment (@align)
 
+Structured, efficient synchronization at decision points. **Formalized exchange, not prose.**
+
 | Level | Agent behavior | When to use |
 |-------|---------------|-------------|
-| `report` | Output summary, **keep going** | Plan done, progress updates |
-| `gate` | Output summary, **stop and wait** | Design done, Implement done, scope changes, blockers, ambiguity |
+| `report` | Structured summary, **keep going** | Plan done, progress updates |
+| `gate` | Structured summary, **stop and wait** | Design done, Implement done, scope changes, blockers, ambiguity |
+
+**Format rule**: @align MUST use structured format (tables, labeled items, code blocks). Prose-style @align is an anti-pattern. 5-second scan, instant decision.
 
 Decisions go in their natural home: design → `spec.md`, direction changes → `handover.md` Durable Memory, user feedback → `handover.md` Session Log.
 

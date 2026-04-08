@@ -26,7 +26,7 @@ User feedback ─→ Assess scope ─→ Act ─→ @align "Fixed. Check again?"
 | Class | Signal | Action |
 |-------|--------|--------|
 | **Minor fix** | "This variable name", "Fix this edge case" | Keep current change; fix directly or add `Feedback Tasks` if non-trivial |
-| **Amend** | "This still needs extra validation" | If spec/design already gated → `sspec change scaffold revision <change> --title "..."` first; update tasks.md; return to DOING |
+| **Amend** | "This still needs extra validation" | Re-enter Clarify posture to understand the gap; if spec/design already gated → `sspec change scaffold revision <change> --title "..."` first; update tasks.md; return to DOING |
 | **Follow-up** | "After this, also add export" | `@align` user before opening a new change with `prev-change` reference |
 | **Supersede** | "This whole approach is wrong" | `@align` user before marking current change `BLOCKED` and opening a replacement |
 

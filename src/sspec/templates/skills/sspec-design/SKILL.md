@@ -27,15 +27,15 @@ Define the problem, design the solution, create the change. **The user MUST conf
 Use `AGENTS.md` Scale Assessment. Fallback: Micro (≤3 files, ≤30min) | Multi (>15 files OR >20 tasks OR >1 week) | else Single.
 Uncertain → default **Single**, `@align` whether to split.
 
-## Step 2: Explore Solutions
+## Step 2: Converge Solution
 
-Before writing formal design, ensure the technical direction is aligned.
+Clarify phase should have produced a Problem Statement + direction sketch.
 
-- If user has already specified a clear approach (in request, conversation, or prior alignment) → adopt it directly, proceed to Step 3.
-- If approach is open → present 1-2 candidate approaches with core tradeoffs. Let user express preference before drafting formal design.
-- If user describes a solution but the underlying goal is unclear → probe the goal first (Research should have caught this, but double-check).
+- If Clarify produced a clear direction → adopt it, proceed to Step 3.
+- If multiple approaches surfaced during Clarify → present final recommendation with tradeoffs for user decision.
+- If entering Design without prior Clarify (e.g. user jumped straight to "build X this way") → briefly verify the direction is sound. If the goal is unclear, step back to Clarify posture.
 
-This is a lightweight discussion, not a document. The goal is to avoid writing a full spec.md only to discover the user wanted a different direction.
+The goal is to converge on a single approach before formalizing into spec.md.
 
 ## Step 3: Create Change
 

@@ -1,58 +1,86 @@
 ---
 name: sspec-align
-description: "Agent-user alignment via persistent Q&A. USE ACTIVELY — guessing wastes more tokens than aligning."
+description: "Structured, efficient agent-user synchronization at decision points. Formalized exchange over prose."
 metadata:
   author: frostime
-  version: 10.0.0
+  version: 12.0.0
 ---
 
 # SSPEC Align
 
-Before continuing execution, choose whether the current moment only needs a summary or truly needs a user decision.
+`@align` is how agents synchronize with users at decision points — **efficiently, structurally, and with minimal friction**. The goal is 5-second scan, instant decision.
 
-**Core principle**: `@align` is not automatically a hard stop. Use a hard stop only when the user MUST decide something before safe progress can continue.
-
----
-
-## 1. Requirement Restoration
-
-When user describes **means** rather than **goals**, probe the underlying intent before proceeding.
-
-- Ask: "What's the real problem? What would success look like?"
-- Decompose open-ended requirements into atomic choice/confirmation questions
-- Reduce user response cost — don't ask vague questions, offer structured options
-- Recommand to batch with `question-like` tool (if possible)
-
-**Posture**: Understand the "why" before designing the "how".
+**Core principle**: Every @align must answer three questions — What happened? What needs deciding? What are the options? — in structured format, not prose.
 
 ---
 
-## 2. Levels
+## 1. Levels (When)
 
 | Level | Agent behavior | Typical situations |
 |---|---|---|
-| `report` | Summarize current state and continue execution | Plan done, progress update, low-risk confirmation, lightweight preference |
-| `gate` | Present the decision or review target, then stop and wait for user response | Design gate, implement complete / review request, blocker, wrong assumption, rejected tool call, scope or direction change, irreversible action, split / replace current change |
+| `report` | Structured summary, **keep going** | Plan done, progress update, low-risk confirmation |
+| `gate` | Structured summary, **stop and wait** | Design done, implement complete, blocker, scope change, irreversible action |
 
 **Rule**: If safe progress depends on a user decision, the agent MUST use `gate`. Otherwise prefer `report`.
 
 ---
 
-## 3. How To Gate
+## 2. Presentation (How)
 
-- If a built-in `question`-like tool is available, first present the context in normal output, then use the tool only for the concise question itself.
-- Otherwise, if `sspec tool ask` is available, use it as the fallback ask channel.
-- Otherwise, state the question clearly in normal output and end the turn.
+@align information MUST use structured format. Prose-style @align is an anti-pattern.
 
-For large context, write analysis to `.sspec/tmp/` and link it instead of pasting everything inline.
+### Required format elements
 
-**Question-tool rule**: the agent MUST NOT stuff long context, tradeoff tables, or multi-paragraph analysis into the `question` tool payload. Show the summary first; let the tool carry only the decision prompt.
+- **Tables** for comparisons, options, scope summaries
+- **Labeled items** for decisions, risks, constraints
+- **Code blocks** for interfaces, commands, config
+- **Explicit decision point** — atomic, confirmable question at the end
+
+### Anti-patterns
+
+```
+❌ Prose @align:
+"I've been thinking about the design and I believe we should
+split the service into three parts. The first handles auth,
+the second manages sessions, and the third provides the API.
+What do you think?"
+
+✅ Structured @align:
+## Design Gate
+
+| Component | Source → Target | Responsibility |
+|-----------|----------------|----------------|
+| Auth      | `handlers/monolith.py` → `services/auth.py` | Authentication |
+| Session   | `middleware/chain.py` → `services/session.py` | State mgmt |
+| API       | (new) `api/surface.py` | Thin wrapper |
+
+**Rationale**: Testability + independent deployment
+**Risk**: Migration complexity (feature flag mitigates)
+
+→ Proceed with this split?
+```
+
+### Context and decision separation
+
+1. Present structured context in normal output (tables, diagrams, labeled items)
+2. Use `question-like` tool ONLY for the final concise ask
+3. MUST NOT stuff analysis, tradeoff tables, or multi-paragraph context into the question tool payload
+
+---
+
+## 3. Tools (What)
+
+- If a built-in `question`-like tool is available → use it for the final ask
+- Otherwise, if `sspec tool ask` is available → use it as fallback
+- Otherwise → state the question clearly in output, end turn
+
+For large context, write analysis to `.sspec/tmp/` and link it instead of pasting inline.
 
 Fallback tool usage reference: `sspec tool ask --prompt`
 
 ---
 
-## 4. After Align — Update Records
+## 4. After Align — Records
 
 Alignment without record = information lost on next session.
 
@@ -65,24 +93,3 @@ Alignment without record = information lost on next session.
 | Scope/design change after gate | `revisions/NNN-*.md` + `tasks.md` |
 
 **No separate ask record is required.** Put the decision in its natural home.
-
----
-
-## 5. Message Shape
-
-### `report`
-
-Keep it short:
-- what just completed
-- what happens next
-- any risk or assumption worth surfacing
-
-### `gate`
-
-Make the stop explicit:
-- current state
-- decision / review needed
-- what changes based on the answer
-- link to `spec.md`, `design.md`, `tasks.md`, or `.sspec/tmp/...` if useful
-
-When a `question` tool is available, the normal output carries the context and the tool carries the final short ask.

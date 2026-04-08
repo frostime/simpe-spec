@@ -25,10 +25,10 @@ Execute the approved plan. Work through tasks.md systematically.
 | Situation | Action |
 |-----------|--------|
 | Task is ambiguous | `@align` for clarification |
-| Implementation reveals design issue | Create `revisions/NNN-*.md` if spec/design already gated, then update tasks.md; `@align` if scope changes |
+| Implementation reveals design issue | Re-enter Clarify posture to understand the gap; create `revisions/NNN-*.md` if spec/design already gated, then update tasks.md; `@align` if scope changes |
 | Blocker encountered | Record in `handover.md`, `@align` user |
 | Multiple valid approaches | Pick the simpler one, note in handover |
-| Design assumption was wrong | `@align` user: "Design says X but I found Y. Revise?" |
+| Design assumption was wrong | Re-enter Clarify posture: "Design says X but I found Y" → re-sync with user before revising |
 
 **Do not guess on blockers.** One `@align` < one rework cycle.
 

@@ -1,6 +1,6 @@
 # Memory: pareto-cleanup
 
-**Updated**: 2026-04-09T20:06
+**Updated**: 2026-04-09T21:19
 
 ## Git Baseline (Immutable)
 <!-- Captured during `sspec change new` before any change files are written.
@@ -18,8 +18,8 @@ This section records the change starting point in git and MUST NOT be edited or 
 ```
 
 ## State
-Implementation is partially complete: memory-only summary parsing, status rendering, and surgical doc/template wording fixes are done.
-Next: run self-host sync (`uv pip install -e .`, `uv run sspec project update`) and finish the final verification pass.
+Implementation and self-host verification are complete.
+Next: user review the cutover behavior; if accepted, this change can move to DONE.
 
 ## Key Files
 - `.sspec/changes/26-04-09T19-28_pareto-cleanup/spec.md` — updated scope and no-compatibility boundary
@@ -38,3 +38,4 @@ Next: run self-host sync (`uv pip install -e .`, `uv run sspec project update`) 
 - [2026-04-09T19:29] Created `pareto-cleanup` and drafted the initial compatibility-preserving repair plan.
 - [2026-04-09T19:48] User chose a full cutover: revised spec/design/tasks to remove backward compatibility and standardize on `memory.md` only.
 - [2026-04-09T20:06] Implemented memory-only parser/status/doc changes and verified focused tests pass (46 passed).
+- [2026-04-09T21:19] Reinstalled package, ran `sspec project update`, and sandbox-verified new single/root status plus legacy unsupported output.

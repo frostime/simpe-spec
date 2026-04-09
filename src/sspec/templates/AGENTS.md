@@ -40,8 +40,9 @@ SSPEC is a doc-driven workflow. Planning, tracking, and memory live in `.sspec/`
 | Micro task (≤3 files, ≤30min, obvious) | Do directly — no change, no @align gates |
 
 **Background rules**:
-- Important discovery → write to `memory.md` immediately
-- Long session (>30 exchanges) → checkpoint `memory.md`
+- Important discovery → write to `memory.md` Knowledge immediately
+- Session ending → MUST update memory.md (State + Milestones) → `sspec howto write-memory`
+- @align gate with new decisions → SHOULD update memory.md Knowledge
 - Current date/time uncertain → `sspec tool now`
 
 ---
@@ -73,16 +74,15 @@ Implement → sspec-implement
   exit: @align gate (MUST wait)
 
 Review → sspec-review
-  satisfied    → Memory update (DONE)
+  satisfied    → DONE (update memory.md State + Milestones)
   minor-fix    → Implement → Review
   amend        → revisions/NNN-*.md + tasks.md update → Implement
   follow-up    → @align user → current DONE → new change (prev-change ref)
   supersede    → @align user → current BLOCKED → new change
-
-Memory → sspec-memory
-  output: memory.md, project.md
-  trigger: MUST at session end; SHOULD at @align gates
 ```
+
+memory.md is a change-scoped memory store, maintained throughout the lifecycle (not a phase).
+Triggers and format: `sspec howto write-memory`
 
 **Flow rules**: Follow phase order. `gate` = hard stop, MUST pass. `report` = output summary, keep going. Failed gate → return to phase, update, realign.
 

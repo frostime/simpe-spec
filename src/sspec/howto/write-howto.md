@@ -9,7 +9,7 @@ A HOWTO must be concrete, focused, directive, and actionable without human inter
 
 **Do this**
 - Solve one job only. If the draft answers multiple questions, split it.
-- Good targets: one document-writing rule, one reading procedure, one alignment pattern, one review / handover action.
+- Good targets: one document-writing rule, one reading procedure, one alignment pattern, one review / memory action.
 - Bad targets: a whole lifecycle, a broad role description, or a mixed style guide.
 - Use a verb-led `name`; keep `desc` short.
 - Hard limit: about 2K words and 60 lines. Recommended: within 1.5K words and 50 lines.

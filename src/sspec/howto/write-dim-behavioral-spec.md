@@ -28,7 +28,7 @@ sspec change new <name> --from <request>
   │
   ├── parse_request(req_path)       → read frontmatter, extract name
   ├── create_change_dir(name)       → mkdir .sspec/changes/<ts>_<name>/
-  ├── copy_templates()              → spec.md, tasks.md, handover.md
+  ├── copy_templates()              → spec.md, tasks.md, memory.md
   └── link_request(req, change)     → bidirectional reference update
 
 The link_request step writes to both files: request gets `attach-change`,

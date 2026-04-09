@@ -17,6 +17,7 @@ from sspec.services.change_service import (
     find_change_matches,
     list_changes,
     parse_change,
+    summarize_change,
     validate_change,
 )
 
@@ -108,7 +109,7 @@ class TestCreateChange:
         assert change_path.is_dir()
         assert (change_path / 'spec.md').exists()
         assert (change_path / 'tasks.md').exists()
-        assert (change_path / 'handover.md').exists()
+        assert (change_path / 'memory.md').exists()
         assert (change_path / 'reference').is_dir()
 
     def test_name_normalization(self, sspec_root: Path):
@@ -138,7 +139,7 @@ class TestCreateChange:
             create_change(sspec_root, 'duplicate')
 
     @pytest.mark.skipif(not GIT_AVAILABLE, reason='git is required for snapshot tests')
-    def test_records_clean_git_baseline_in_handover(self, sspec_root: Path):
+    def test_records_clean_git_baseline_in_memory(self, sspec_root: Path):
         project_root = sspec_root.parent
         _init_git_repo(project_root)
 
@@ -146,13 +147,13 @@ class TestCreateChange:
         head_hash = _git(project_root, 'rev-parse', 'HEAD').stdout.strip()
 
         change_path = create_change(sspec_root, 'git-clean')
-        handover = (change_path / 'handover.md').read_text(encoding='utf-8')
+        memory = (change_path / 'memory.md').read_text(encoding='utf-8')
 
-        assert '## Git Baseline (Immutable)' in handover
-        assert f'- Branch: `{branch}`' in handover
-        assert f'- HEAD: `{head_hash}`' in handover
-        assert '- Worktree: `clean`' in handover
-        assert '```text' in handover
+        assert '## Git Baseline (Immutable)' in memory
+        assert f'- Branch: `{branch}`' in memory
+        assert f'- HEAD: `{head_hash}`' in memory
+        assert '- Worktree: `clean`' in memory
+        assert '```text' in memory
 
     @pytest.mark.skipif(not GIT_AVAILABLE, reason='git is required for snapshot tests')
     def test_records_dirty_git_baseline_before_change_files_exist(self, sspec_root: Path):
@@ -165,32 +166,32 @@ class TestCreateChange:
         _git(project_root, 'add', 'staged.txt')
 
         change_path = create_change(sspec_root, 'git-dirty')
-        handover = (change_path / 'handover.md').read_text(encoding='utf-8')
+        memory = (change_path / 'memory.md').read_text(encoding='utf-8')
 
-        assert '- Worktree: `dirty`' in handover
-        assert 'tracked.txt' in handover
-        assert 'staged.txt' in handover
-        assert 'untracked.txt' in handover
-        assert change_path.name not in handover
+        assert '- Worktree: `dirty`' in memory
+        assert 'tracked.txt' in memory
+        assert 'staged.txt' in memory
+        assert 'untracked.txt' in memory
+        assert change_path.name not in memory
 
     def test_non_repo_gets_fallback_git_baseline(self, sspec_root: Path):
         change_path = create_change(sspec_root, 'git-fallback')
-        handover = (change_path / 'handover.md').read_text(encoding='utf-8')
+        memory = (change_path / 'memory.md').read_text(encoding='utf-8')
 
-        assert '## Git Baseline (Immutable)' in handover
-        assert '- Repository: unavailable' in handover
-        assert 'Not a git repository.' in handover
+        assert '## Git Baseline (Immutable)' in memory
+        assert '- Repository: unavailable' in memory
+        assert 'Not a git repository.' in memory
 
     @pytest.mark.skipif(not GIT_AVAILABLE, reason='git is required for snapshot tests')
-    def test_root_change_handover_also_includes_git_baseline(self, sspec_root: Path):
+    def test_root_change_memory_also_includes_git_baseline(self, sspec_root: Path):
         project_root = sspec_root.parent
         _init_git_repo(project_root)
 
         change_path = create_change(sspec_root, 'git-root', is_root=True)
-        handover = (change_path / 'handover.md').read_text(encoding='utf-8')
+        memory = (change_path / 'memory.md').read_text(encoding='utf-8')
 
-        assert '## Git Baseline (Immutable)' in handover
-        assert '- Branch: `' in handover
+        assert '## Git Baseline (Immutable)' in memory
+        assert '- Branch: `' in memory
 
 
 # ---------------------------------------------------------------------------
@@ -422,45 +423,133 @@ class TestArchiveChange:
 # ---------------------------------------------------------------------------
 
 
+class TestSummarizeChange:
+    def test_new_memory_summary_reads_state_and_latest_milestone(self, sspec_root: Path):
+        change_path = create_change(sspec_root, 'summary-new')
+        (change_path / 'memory.md').write_text(
+            '# Memory: summary-new\n\n'
+            '**Updated**: 2026-04-09T19:00\n\n'
+            '## Git Baseline (Immutable)\n\n'
+            '- Repository: unavailable\n\n'
+            '## State\n'
+            'Implementing phase 1.\n'
+            'Next: update parser.\n\n'
+            '## Milestones\n'
+            '- [2026-04-09T18:00] Created change\n'
+            '- [2026-04-09T19:00] Planning finished\n',
+            encoding='utf-8',
+        )
+
+        summary = summarize_change(change_path)
+        assert summary.memory_exists is True
+        assert summary.state_lines == ['Implementing phase 1.', 'Next: update parser.']
+        assert summary.latest_milestone == '[2026-04-09T19:00] Planning finished'
+        assert summary.coordination_rows is None
+
+    def test_new_root_memory_summary_reads_coordination(self, sspec_root: Path):
+        change_path = create_change(sspec_root, 'summary-root', is_root=True)
+        (change_path / 'memory.md').write_text(
+            '# Memory: summary-root\n\n'
+            '**Updated**: 2026-04-09T19:00\n\n'
+            '## Git Baseline (Immutable)\n\n'
+            '- Repository: unavailable\n\n'
+            '## Coordination\n\n'
+            '| Phase | Sub-Change | Status | Blocker |\n'
+            '|-------|------------|--------|---------|\n'
+            '| Phase 1 | alpha | ✅ | — |\n'
+            '| Phase 2 | beta | ⏳ | waiting |\n\n'
+            '## State\n'
+            'Coordinating phase rollout.\n\n'
+            '## Milestones\n'
+            '- [2026-04-09T19:00] Root planning finished\n',
+            encoding='utf-8',
+        )
+
+        summary = summarize_change(change_path)
+        assert summary.memory_exists is True
+        assert summary.coordination_rows == [
+            {'Phase': 'Phase 1', 'Sub-Change': 'alpha', 'Status': '✅', 'Blocker': '—'},
+            {'Phase': 'Phase 2', 'Sub-Change': 'beta', 'Status': '⏳', 'Blocker': 'waiting'},
+        ]
+
+    def test_legacy_handover_is_unsupported_in_summary(self, sspec_root: Path):
+        change_path = create_change(sspec_root, 'legacy-summary')
+        (change_path / 'memory.md').unlink()
+        (change_path / 'handover.md').write_text(
+            '# Handover: legacy-summary\n\n'
+            '## Session Log\n\n'
+            '### 2026-04-09T19:00 [work-log] Legacy session\n\n'
+            '**Next**\n'
+            '- old next step\n',
+            encoding='utf-8',
+        )
+
+        summary = summarize_change(change_path)
+        assert summary.memory_exists is False
+        assert summary.state_lines == []
+        assert summary.latest_milestone is None
+        assert summary.coordination_rows is None
+
+
 class TestValidateChange:
-    def test_valid_template_has_template_warnings(self, sspec_root: Path):
-        """Freshly created change should have warnings about empty template sections."""
+    def test_fresh_template_passes_validation(self, sspec_root: Path):
+        """Freshly created change should satisfy the current validator semantics."""
         change_path = create_change(sspec_root, 'validate-test')
         issues = validate_change(change_path)
-        # Template has unfilled sections → should produce issues
-        assert len(issues) > 0
+        assert issues == []
 
     def test_missing_files_reported(self, tmp_path: Path):
-        """Missing spec.md/tasks.md/handover.md should be flagged."""
+        """Missing spec.md/tasks.md/memory.md should be flagged."""
         empty_change = tmp_path / 'empty-change'
         empty_change.mkdir()
         issues = validate_change(empty_change)
         assert any('spec.md' in i for i in issues)
         assert any('tasks.md' in i for i in issues)
-        assert any('handover.md' in i for i in issues)
+        assert any('memory.md' in i for i in issues)
 
-    def test_filled_spec_reduces_issues(self, sspec_root: Path):
+    def test_filled_spec_passes_validation(self, sspec_root: Path):
         change_path = create_change(sspec_root, 'filled')
-        # Fill in spec sections
         spec = change_path / 'spec.md'
-        # Ensure sections A, B, C have content
         filled = (
-            '---\nname: filled\nstatus: DOING\n---\n'
-            '## A. Problem\nUsers need auth\n'
-            '## B. Solution\nAdd OAuth\n'
-            '## C. Implementation\nmodify auth.py\n'
+            '---\n'
+            'name: filled\n'
+            'status: DOING\n'
+            'change-type: single\n'
+            'reference: null\n'
+            '---\n\n'
+            '# filled\n\n'
+            '## Problem Statement\n'
+            'Auth failures are causing sign-in drop-off.\n\n'
+            '## Proposed Solution\n\n'
+            '### Approach\n'
+            'Add a deterministic OAuth login flow.\n\n'
+            '### Key Change\n'
+            '**Feat A: OAuth login** — add provider callback handling.\n\n'
+            '### Scope Summary\n'
+            '| File | Change |\n'
+            '|------|--------|\n'
+            '| `src/auth.py` | Add OAuth login flow |\n'
         )
         spec.write_text(filled, encoding='utf-8')
 
-        # Add real tasks
         _write_tasks(change_path, done=1, total=3)
-
-        # Fill handover background
-        handover = change_path / 'handover.md'
-        handover.write_text('## Background\nImplementing auth system\n', encoding='utf-8')
+        (change_path / 'memory.md').write_text(
+            '# Memory: filled\n\n'
+            '**Updated**: 2026-04-09T19:00\n\n'
+            '## Git Baseline (Immutable)\n\n'
+            '- Repository: unavailable\n\n'
+            '## State\n'
+            'Implementing OAuth flow.\n',
+            encoding='utf-8',
+        )
 
         issues = validate_change(change_path)
-        # Should have fewer or no issues about empty sections
-        assert not any('no content' in i.lower() for i in issues)
-        assert not any('No tasks defined' in i for i in issues)
-        assert not any('Background section empty' in i for i in issues)
+        assert issues == []
+
+    def test_legacy_handover_fails_validation_without_memory(self, sspec_root: Path):
+        change_path = create_change(sspec_root, 'legacy-validate')
+        (change_path / 'memory.md').unlink()
+        (change_path / 'handover.md').write_text('## Background\nLegacy note\n', encoding='utf-8')
+
+        issues = validate_change(change_path)
+        assert 'Missing required file: memory.md' in issues

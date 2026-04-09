@@ -1,9 +1,9 @@
 ---
 name: sspec-design
-description: "Assess scale, create change, fill spec.md, align with user. Use after research when ready to define the solution."
+description: "Assess scale, create change, fill spec.md + design.md, align with user. Use after clarify when ready to define the solution."
 metadata:
   author: frostime
-  version: 4.1.0
+  version: 5.0.0
 ---
 
 # SSPEC Design
@@ -16,9 +16,10 @@ Define the problem, design the solution, create the change. **The user MUST conf
 
 ```
 1. Assess scale → micro / single / multi
-2. Create change (CLI)
-3. Fill spec.md → Type A (single/sub) or Type B (root)
-4. @align user (gate)
+2. Explore solutions with user (if approach not predetermined)
+3. Create change (CLI)
+4. Fill spec.md (+ design.md if needed)
+5. @align user (gate)
 ```
 
 ## Step 1: Assess Scale
@@ -26,180 +27,115 @@ Define the problem, design the solution, create the change. **The user MUST conf
 Use `AGENTS.md` Scale Assessment. Fallback: Micro (≤3 files, ≤30min) | Multi (>15 files OR >20 tasks OR >1 week) | else Single.
 Uncertain → default **Single**, `@align` whether to split.
 
-## Step 2: Create Change
+## Step 2: Converge Solution
+
+Clarify phase should have produced a Problem Statement + direction sketch.
+
+- If Clarify produced a clear direction → adopt it, proceed to Step 3.
+- If multiple approaches surfaced during Clarify → present final recommendation with tradeoffs for user decision.
+- If entering Design without prior Clarify (e.g. user jumped straight to "build X this way") → briefly verify the direction is sound. If the goal is unclear, step back to Clarify posture.
+
+The goal is to converge on a single approach before formalizing into spec.md.
+
+## Step 3: Create Change
 
 ```bash
-sspec change new <name>            # single/sub change
-sspec change new --from <request>  # create + link request
-sspec change new <name> --root     # root coordinator
+sspec change new <name>                  # default: spec.md + tasks.md + memory.md
+sspec change new <name> --scaffold design # also create design.md
+sspec change new --from <request>         # create + link request
+sspec change new <name> --root            # root coordinator
 ```
 
-Verify generated `spec.md` frontmatter follows template `@RULE`:
-- `status`: `PLANNING` | `change-type`: `single` | `sub` | `root`
-- `reference` entries: workspace-relative `source` (no leading `./`), valid `type` per template
+## Step 4: Fill spec.md + design.md
 
-## Step 3A: Fill Single/Sub spec.md (Type A)
+### spec.md
 
-Follow guidance below + `@RULE` blocks in the generated template.
+Follow the template `@RULE` blocks. Key sections:
 
-### Section A — Problem Statement
+- **Problem Statement**: Quantify impact. Format: "[metric] causing [impact]".
+- **Approach**: Core idea (1-3 paragraphs) + why this over alternatives.
+- **Key Change**: REQUIRED. Label each independent change item with `**Type Label: Title**` format. This is what lets the user predict *exactly what will change*.
+- **Scope Summary**: REQUIRED. File | Change table.
+- **Design Reference**: If design.md exists, link it here.
 
-Quantify impact: "[metric] causing [impact]". Simple → single paragraph. Complex → split "Current Situation" + "User Requirement".
+### design.md — when to create
 
-| Bad | Good |
-|-----|------|
-| "Need to refactor" | "Auth takes 5s → 12% conversion drop" |
-| "Improve the UI" | "Form completion rate 23% → target 60%" |
+Create `design.md` when the change involves new interface definitions, data model changes, or architectural logic changes. Simple bugfixes and text changes don't need it.
 
-### Section B — Proposed Solution
-
-Section B has three parts. Approach and Key Design are flexible; **Key Change and Scope Summary are REQUIRED** (but scale with complexity — a single-line each is fine for simple changes).
-
-```
-### Approach          — core idea + rationale (always)
-### Key Design        — optional dimension sub-sections (scale-aware)
-### Key Change        — per-item decisions and constraints (always, ≥1 item)
-### Scope Summary     — File | Change table (always, ≥1 file)
+```bash
+sspec change scaffold design <change>  # create design.md from template
 ```
 
-`### Approach`: Core idea (1-3 paragraphs) + why this over alternatives.
+### Writing design.md — Prediction Contract
 
-`### Key Design`: Scale-aware depth:
+spec + design is a **prediction contract**: the user reads it and predicts what the code will look like. Your job is to think carefully about which dimensions to cover so the user feels in control of this change.
 
-| Complexity | Design Depth |
-|------------|-------------|
-| Simple (≤3 files) | Inline in Approach unless sub-section materially improves clarity |
-| Medium (4-15 files) | 1-4 dedicated dimension sub-sections |
-| Complex (>15 files) | B = predictive summary; full design in `reference/design.md` |
+**Guiding question**: What does the user need to predict to feel in control? Answer this for the specific change, then choose dimensions accordingly.
 
-`### Key Change`: Label each independent change item and describe its core decision, constraints, and boundary conditions. This is what lets the user predict *exactly how the code will change*. Use `**Type Label: Title**` format:
+**Common dimensions** (examples, not checklist — pick what serves prediction):
 
-```markdown
-**Fix A: Request linking** — `link_request()` writes bidirectional references.
-  Absolute paths outside workspace require confirmation; `--unsafe` bypasses.
-**Feat B: Cache TTL jitter** — ±10% jitter to reduce stampede risk.
-  `no_change_patch` counts as non-fatal so reruns don't fail.
-```
+| Dimension | User's question | Useful when | Format constraint |
+|-----------|----------------|-------------|-------------------|
+| Interface Contract | "What are the signatures / APIs?" | New or changed function/class/endpoint | Typed code block (MUST) |
+| Behavioral Spec | "How does it behave at runtime?" | Call chains, state transitions, algorithms | ASCII diagram (MUST) |
+| Structural Blueprint | "How is it organized?" | Module splits, file trees, component hierarchy | ASCII diagram (MUST) |
+| Data Architecture | "What does the data look like?" | Schemas, storage, data pipelines | Typed code block (MUST) |
+| Outcome Preview | "What will I see?" | CLI output, UI, before/after | Example output block |
+| Content Outline | "What's the content structure?" | Documents, templates, specs | Heading tree / outline |
+| Migration Path | "How do we get from here to there?" | Compatibility, rollback, versioning | Step list + constraints |
 
-tasks.md references these labels: "Implement Fix A per spec §B". Never copy the logic description into tasks.
+Custom dimensions are fine — use whatever makes the prediction clearer.
 
-`### Scope Summary`: File | Change table — every spec MUST end with this.
+**Minimum quality bar**: design.md MUST contain at least one structured artifact (code block, diagram, table, or labeled items). Pure prose design is not acceptable.
 
-```markdown
-| File | Change |
-|------|--------|
-| `src/api/users.py` | Add `GET /users/{id}` handler |
-| `src/services/cache.py` | Add `get_cached_user()` + TTL jitter |
-```
+**Key principle**: show, don't describe. `def process(x: Input) -> Output` beats "a function that accepts X and returns Y".
 
-If scope boundaries are non-obvious, add `### What Stays Unchanged` after the table.
+### spec.md vs design.md boundary
 
-### Choosing Dimensions
+| Content | Where |
+|---------|-------|
+| What problem, why it matters | spec.md Problem Statement |
+| Core approach + rationale | spec.md Approach |
+| What changes, labeled items | spec.md Key Change |
+| Which files affected | spec.md Scope Summary |
+| How it works technically (interfaces, data models, behavior) | design.md |
 
-A spec is a **prediction contract** — the user reads it and predicts what the change will produce. Pick 1-4 dimensions that best serve that prediction.
+### spec.md vs tasks.md boundary
 
-Think: (1) What kind of change? (2) What does the user need to predict to feel in control? (3) Which dimensions serve that?
+spec.md/design.md = *how it should work* (design). tasks.md = *what to do* (execution).
+Tasks reference spec labels (e.g. "Implement Fix A per spec") and MUST NOT copy the logic description.
 
-Structure speaks for itself — no need for a "dimension selection rationale". Simple changes: treat dimensions as mental checklist, not mandatory headings.
-
-Safe defaults (adjust as needed):
-
-| Change shape | Default dimensions |
-|--------------|-------------------|
-| Feature / bugfix | Interface Contract + Behavioral Spec |
-| Refactor | Structural Blueprint + Behavioral Spec |
-| Docs / template / protocol | Content Outline |
-| Migration / compatibility | Migration Path + Interface Contract |
-
-### Predictability Dimensions
-
-| Dimension | User's Question | When to Use |
-|-----------|----------------|-------------|
-| Outcome Preview | "What will it look like?" | Visually demonstrable result (CLI, UI, before/after) |
-| Interface Contract | "What are the contracts?" | Function signatures, APIs, type definitions |
-| Structural Blueprint | "How are things organized?" | Module splits, file trees, component hierarchy |
-| Behavioral Spec | "How does it behave?" | Call chains, state machines, algorithm flows |
-| Data Architecture | "What does the data look like?" | Schemas, storage structures, data pipelines |
-| Content Outline | "What's the content structure?" | Documents, templates, specs |
-| Migration Path | "How do we get there?" | Migration, compatibility, rollback |
-
-Custom dimensions allowed — note rationale in Approach.
-
-Per-dimension writing specs — two-step workflow:
-1. `sspec howto list --type design-dimension` — confirm which dimensions you need
-2. `sspec howto read write-dim-<a> write-dim-<b>` — batch-read chosen dimensions in one call
-
-Hard format constraints:
-- Interface Contract / Data Architecture → fenced typed code blocks
-- Behavioral Spec / Structural Blueprint → ASCII diagrams, not prose-only
-
-### Writing Rules
-
-**Read dimension howto before writing** — `sspec howto write-dim-<name>` defines writing norms for each dimension.
-
-**B vs tasks.md boundary** — B = *how it should work* (design). tasks.md = *what to do* (execution). Tasks reference B labels (e.g. "Implement Fix A per spec §B") and MUST NOT copy the logic description. Execution order and file-level task lists MUST NOT appear in B.
-
-📚 Examples: [examples-feature.md](./examples-feature.md) | [examples-docs.md](./examples-docs.md) | [examples-refactor.md](./examples-refactor.md)
-
-## Step 3B: Fill Root spec.md (Type B)
+### Root change
 
 Root spec.md = **overall problem scope + phase decomposition**. No file-level details — those belong in sub-change specs.
 
-Follow `@RULE` blocks in the generated root template.
+After defining phases: `sspec change new <phase-name>` for each sub-change.
 
-**Section A**: Overall problem — full scope across all phases.
-
-**Section B**:
-- `### Overall Approach`: Strategy, delivery order, constraints.
-- `### Phase Overview`: Each phase as named deliverable with scope and dependencies. Format per root template `@RULE` and [examples-root.md](./examples-root.md).
-
-### Creating Sub-Changes
-
-After defining phases: `sspec change new <phase-name>`
-
-Ensure bidirectional references:
+Ensure **bidirectional references**:
 - Sub spec.md → `type: root-change` pointing to root
 - Root spec.md → `type: sub-change` pointing to sub
 
-Each sub-change follows its own design → plan → implement → review cycle.
-
-### Root Presentation Rules
-
-Key Change and Scope Summary rules from 3A apply, adapted:
-
-| Rule | Root adaptation |
-|------|----------------|
-| Scope Summary | Phase \| Depends On \| Scope table (not file-level) |
-| Key Change | ≥3 phases with independent scope |
-| Dependencies | ASCII diagram for phase dependency trees |
-
-### Pitfalls
-
-| Mistake | Fix |
+| Pitfall | Fix |
 |---------|-----|
 | File-level tasks in root tasks.md | Root = milestones only; file tasks → sub-change |
 | Skip root, jump to sub-changes | Root provides phase vision and coordination |
-| Forget bidirectional references | Always link root ↔ sub in both spec.md references |
-| Archive root before subs done | Root stays active until all sub-changes archived |
+| Forget bidirectional references | Always link root ↔ sub in both spec.md |
 
-📚 [examples-root.md](./examples-root.md)
+📚 Examples: [examples-feature.md](./examples-feature.md) | [examples-refactor.md](./examples-refactor.md) | [examples-docs.md](./examples-docs.md) | [examples-root.md](./examples-root.md)
 
-## Step 4: @align
+## Step 5: @align
 
 **Hard gate** — the user MUST confirm before planning proceeds.
 
-Present: problem summary, approach + rationale, key design decisions, (root) phase breakdown. Use `question-like` tool if available, otherwise present clearly and stop.
+Present: problem summary, approach + rationale, key design decisions, scope. Use `question-like` tool if available, otherwise present clearly and stop.
 
 After confirmation → proceed to `sspec-plan`.
 
----
+### Revision mechanism
 
-## References
+After this gate, spec.md and design.md baselines become **immutable**. Any subsequent scope or design change MUST go through the revision protocol:
+1. Create `revisions/NNN-description.md` recording what changed and why
+2. Update tasks.md to reflect new work
+3. The original spec.md/design.md are NOT modified
 
-| When | Load |
-|------|------|
-| Feature/Bugfix examples | [examples-feature.md](./examples-feature.md) |
-| Docs/Template examples | [examples-docs.md](./examples-docs.md) |
-| Refactor/Migration examples | [examples-refactor.md](./examples-refactor.md) |
-| Root-change examples | [examples-root.md](./examples-root.md) |
-| Dimension writing specs | `sspec howto list --type design-dimension` |
+→ `sspec howto handle-review-scope-change`

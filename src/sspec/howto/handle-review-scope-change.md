@@ -3,30 +3,32 @@ name: handle-review-scope-change
 desc: Decide whether review feedback stays in the current change, becomes a follow-up change, or supersedes the current change.
 ---
 
-When review feedback adds work, do not default to `handover.md` and do not open a new change automatically.
+When review feedback adds work, do not default to `memory.md` and do not open a new change automatically.
 
 ## Quick Classifier
 
 | If the feedback... | Class | What to do |
 |---|---|---|
 | tweaks implementation details without changing accepted scope | `minor-fix` | keep the current change; fix directly or add `Feedback Tasks` |
-| adds acceptance work that still belongs to the current change | `current-change-amend` | update `spec.md` first, then `tasks.md`, then continue in the same change |
+| adds acceptance work that still belongs to the current change | `current-change-amend` | if post-gate: create `revisions/NNN-*.md` first, then update `tasks.md`; if pre-gate: update `spec.md` directly |
 | asks for an additional next-step after the current change can already stand on its own | `follow-up-change` | `@align` user first; if approved, create a new change with `prev-change` reference |
 | shows the current change is fundamentally wrong and should stop | `supersede-change` | `@align` user first; if approved, mark the current change `BLOCKED` and create a replacement change |
 
 ## Procedure
 
 1. Decide whether the current change still stands on its own.
-2. If the answer is yes and the feedback is still part of the same acceptance target, update `spec.md` / `tasks.md` inside the current change.
+2. If the answer is yes and the feedback is still part of the same acceptance target:
+   - If `spec.md` / `design.md` have already passed the design gate, create `revisions/NNN-description.md` first to record what changed and why, then update `tasks.md`.
+   - If still in PLANNING, update `spec.md` / `design.md` directly.
 3. If the answer is yes but the feedback is really "what to do next", stop and `@align` before opening a follow-up change.
 4. If the answer is no because the current direction is wrong, stop and `@align` before any `BLOCKED` + replacement-change action.
 5. Record the outcome:
-   - current-change amend -> `spec.md` + `tasks.md` + `handover.md`
-   - follow-up / supersede -> `handover.md` plus the new change's `spec.md` reference chain
+   - current-change amend -> `revisions/NNN-*.md` (if post-gate) + `tasks.md` + `memory.md`
+   - follow-up / supersede -> `memory.md` plus the new change's `spec.md` reference chain
 
 ## Hard Rules
 
-- Accepted scope/design changes must not live only in `handover.md`.
+- Accepted scope/design changes must not live only in `memory.md`.
 - `Feedback Tasks` is only for work that still belongs to the current change.
 - Opening a follow-up or replacement change is a direction decision and must be user-approved through `@align`.
 - Do not use `BLOCKED` for ordinary follow-up work.

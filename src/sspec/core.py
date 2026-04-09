@@ -19,7 +19,7 @@ SPEC_DOCS_DIR = 'spec-docs'
 ARCHIVE_DIR = 'archive'
 
 # Schema version - increment when template structure changes
-SCHEMA_VERSION = '4.0'
+SCHEMA_VERSION = '5.0'
 
 # Files tracked for updates (relative to .sspec/)
 # NOTE: Empty by design. The .sspec/ directory contains user-managed files that should
@@ -32,9 +32,23 @@ UPDATABLE_FILES: list[str] = []
 # User-managed files tracked for changes but not auto-updated
 USER_FILES = ['project.md', 'spec-docs/README.md']
 
-# Change template source files
-CHANGE_TEMPLATE_FILES = ['spec.md', 'tasks.md', 'handover.md']
-CHANGE_ROOT_TEMPLATE_FILES: list[str] = ['spec.md', 'tasks.md', 'handover.md']
+# Change base files — always created by `change new`
+CHANGE_BASE_FILES = ['spec.md', 'tasks.md', 'memory.md']
+
+# Scaffoldable file types → template filenames
+# 'revision' is handled specially (auto-numbered, goes into revisions/ subdir)
+SCAFFOLD_FILE_MAP: dict[str, str] = {
+    'spec': 'spec.md',
+    'tasks': 'tasks.md',
+    'design': 'design.md',
+}
+# Types valid for root changes (no design/revision)
+SCAFFOLD_ROOT_TYPES = frozenset({'spec', 'tasks'})
+SCAFFOLD_SINGLE_TYPES = frozenset({'spec', 'tasks', 'design', 'revision'})
+
+# Legacy compat: used by validate_change to check existing changes
+CHANGE_TEMPLATE_FILES = ['spec.md', 'tasks.md', 'memory.md']
+CHANGE_ROOT_TEMPLATE_FILES: list[str] = ['spec.md', 'tasks.md', 'memory.md']
 
 # Files that should never be touched during update
 PROTECTED_PATTERNS = ['changes/*', 'requests/*', 'skills/*', 'spec-docs/*']
@@ -153,15 +167,6 @@ class ChangeInfo:
     frontmatter: dict[str, str | list | dict]
 
 
-@dataclass(frozen=True, slots=True)
-class SessionLogSummary:
-    """Latest session log summary extracted from handover.md."""
-
-    timestamp: str | None
-    tags: list[str]
-    title: str | None
-    next_items: list[str]
-
 
 @dataclass(frozen=True, slots=True)
 class ChangeStatusSummary:
@@ -175,8 +180,10 @@ class ChangeStatusSummary:
     tasks_total: int
     updated: str | None
     linked_requests: list[str]
-    latest_log: SessionLogSummary | None
-    root_snapshot_rows: list[dict[str, str]] | None
+    memory_exists: bool
+    state_lines: list[str]
+    latest_milestone: str | None
+    coordination_rows: list[dict[str, str]] | None
     source_links: dict[str, str]
 
 

@@ -10,16 +10,17 @@ from pathlib import Path
 
 from sspec.core import (
     ARCHIVE_DIR,
-    CHANGE_ROOT_TEMPLATE_FILES,
-    CHANGE_TEMPLATE_FILES,
+    CHANGE_BASE_FILES,
     CHANGES_DIR,
     REQUEST_DIR,
+    SCAFFOLD_FILE_MAP,
+    SCAFFOLD_ROOT_TYPES,
+    SCAFFOLD_SINGLE_TYPES,
     ChangeExistsError,
     ChangeInfo,
     ChangeStatus,
     ChangeStatusSummary,
     InvalidChangeNameError,
-    SessionLogSummary,
     copy_template,
     get_template_dir,
     normalize_status,
@@ -55,7 +56,7 @@ def _git_stdout(project_root: Path, *args: str) -> str | None:
 
 
 def _render_git_snapshot(project_root: Path) -> str:
-    """Render the immutable git baseline section for handover templates."""
+    """Render the immutable git baseline section for memory templates."""
 
     repo_root = _git_stdout(project_root, 'rev-parse', '--show-toplevel')
     if repo_root is None:
@@ -256,9 +257,9 @@ def _display_path(path: Path, base: Path) -> str:
         return path.as_posix()
 
 
-def _extract_updated(handover_content: str) -> str | None:
-    """Extract Updated field from handover content."""
-    match = re.search(r'^\*\*Updated\*\*:\s*(.+?)\s*$', handover_content, re.MULTILINE)
+def _extract_updated(memory_content: str) -> str | None:
+    """Extract Updated field from memory content."""
+    match = re.search(r'^\*\*Updated\*\*:\s*(.+?)\s*$', memory_content, re.MULTILINE)
     if not match:
         return None
 
@@ -266,74 +267,54 @@ def _extract_updated(handover_content: str) -> str | None:
     return None if value.startswith('<!--') else value
 
 
-def _extract_latest_session_log(handover_content: str) -> SessionLogSummary | None:
-    """Extract the newest session log entry summary from handover.md."""
-    lines = handover_content.splitlines()
+def _extract_section_lines(memory_content: str, heading: str) -> list[str]:
+    """Extract non-comment, non-heading lines from a markdown section."""
+    lines = memory_content.splitlines()
 
     try:
-        start = next(i for i, line in enumerate(lines) if line.startswith('## Session Log'))
+        start = next(i for i, line in enumerate(lines) if line.startswith(heading))
     except StopIteration:
-        return None
+        return []
 
-    heading_index = None
-    heading_match = None
-    heading_pattern = re.compile(
-        r'^###\s+(?P<timestamp>\S+)(?:\s+\[(?P<tags>[^\]]+)\])?(?:\s+(?P<title>.+))?$'
-    )
+    collected: list[str] = []
     in_comment = False
     for idx in range(start + 1, len(lines)):
         raw_line = lines[idx]
-        candidate = raw_line.strip()
+        stripped = raw_line.strip()
+        if stripped.startswith('## '):
+            break
         if '<!--' in raw_line:
             in_comment = True
         if in_comment:
             if '-->' in raw_line:
                 in_comment = False
             continue
-        match = heading_pattern.match(candidate)
-        if match and not match.group('timestamp').startswith('<'):
-            heading_index = idx
-            heading_match = match
-            break
-
-    if heading_index is None or heading_match is None:
-        return None
-
-    next_items: list[str] = []
-    in_next_block = False
-    bullet_pattern = re.compile(r'^(-|\d+\.)\s+(.*\S)\s*$')
-    for idx in range(heading_index + 1, len(lines)):
-        stripped = lines[idx].strip()
-        if stripped.startswith('### ') or stripped.startswith('## '):
-            break
-        if stripped == '**Next**':
-            in_next_block = True
+        if not stripped:
             continue
-        if stripped.startswith('**') and stripped != '**Next**':
-            in_next_block = False
-            continue
-        if not in_next_block or not stripped:
-            continue
-        if match := bullet_pattern.match(stripped):
-            next_items.append(match.group(2))
+        collected.append(stripped)
 
-    tags_raw = heading_match.group('tags') or ''
-    tags = [tag.strip() for tag in tags_raw.split(',') if tag.strip()]
-    title = (heading_match.group('title') or '').strip() or None
-    return SessionLogSummary(
-        timestamp=heading_match.group('timestamp'),
-        tags=tags,
-        title=title,
-        next_items=next_items,
-    )
+    return collected
 
 
-def _extract_root_snapshot_rows(handover_content: str) -> list[dict[str, str]] | None:
-    """Extract rows from the root change volatile snapshot table."""
-    lines = handover_content.splitlines()
+def _extract_state_lines(memory_content: str) -> list[str]:
+    """Extract meaningful lines from the State section."""
+    return _extract_section_lines(memory_content, '## State')
+
+
+def _extract_latest_milestone(memory_content: str) -> str | None:
+    """Extract the newest milestone entry from the Milestones section."""
+    for line in reversed(_extract_section_lines(memory_content, '## Milestones')):
+        if line.startswith('- '):
+            return line[2:].strip()
+    return None
+
+
+def _extract_coordination_rows(memory_content: str) -> list[dict[str, str]] | None:
+    """Extract rows from the root change Coordination table."""
+    lines = memory_content.splitlines()
 
     try:
-        start = next(i for i, line in enumerate(lines) if line.startswith('## Sub-Change Status'))
+        start = next(i for i, line in enumerate(lines) if line.startswith('## Coordination'))
     except StopIteration:
         return None
 
@@ -385,13 +366,14 @@ def summarize_change(change_path: Path, cwd: Path | None = None) -> ChangeStatus
     raw_change_type = change.frontmatter.get('change-type', '')
     change_type = raw_change_type if isinstance(raw_change_type, str) else ''
 
-    handover_file = change_path / 'handover.md'
-    handover_content = handover_file.read_text(encoding='utf-8') if handover_file.exists() else ''
+    memory_file = change_path / 'memory.md'
+    memory_exists = memory_file.exists()
+    memory_content = memory_file.read_text(encoding='utf-8') if memory_exists else ''
 
     source_links = {
         'spec': _display_path(change_path / 'spec.md', base),
         'tasks': _display_path(change_path / 'tasks.md', base),
-        'handover': _display_path(handover_file, base),
+        'memory': _display_path(memory_file, base),
     }
     research_file = change_path / 'reference' / 'status-research.md'
     if research_file.exists():
@@ -404,21 +386,33 @@ def summarize_change(change_path: Path, cwd: Path | None = None) -> ChangeStatus
         change_type=change_type,
         tasks_done=change.progress['done'],
         tasks_total=change.progress['total'],
-        updated=_extract_updated(handover_content),
+        updated=_extract_updated(memory_content),
         linked_requests=_extract_linked_request_paths(change),
-        latest_log=_extract_latest_session_log(handover_content),
-        root_snapshot_rows=_extract_root_snapshot_rows(handover_content),
+        memory_exists=memory_exists,
+        state_lines=_extract_state_lines(memory_content),
+        latest_milestone=_extract_latest_milestone(memory_content),
+        coordination_rows=_extract_coordination_rows(memory_content),
         source_links=source_links,
     )
 
 
-def create_change(sspec_root: Path, change_name: str, *, is_root: bool = False) -> Path:
-    """Create a new change directory with spec.md, tasks.md, and handover.md.
+def create_change(
+    sspec_root: Path,
+    change_name: str,
+    *,
+    is_root: bool = False,
+    scaffold: list[str] | None = None,
+) -> Path:
+    """Create a new change directory with base files + optional scaffolded files.
+
+    Base files (always created): spec.md, tasks.md, memory.md
+    Additional scaffold types: design (single only), revision (single only)
 
     Args:
         sspec_root: Path to .sspec directory
         change_name: Name for the change
         is_root: If True, use root change templates (phase-level coordination)
+        scaffold: Additional file types to scaffold at creation time
     """
 
     # Normalize name: lowercase, replace spaces with hyphens, remove invalid chars
@@ -427,6 +421,15 @@ def create_change(sspec_root: Path, change_name: str, *, is_root: bool = False) 
 
     if not change_name:
         raise InvalidChangeNameError('Invalid change name')
+
+    # Validate scaffold types
+    allowed_types = SCAFFOLD_ROOT_TYPES if is_root else SCAFFOLD_SINGLE_TYPES
+    for s in scaffold or []:
+        if s not in allowed_types:
+            raise InvalidChangeNameError(
+                f"Scaffold type '{s}' not valid for {'root' if is_root else 'single'} change. "
+                f'Allowed: {", ".join(sorted(allowed_types))}'
+            )
 
     # Generate timestamped name: <yy-MM-ddTHH-mm>_<name>
     timestamp = datetime.now().strftime('%y-%m-%dT%H-%M')
@@ -439,21 +442,131 @@ def create_change(sspec_root: Path, change_name: str, *, is_root: bool = False) 
     project_root = sspec_root.parent
     template_subdir = 'change-root' if is_root else 'change'
     template_dir = get_template_dir() / template_subdir
-    template_files = CHANGE_ROOT_TEMPLATE_FILES if is_root else CHANGE_TEMPLATE_FILES
-    replacements = {
+    replacements = _build_template_replacements(change_name, project_root)
+
+    change_path.mkdir(parents=True, exist_ok=True)
+
+    # Always create base files
+    base_files = CHANGE_BASE_FILES
+    for file_name in base_files:
+        copy_template(template_dir / file_name, change_path / file_name, replacements)
+
+    # Scaffold additional files
+    for s in scaffold or []:
+        if s == 'revision':
+            _scaffold_revision(change_path, template_dir, replacements, title=change_name)
+        else:
+            tpl_file = SCAFFOLD_FILE_MAP[s]
+            copy_template(template_dir / tpl_file, change_path / tpl_file, replacements)
+
+    (change_path / 'reference').mkdir(exist_ok=True)
+
+    return change_path
+
+
+def _build_template_replacements(change_name: str, project_root: Path) -> dict[str, str]:
+    """Build the standard template variable replacements dict."""
+    return {
         'CHANGE_NAME': change_name,
         'TIME': datetime.now().isoformat(timespec='seconds'),
         'GIT': _render_git_snapshot(project_root),
     }
 
-    change_path.mkdir(parents=True, exist_ok=True)
 
-    for file_name in template_files:
-        copy_template(template_dir / file_name, change_path / file_name, replacements)
+def scaffold_change_file(
+    sspec_root: Path,
+    change_path: Path,
+    file_type: str,
+    *,
+    title: str | None = None,
+) -> Path:
+    """Scaffold a single file into an existing change directory.
 
-    (change_path / 'reference').mkdir(exist_ok=True)
+    Args:
+        sspec_root: Path to .sspec directory
+        change_path: Path to the change directory
+        file_type: One of 'spec', 'tasks', 'design', 'revision'
+        title: Required for revision type, used in filename and template
 
-    return change_path
+    Returns:
+        Path to the created file
+
+    Raises:
+        ChangeExistsError: If the file already exists (non-revision)
+        InvalidChangeNameError: If the file_type is not valid for this change type
+    """
+    # Determine change type from spec.md frontmatter
+    spec_file = change_path / 'spec.md'
+    is_root = False
+    if spec_file.exists():
+        content = spec_file.read_text(encoding='utf-8')
+        meta, _ = parse_frontmatter(content)
+        is_root = meta.get('change-type') == 'root'
+
+    allowed_types = SCAFFOLD_ROOT_TYPES if is_root else SCAFFOLD_SINGLE_TYPES
+    if file_type not in allowed_types:
+        raise InvalidChangeNameError(
+            f"Scaffold type '{file_type}' not valid for {'root' if is_root else 'single'} change. "
+            f'Allowed: {", ".join(sorted(allowed_types))}'
+        )
+
+    project_root = sspec_root.parent
+    template_subdir = 'change-root' if is_root else 'change'
+    template_dir = get_template_dir() / template_subdir
+
+    # Extract change_name from directory name (after timestamp_)
+    dir_name = change_path.name
+    change_name = dir_name.split('_', 1)[1] if '_' in dir_name else dir_name
+    replacements = _build_template_replacements(change_name, project_root)
+
+    if file_type == 'revision':
+        return _scaffold_revision(
+            change_path, template_dir, replacements, title=title or 'untitled'
+        )
+
+    tpl_file = SCAFFOLD_FILE_MAP[file_type]
+    target = change_path / tpl_file
+    if target.exists():
+        raise ChangeExistsError(f"File '{tpl_file}' already exists in {change_path.name}")
+
+    copy_template(template_dir / tpl_file, target, replacements)
+    return target
+
+
+def _scaffold_revision(
+    change_path: Path,
+    template_dir: Path,
+    replacements: dict[str, str],
+    *,
+    title: str,
+) -> Path:
+    """Create a numbered revision file in the change's revisions/ directory."""
+    revisions_dir = change_path / 'revisions'
+    revisions_dir.mkdir(exist_ok=True)
+
+    # Find next revision number
+    existing = sorted(revisions_dir.glob('*.md'))
+    next_num = 1
+    for f in existing:
+        match = re.match(r'(\d+)-', f.name)
+        if match:
+            next_num = max(next_num, int(match.group(1)) + 1)
+
+    # Normalize title for filename
+    slug = re.sub(r'\s+', '-', title.strip().lower())
+    slug = re.sub(r'[^a-z0-9\-]', '', slug)
+    filename = f'{next_num:03d}-{slug}.md'
+
+    rev_replacements = {
+        **replacements,
+        'N': str(next_num),
+        'TITLE': title,
+    }
+
+    tpl = template_dir / 'revision.md'
+    target = revisions_dir / filename
+    copy_template(tpl, target, rev_replacements)
+    return target
 
 
 def list_changes(sspec_root: Path, include_archived: bool = False) -> list[ChangeInfo]:
@@ -550,8 +663,8 @@ def validate_change(change_path: Path) -> list[str]:
     """
     issues: list[str] = []
 
-    # Check required files
-    for fname in CHANGE_TEMPLATE_FILES:
+    # Check base required files (spec.md + tasks.md + memory.md)
+    for fname in CHANGE_BASE_FILES:
         fpath = change_path / fname
         if not fpath.exists():
             issues.append(f'Missing required file: {fname}')
@@ -566,8 +679,17 @@ def validate_change(change_path: Path) -> list[str]:
         if not meta.get('status'):
             issues.append('spec.md: missing "status" in frontmatter')
 
-        sections = ['## A.', '## B.', '## C.']
-        for section in sections:
+        # Check for new spec structure (## Problem Statement, ## Proposed Solution)
+        # or legacy structure (## A., ## B.) — support both
+        new_sections = ['## Problem Statement', '## Proposed Solution']
+        legacy_sections = ['## A.', '## B.']
+        has_new = any(s in body for s in new_sections)
+        has_legacy = any(s in body for s in legacy_sections)
+
+        check_sections = (
+            new_sections if has_new else legacy_sections if has_legacy else new_sections
+        )
+        for section in check_sections:
             if section in body:
                 idx = body.index(section)
                 next_heading = body.find('\n## ', idx + len(section))
@@ -592,19 +714,10 @@ def validate_change(change_path: Path) -> list[str]:
         if total == 0:
             issues.append('tasks.md: No tasks defined (still template)')
 
-    handover_file = change_path / 'handover.md'
-    if handover_file.exists():
-        content = handover_file.read_text(encoding='utf-8')
-        if '## Background' in content:
-            bg_idx = content.index('## Background')
-            next_heading = content.find('\n## ', bg_idx + 13)
-            bg_body = content[bg_idx:next_heading] if next_heading > 0 else content[bg_idx:]
-            lines = [
-                line
-                for line in bg_body.split('\n')
-                if line.strip() and not line.startswith('#') and not line.strip().startswith('<!--')
-            ]
-            if len(lines) == 0:
-                issues.append('handover.md: Background section empty')
+    memory_file = change_path / 'memory.md'
+    if memory_file.exists():
+        content = memory_file.read_text(encoding='utf-8')
+        if '## State' not in content:
+            issues.append('memory.md: Missing section "## State"')
 
     return issues

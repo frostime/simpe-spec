@@ -1,7 +1,6 @@
 ---
 name: {{CHANGE_NAME}}
 status: PLANNING
-type: ""
 change-type: root
 created: {{TIME}}
 reference: null
@@ -10,7 +9,7 @@ reference: null
 <!-- @RULE: Frontmatter
 status: PLANNING | DOING | REVIEW | DONE | BLOCKED
 change-type: root (coordinator for sub-changes)
-reference?: Array<{source, type: 'request'|'root-change'|'sub-change'|'doc', note?}>
+reference?: Array<{source, type: 'request'|'sub-change'|'doc', note?}>
 
 Root reference rules:
 - If created from a request, include a `type: request` entry.
@@ -18,8 +17,6 @@ Root reference rules:
 
 Example:
 reference:
-  - source: ".sspec/requests/<request-file>.md"
-    type: "request"
   - source: ".sspec/changes/<sub-change-dir>"
     type: "sub-change"
     note: "Phase <n>: <phase-name>"
@@ -27,30 +24,23 @@ reference:
 
 # {{CHANGE_NAME}}
 
-## A. Problem Statement
+## Problem Statement
 <!-- @REPLACE -->
 
-<!-- @RULE: Overall impact. This is the root coordinator — describe the FULL scope. -->
+<!-- Root coordinator — describe the FULL scope across all phases. -->
 
-## B. Proposed Solution
+## Proposed Solution
 <!-- @REPLACE -->
 
 ### Overall Approach
-<!-- High-level strategy. How will this be broken into phases? Delivery order? -->
+<!-- High-level strategy. Delivery order, constraints, cross-phase coordination. -->
 
 ### Phase Overview
 <!-- @RULE: List phases with goals and dependencies. Each phase becomes a sub-change.
 
 Format (≤3 phases): dependency-annotated list + ASCII dependency tree
-- **Phase 1: <name>** — goal, measurable deliverable, scope (subsystems/modules)
-- **Phase 2: <name>** — goal, measurable deliverable, dependencies on Phase 1
+Format (≥4 phases): dependency table
 
-Dependency tree:
-Phase 1: <name>
-  ├── Phase 2: <name>  (depends on Phase 1)
-  └── Phase 3: <name>  (depends on Phase 1, independent of Phase 2)
-
-Format (≥4 phases): use a dependency table
 | Phase | Goal | Depends On | Scope |
 |-------|------|-----------|-------|
 | Phase 1: <name> | measurable goal | — | subsystems/modules |
@@ -60,9 +50,13 @@ Coordination Notes:
 - Cross-phase constraints, shared interfaces, integration handoffs
 - Which phases can run in parallel
 
-When a sub-change is created, the agent MUST sync references in BOTH directions:
-- Root `spec.md` adds `type: sub-change` entry for the sub-change
-- Sub `spec.md` adds `type: root-change` entry back to this root
+When a sub-change is created, sync references in BOTH directions:
+- Root spec.md adds `type: sub-change` entry
+- Sub spec.md adds `type: root-change` entry back
 
-Note: root spec MUST NOT include file-level interface/data-model detail.
-File-level design belongs in each sub-change's own spec.md Section B. -->
+Note: root spec MUST NOT include file-level detail.
+File-level design belongs in each sub-change's own spec.md / design.md. -->
+
+### Design Reference
+<!-- 如果需要跨 phase 的架构设计约束，创建 design.md。
+大多数 root change 不需要 — 设计在 sub-change 中。 -->

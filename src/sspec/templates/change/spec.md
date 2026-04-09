@@ -1,7 +1,6 @@
 ---
 name: {{CHANGE_NAME}}
 status: PLANNING
-type: ""
 change-type: single
 created: {{TIME}}
 reference: null
@@ -10,7 +9,7 @@ reference: null
 <!-- @RULE: Frontmatter
 status: PLANNING | DOING | REVIEW | DONE | BLOCKED
 change-type: single | sub
-reference?: Array<{source, type: 'request'|'root-change'|'sub-change'|'prev-change' |'doc', note?}>
+reference?: Array<{source, type: 'request'|'root-change'|'sub-change'|'prev-change'|'doc', note?}>
 
 Sub-change MUST link root:
 reference:
@@ -24,45 +23,33 @@ reference:
     type: "request"
   - source: ".sspec/changes/<change-dir>"
     type: "prev-change"
-    note: "This change is a follow-up to <change-name> which introduced <feature/bug>. This change addresses <issue> with that feature/bug."
+    note: "Follow-up to <change-name>."
 -->
 
 # {{CHANGE_NAME}}
 
-## A. Problem Statement
+## Problem Statement
 <!-- @REPLACE -->
 
-<!-- @RULE: Quantify impact. Format: "[metric] causing [impact]".
-Simple: single paragraph. Complex: split "Current Situation" + "User Requirement". -->
+<!-- 量化影响。格式："[指标] 导致 [影响]"。
+简单：单段。复杂：拆分 "现状" + "用户需求"。 -->
 
-## B. Proposed Solution
+## Proposed Solution
 <!-- @REPLACE -->
-
-<!-- @RULE: Accepted review-stage changes belong here as formal design.
-If user feedback changes the current change's scope/design and the work still belongs to this change,
-update A/B directly instead of leaving the accepted change only in handover.md.
-If review history matters, add `### Review Amendments` under B as part of the design. -->
 
 ### Approach
-<!-- Core idea (1-3 paragraphs) + why this over alternatives -->
-
-### Key Design
-<!-- Scale-aware guidance (see SKILL.md):
-- Simple (<=3 files): keep Key Design inline in Approach unless a dedicated sub-section materially helps
-- Medium (4-15 files): choose 1-4 predictability dimensions as sub-sections
-- Complex (>15 files): keep B as an executive summary; move full detail to `reference/design.md`
-
-Ask: what does the user need to predict to feel in control of this change?
-Browse dimensions: `sspec howto list --type design-dimension`
-Read the chosen dimension HOWTO(s) before drafting.
-
-Dimension-specific writing norms are in each dimension's howto. -->
+<!-- 核心方案 (1-3 段) + 为什么选这个方案 -->
 
 ### Key Change
-<!-- REQUIRED. Label each independent change item with its core decision, constraints,
-and boundary conditions. Use **Type Label: Title** format (e.g. Fix A, Feat B, Refactor C).
-tasks.md references these labels — MUST NOT copy the logic description into tasks.
-If scope boundaries are non-obvious, add a short `What Stays Unchanged` block after Scope Summary. -->
+<!-- REQUIRED. 每个独立变更项用 **Type Label: Title** 格式标注核心决策与约束。
+例：**Fix A: 请求链接** / **Feat B: 缓存 TTL 抖动**
+tasks.md 引用这些标签 — 不复制设计描述。
+如果范围边界不明显，在 Scope Summary 后加 "What Stays Unchanged" 块。 -->
 
 ### Scope Summary
-<!-- REQUIRED. File | Change table — every spec MUST end with this. -->
+<!-- REQUIRED. File | Change 表 — 每个 spec 都必须以此结尾。 -->
+
+### Design Reference
+<!-- 技术设计复杂时（新接口/数据模型/架构变更），MUST 创建 design.md。
+在此标注：→ 详细技术设计见 [design.md](./design.md)
+简单变更可删除此节，在 Approach 中直接说明技术方案。 -->

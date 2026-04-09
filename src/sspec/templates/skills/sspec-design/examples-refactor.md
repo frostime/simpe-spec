@@ -1,17 +1,13 @@
 # Design Examples — Refactor / Migration
 
 Scenario examples for changes that restructure code or migrate data/schemas.
-These are **references, not prescriptions** — adapt dimensions to your specific change.
-
-**Typical dimensions**: Structural Blueprint + Migration Path
+These are **references, not prescriptions** — adapt to your specific change.
 
 Path note: when a sample includes `reference.source`, it is workspace-relative and normally starts with `.sspec/`.
 
 ---
 
 ## Refactor Example: Extract auth into service layer
-
-Dimensions chosen: Structural Blueprint (before/after module layout), Behavioral Spec (new call chain).
 
 ```markdown
 ---
@@ -24,13 +20,13 @@ reference: null
 
 # extract-auth-service
 
-## A. Problem Statement
+## Problem Statement
 
 `src/auth.py` is a 2,400 LOC monolith handling JWT validation, permission checks,
 and Redis caching in one file. Auth latency is 5s on cold start. No unit tests
 exist because every function depends on global state.
 
-## B. Proposed Solution
+## Proposed Solution
 
 ### Approach
 
@@ -38,48 +34,12 @@ Extract auth into a service layer with clear boundaries. The monolith becomes
 three focused modules behind an `AuthService` interface. Redis caching moves
 from inline calls to a dedicated cache layer.
 
-### Key Design
-
-#### Structural Blueprint
-
-\`\`\`text
-# Before
-src/
-├── auth.py              (2,400 LOC monolith)
-└── middleware/
-    └── auth.py          (imports directly from auth.py globals)
-
-# After
-src/
-├── auth/
-│   ├── __init__.py      (re-exports AuthService)
-│   ├── service.py       (AuthService class — pure business logic)
-│   ├── jwt.py           (JWT encode/decode/validate)
-│   └── cache.py         (Redis cache layer, TTL management)
-├── middleware/
-│   └── auth.py          (calls AuthService, no direct Redis/JWT)
-└── auth.py              (deleted)
-\`\`\`
-
-#### Behavioral Spec
-
-\`\`\`text
-Request → AuthMiddleware
-  └── AuthService.authenticate(token)
-        ├── cache.get(token_hash)    → HIT: return cached User
-        └── MISS:
-              ├── jwt.decode(token)  → extract claims
-              ├── db.get_user(claims.user_id)
-              ├── cache.set(token_hash, user, ttl=300)
-              └── return User
-\`\`\`
-
-AuthService is the only public interface. Middleware never touches JWT or cache directly.
-This makes AuthService unit-testable without Redis or HTTP.
-
 ### Key Change
 
-**Refactor A: Extract auth service layer** — Split monolithic `auth.py` (2,400 LOC) into three focused modules behind `AuthService` interface. Redis caching moves from inline calls to dedicated `cache.py`. Middleware calls `AuthService` only — no direct JWT or cache access. The old `auth.py` is deleted entirely.
+**Refactor A: Extract auth service layer** — Split monolithic `auth.py` (2,400 LOC)
+into three focused modules behind `AuthService` interface. Redis caching moves to
+dedicated `cache.py`. Middleware calls `AuthService` only — no direct JWT or cache
+access. The old `auth.py` is deleted entirely.
 
 ### Scope Summary
 
@@ -91,68 +51,71 @@ This makes AuthService unit-testable without Redis or HTTP.
 | `src/middleware/auth.py` | Refactor to call `AuthService` instead of `auth.py` globals |
 | `src/auth.py` | Delete — logic moved to `src/auth/` package |
 | `tests/test_auth_service.py` | New — unit tests for AuthService (no Redis needed) |
+
+### Design Reference
+
+→ 详细技术设计见 [design.md](./design.md)
 ```
 
----
-
-## Large Change Variant: Use `reference/design.md`
-
-When a refactor or migration grows beyond roughly 15 files, keep `spec.md` predictive and move exhaustive detail into `reference/design.md`.
+**design.md** — before/after structure and call chain shown directly, no prose narration:
 
 ```markdown
 ---
-name: multi-tenant-rbac
-status: PLANNING
-change-type: single
-created: 2026-02-15T10:00:00
-reference:
-  - source: ".sspec/requests/260210_multi-tenancy.md"
-    type: "request"
+change: "extract-auth-service"
+created: 2026-02-20T09:00:00
 ---
 
-# multi-tenant-rbac
+# Design: extract-auth-service
 
-## A. Problem Statement
+## Module Structure
 
-Single-tenant auth system. Need isolated tenant data and tenant-scoped RBAC.
+```text
+# Before
+src/
+├── auth.py              (2,400 LOC monolith)
+└── middleware/
+    └── auth.py          (imports directly from auth.py globals)
 
-## B. Proposed Solution
+# After
+src/
+├── auth/
+│   ├── __init__.py      (re-exports AuthService)
+│   ├── service.py       (AuthService — pure business logic, no global state)
+│   ├── jwt.py           (JWT encode/decode/validate)
+│   └── cache.py         (Redis cache layer, TTL management)
+├── middleware/
+│   └── auth.py          (calls AuthService only — no direct Redis/JWT)
+└── auth.py              (deleted)
+```
 
-### Approach
+## Public Interface
 
-Add tenant isolation and RBAC on top of existing JWT auth.
-Full architecture, migration sequencing, and permission matrix: see [reference/design.md](reference/design.md).
+```python
+class AuthService:
+    def authenticate(self, token: str) -> User: ...
+    def invalidate(self, user_id: str) -> None: ...
+```
 
-### Key Design
+Middleware never touches JWT or cache directly. This makes `AuthService`
+unit-testable without Redis or HTTP.
 
-#### Interface Contract
+## Call Chain
 
-\`\`\`python
-@dataclass
-class AuthClaims:
-    user_id: str
-    tenant_id: str  # NEW
-    roles: list[str]
-\`\`\`
-
-### Key Change
-
-**Refactor A: Tenant isolation + RBAC** — Add tenant-scoped data isolation and role-permission matrix on top of existing JWT auth. Full architecture, migration sequencing, and permission matrix in [reference/design.md](reference/design.md).
-
-### Scope Summary
-
-| File | Change |
-|------|--------|
-| `src/auth/` | Add tenant-aware auth and RBAC flows |
-| `src/middleware/` | Inject tenant context before business handlers |
-| `reference/design.md` | Full architecture, migration, and permission matrix |
+```
+Request → AuthMiddleware
+  └── AuthService.authenticate(token)
+        ├── cache.get(token_hash)    → HIT: return cached User
+        └── MISS:
+              ├── jwt.decode(token)  → extract claims
+              ├── db.get_user(claims.user_id)
+              ├── cache.set(token_hash, user, ttl=300)
+              └── return User
+```
 ```
 
 ---
 
 ## Migration Example: Add `type` field to HOWTO frontmatter
-
-Dimensions chosen: Migration Path (before/after format, compatibility), Interface Contract (changed dataclass).
 
 ```markdown
 ---
@@ -165,46 +128,66 @@ reference: null
 
 # howto-type-field
 
-## A. Problem Statement
+## Problem Statement
 
 All HOWTOs are listed in a flat, unfiltered list. With 20+ HOWTOs, finding
 dimension-specific cards requires scanning every entry. No classification mechanism exists.
 
-## B. Proposed Solution
+## Proposed Solution
 
 ### Approach
 
 Add an optional `type` field to HOWTO frontmatter. `sspec howto list` gains `--type`
 filtering. Backward compatible — existing HOWTOs without `type` continue to work.
 
-### Key Design
+### Key Change
 
-#### Migration Path
+**Feat A: HOWTO type classification** — Add optional `type` field to HOWTO frontmatter.
+Backward compatible: existing files without `type` default to `None` and require zero
+changes. `sspec howto list` gains `--type` filtering. No data migration needed.
 
-\`\`\`yaml
-# Before: HOWTO frontmatter
+### Scope Summary
+
+| File | Change |
+|------|--------|
+| `src/sspec/services/howto_service.py` | Add `type` to `HowtoInfo`; parse in `_build_howto_info` |
+| `src/sspec/commands/howto.py` | Add `--type` filter to `list_cmd`; type column in output |
+
+### Design Reference
+
+→ 详细技术设计见 [design.md](./design.md)
+```
+
+**design.md** — schema before/after and interface change shown side by side:
+
+```markdown
+---
+change: "howto-type-field"
+created: 2026-03-17T20:00:00
+---
+
+# Design: howto-type-field
+
+## Schema Change
+
+```yaml
+# Before
 ---
 name: resume-change
-desc: Resume an in-progress change from handover.md in 30 seconds.
+desc: Resume an in-progress change from memory.md in 30 seconds.
 ---
 
-# After: HOWTO frontmatter (type field added)
+# After (type is optional — existing files require zero changes)
 ---
 name: resume-change
-desc: Resume an in-progress change from handover.md in 30 seconds.
-type: null                    # optional, not present in existing files
+desc: Resume an in-progress change from memory.md in 30 seconds.
+type: workflow   # optional; absent = None
 ---
-\`\`\`
+```
 
-Migration strategy: backward-compatible addition.
-- `type` is optional, defaults to `None` when absent
-- Existing HOWTO files require zero changes
-- No data migration script needed
-- Rollback: simply ignore the field
+## Data Model
 
-#### Interface Contract
-
-\`\`\`python
+```python
 @dataclass(frozen=True, slots=True)
 class HowtoInfo:
     name: str
@@ -213,27 +196,48 @@ class HowtoInfo:
     path: Path
     source: HowtoSource
     file: str
-    type: str | None = None  # NEW: optional classification
-\`\`\`
+    type: str | None = None  # NEW — optional classification
+```
 
-\`\`\`python
+## Interface Change
+
+```python
 # howto.py — list_cmd gains --type filter
-@click.option('--type', 'howto_type', default=None,
-              help='Filter by howto type')
+@click.option('--type', 'howto_type', default=None, help='Filter by howto type')
 def list_cmd(howto_type: str | None, ...):
     ...
     if howto_type:
         items = [h for h in items if h.type == howto_type]
-\`\`\`
+```
 
+Migration strategy: backward-compatible addition. `type` defaults to `None` when
+absent. No migration script needed. Rollback = ignore the field.
+```
+
+---
+
+## Large Refactor Variant: When design.md grows large
+
+When a refactor spans >15 files, keep spec.md predictive and move exhaustive detail into design.md.
+The spec.md Key Change still labels every independent item — design.md carries the full technical depth.
+
+```markdown
 ### Key Change
 
-**Feat A: HOWTO type classification** — Add optional `type` field to HOWTO frontmatter. Backward compatible: existing files without `type` default to `None` and require zero changes. `sspec howto list` gains `--type` filtering. No data migration needed; rollback = ignore the field.
+**Refactor A: Tenant isolation + RBAC** — Add tenant-scoped data isolation and
+role-permission matrix on top of existing JWT auth.
 
 ### Scope Summary
 
 | File | Change |
 |------|--------|
-| `src/sspec/services/howto_service.py` | Add `type` to `HowtoInfo`; parse in `_build_howto_info` |
-| `src/sspec/commands/howto.py` | Add `--type` filter to `list_cmd`; type column in output |
+| `src/auth/` | Add tenant-aware auth and RBAC flows |
+| `src/middleware/` | Inject tenant context before business handlers |
+
+### Design Reference
+
+→ 详细技术设计见 [design.md](./design.md)
 ```
+
+The design.md then carries the full architecture, migration sequencing, and permission matrix —
+without cluttering the spec that the user reviews at the gate.

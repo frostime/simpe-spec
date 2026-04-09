@@ -2,7 +2,7 @@
 name: design-template
 created: 2026-03-17 19:42:43
 status: DOING
-attach-change: .sspec/changes/26-03-17T20-28_design-template/spec.md
+attach-change: .sspec/changes/archive/26-03-17T20-28_design-template/spec.md
 tldr: ''
 ---
 <!-- @RULE: Frontmatter Type

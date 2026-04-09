@@ -32,7 +32,7 @@ $ sspec howto list
 $ sspec howto list
 - name: resume-change
   source: builtin
-  desc: Resume an in-progress change from handover.md in 30 seconds.
+  desc: Resume an in-progress change from memory.md in 30 seconds.
 ```
 
 **Result demo pattern** — best for new features:

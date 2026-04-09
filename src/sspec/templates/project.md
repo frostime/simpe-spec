@@ -1,7 +1,7 @@
 # Project Context
 
 <!-- This file is the stable identity layer for agents working on this project.
-Read it first every session. Update Conventions + Notes via @handover. -->
+Read it first every session. Update Conventions + Notes via @memory. -->
 
 **Name**: {{TODO}}
 **Description**: {{TODO}}
@@ -36,6 +36,6 @@ Keep entries in sync with actual spec-doc files. Format: `- [name](spec-docs/<fi
 
 ## Notes
 <!-- @RULE: Project-level memory. Append-only log of learnings, gotchas, preferences.
-Agent appends here during @handover when a discovery is project-wide (not change-specific).
+Agent appends here during @memory when a discovery is project-wide (not change-specific).
 Format each entry as: `- YYYY-MM-DD: <learning>`
 Prune entries that become outdated or graduate to Conventions/spec-docs. -->

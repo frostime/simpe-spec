@@ -174,13 +174,13 @@ created: 2026-03-17T20:00:00
 # Before
 ---
 name: resume-change
-desc: Resume an in-progress change from handover.md in 30 seconds.
+desc: Resume an in-progress change from memory.md in 30 seconds.
 ---
 
 # After (type is optional — existing files require zero changes)
 ---
 name: resume-change
-desc: Resume an in-progress change from handover.md in 30 seconds.
+desc: Resume an in-progress change from memory.md in 30 seconds.
 type: workflow   # optional; absent = None
 ---
 ```

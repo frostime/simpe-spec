@@ -33,7 +33,7 @@ UPDATABLE_FILES: list[str] = []
 USER_FILES = ['project.md', 'spec-docs/README.md']
 
 # Change base files — always created by `change new`
-CHANGE_BASE_FILES = ['spec.md', 'tasks.md', 'handover.md']
+CHANGE_BASE_FILES = ['spec.md', 'tasks.md', 'memory.md']
 
 # Scaffoldable file types → template filenames
 # 'revision' is handled specially (auto-numbered, goes into revisions/ subdir)
@@ -47,8 +47,8 @@ SCAFFOLD_ROOT_TYPES = frozenset({'spec', 'tasks'})
 SCAFFOLD_SINGLE_TYPES = frozenset({'spec', 'tasks', 'design', 'revision'})
 
 # Legacy compat: used by validate_change to check existing changes
-CHANGE_TEMPLATE_FILES = ['spec.md', 'tasks.md', 'handover.md']
-CHANGE_ROOT_TEMPLATE_FILES: list[str] = ['spec.md', 'tasks.md', 'handover.md']
+CHANGE_TEMPLATE_FILES = ['spec.md', 'tasks.md', 'memory.md']
+CHANGE_ROOT_TEMPLATE_FILES: list[str] = ['spec.md', 'tasks.md', 'memory.md']
 
 # Files that should never be touched during update
 PROTECTED_PATTERNS = ['changes/*', 'requests/*', 'skills/*', 'spec-docs/*']
@@ -169,7 +169,7 @@ class ChangeInfo:
 
 @dataclass(frozen=True, slots=True)
 class SessionLogSummary:
-    """Latest session log summary extracted from handover.md."""
+    """Latest session log summary extracted from memory.md."""
 
     timestamp: str | None
     tags: list[str]

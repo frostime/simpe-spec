@@ -25,7 +25,7 @@ TOOL_PROMPT = """
 ## Purpose
 
 Provide a reliable current timestamp when an agent needs to write time-sensitive
-content such as handover updates, session logs, frontmatter, or spec-doc
+content such as memory updates, milestones, frontmatter, or spec-doc
 metadata.
 
 ## Usage

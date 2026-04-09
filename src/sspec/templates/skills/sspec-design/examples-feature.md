@@ -105,7 +105,7 @@ sspec change new <name> --tag frontend --tag backend
   │
   ├── validate_tags(tags)           → check against allowlist if configured
   ├── create_change_dir(name)       → mkdir .sspec/changes/<ts>_<name>/
-  ├── copy_templates()              → spec.md, tasks.md, handover.md
+  ├── copy_templates()              → spec.md, tasks.md, memory.md
   └── write_frontmatter(tags=tags)  → tags: ["frontend", "backend"] in spec.md
 
 sspec change list --filter-tag frontend
@@ -186,7 +186,7 @@ WARNING: Malformed frontmatter in .sspec/howto/bad-file.md, using filename as na
   desc: (no description)
 - name: resume-change
   source: builtin
-  desc: Resume an in-progress change from handover.md in 30 seconds.
+  desc: Resume an in-progress change from memory.md in 30 seconds.
 ```
 
 ## Fix Logic

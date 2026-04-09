@@ -5,7 +5,7 @@ SSPEC_SCHEMA::{{SCHEMA_VERSION}}
 
 ## 0. Overview
 
-SSPEC is a doc-driven workflow. Planning, tracking, and handover live in `.sspec/`.
+SSPEC is a doc-driven workflow. Planning, tracking, and memory live in `.sspec/`.
 
 **Goal**: Any Agent resumes in 30 seconds from `.sspec/`.
 
@@ -15,7 +15,7 @@ SSPEC is a doc-driven workflow. Planning, tracking, and handover live in `.sspec
 .sspec/
 ├── project.md     # Identity, conventions, notes
 ├── spec-docs/     # Formal specs (architecture, APIs)
-├── changes/<n>/   # spec.md | tasks.md | handover.md [+ design.md | revisions/ | reference/]
+├── changes/<n>/   # spec.md | tasks.md | memory.md [+ design.md | revisions/ | reference/]
 ├── requests/      # User intent records
 └── tmp/           # Informal drafts
 ```
@@ -34,14 +34,14 @@ SSPEC is a doc-driven workflow. Planning, tracking, and handover live in `.sspec
 
 | Input | Action |
 |-------|--------|
-| Directive (`@resume`, `@handover`, etc.) | Execute → §5 |
+| Directive (`@resume`, `@memory`, etc.) | Execute → §5 |
 | Request (attached or described) | Assess scale → §3 |
-| Resume existing change | `read(handover→tasks→spec)` → continue |
+| Resume existing change | `read(memory→tasks→spec)` → continue |
 | Micro task (≤3 files, ≤30min, obvious) | Do directly — no change, no @align gates |
 
 **Background rules**:
-- Important discovery → write to `handover.md` immediately
-- Long session (>30 exchanges) → checkpoint `handover.md`
+- Important discovery → write to `memory.md` immediately
+- Long session (>30 exchanges) → checkpoint `memory.md`
 - Current date/time uncertain → `sspec tool now`
 
 ---
@@ -73,15 +73,15 @@ Implement → sspec-implement
   exit: @align gate (MUST wait)
 
 Review → sspec-review
-  satisfied    → Handover (DONE)
+  satisfied    → Memory update (DONE)
   minor-fix    → Implement → Review
   amend        → revisions/NNN-*.md + tasks.md update → Implement
   follow-up    → @align user → current DONE → new change (prev-change ref)
   supersede    → @align user → current BLOCKED → new change
 
-Handover → sspec-handover
-  output: handover.md, project.md
-  trigger: MUST at session end; SHOULD mid-session (>30 exchanges, phase switches)
+Memory → sspec-memory
+  output: memory.md, project.md
+  trigger: MUST at session end; SHOULD at @align gates
 ```
 
 **Flow rules**: Follow phase order. `gate` = hard stop, MUST pass. `report` = output summary, keep going. Failed gate → return to phase, update, realign.
@@ -113,7 +113,7 @@ Structured, efficient synchronization at decision points. **Formalized exchange,
 
 **Format rule**: @align MUST use structured format (tables, labeled items, code blocks). Prose-style @align is an anti-pattern. 5-second scan, instant decision.
 
-Decisions go in their natural home: design → `spec.md`, direction changes → `handover.md` Durable Memory, user feedback → `handover.md` Session Log.
+Decisions go in their natural home: design → `spec.md`, direction changes → `memory.md` Knowledge, user feedback → `memory.md` Knowledge.
 
 📚 Gate mechanics and patterns: `sspec-align` SKILL
 
@@ -123,7 +123,7 @@ Decisions go in their natural home: design → `spec.md`, direction changes → 
 
 ### Directives
 
-`@change <n>` load or create | `@resume` active change | `@handover` save state | `@sync` reconcile files (MUST NOT split/replace without @align) | `@argue` stop + reassess scope | `@subagent-audits` independent review
+`@change <n>` load or create | `@resume` active change | `@memory` save state | `@sync` reconcile files (MUST NOT split/replace without @align) | `@argue` stop + reassess scope | `@subagent-audits` independent review
 
 ### Spec-Docs
 
@@ -142,7 +142,7 @@ Architecture knowledge that outlives a single change. When change is DONE with a
 
 **sspec tool** — `sspec tool <name> --prompt` for detailed usage:
 
-- `now`: current time (MUST use for handover)
+- `now`: current time (MUST use for memory updates)
 - `ask`: question user (fallback when no built-in question tool)
 - `mdtoc`: markdown outline / structure
 - `view-tree`: directory tree

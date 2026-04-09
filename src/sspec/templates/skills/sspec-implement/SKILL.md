@@ -26,8 +26,8 @@ Execute the approved plan. Work through tasks.md systematically.
 |-----------|--------|
 | Task is ambiguous | `@align` for clarification |
 | Implementation reveals design issue | Re-enter Clarify posture to understand the gap; create `revisions/NNN-*.md` if spec/design already gated, then update tasks.md; `@align` if scope changes |
-| Blocker encountered | Record in `handover.md`, `@align` user |
-| Multiple valid approaches | Pick the simpler one, note in handover |
+| Blocker encountered | Record in `memory.md`, `@align` user |
+| Multiple valid approaches | Pick the simpler one, note in memory |
 | Design assumption was wrong | Re-enter Clarify posture: "Design says X but I found Y" → re-sync with user before revising |
 
 **Do not guess on blockers.** One `@align` < one rework cycle.
@@ -40,11 +40,11 @@ Execute the approved plan. Work through tasks.md systematically.
 ## Handover During Implementation
 
 For long sessions (>30 exchanges or multi-file work):
-- Promote durable decisions / constraints to `handover.md` Durable Memory
+- Promote durable decisions / constraints to `memory.md` Knowledge
 - Record blockers, discoveries, or user feedback in Session Log
 - Update Key Files as you discover important files
 
-**Test**: "Would I struggle to continue if context was compressed right now?" → Write to handover.
+**Test**: "Would I struggle to continue if context was compressed right now?" → Write to memory.
 
 ## Exit: @align User
 

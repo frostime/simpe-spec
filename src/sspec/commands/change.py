@@ -173,7 +173,7 @@ def new(
 ) -> None:
     """Create a new change proposal.
 
-    Creates spec.md + handover.md by default. Use --scaffold to add more files.
+    Creates spec.md + memory.md by default. Use --scaffold to add more files.
 
     NAME is optional when --from is provided; the change name will be
     derived from the request name.
@@ -236,7 +236,7 @@ def new(
     console.print(f'  {rel_path}/')
     console.print(f'  {branch_prefix} spec.md      # Change definition')
     console.print(f'  {branch_prefix} tasks.md     # Execution plan')
-    console.print(f'  {branch_prefix} handover.md  # Session continuity')
+    console.print(f'  {branch_prefix} memory.md    # Scoped memory')
     # Show scaffolded files (skip base files already shown above)
     extra_files = []
     for s in scaffold_list:
@@ -366,7 +366,7 @@ def _display_change(change: ChangeInfo, dim: bool = False, in_detail: bool = Fal
     # Indented Metadata
     path_rel = change.path.relative_to(Path.cwd())
     console.print(f'  [dim]Change/Spec:[/dim] [dim]{path_rel / "spec.md"}[/dim]')
-    console.print(f'  [dim]Change/Handover:[/dim] [dim]{path_rel / "handover.md"}[/dim]')
+    console.print(f'  [dim]Change/Memory:[/dim] [dim]{path_rel / "memory.md"}[/dim]')
     if change.type:
         console.print(f'  [dim]Type:[/dim] [dim]{change.type}[/dim]')
     console.print(f'  [dim]Progress:[/dim] {progress_str}')

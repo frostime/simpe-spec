@@ -45,7 +45,7 @@ Use `Feedback Tasks` only for work that still belongs to the current change. Do 
 
 ### Git-Aware Review
 
-When `handover.md` has a `Git Baseline (Immutable)` section, use it as the review anchor.
+When `memory.md` has a Git Baseline section, use it as the review anchor.
 
 📚 `sspec howto review-git-baseline`
 
@@ -58,7 +58,7 @@ For independent review, consider subagent audits to avoid context blind spots.
 When user is satisfied:
 1. Ensure all tasks marked `[x]`; update status: `REVIEW → DONE`
 2. If change produced architectural knowledge → `@align` user about creating/updating a spec-doc
-3. Suggest archive or `@handover`
+3. Suggest archive or `@memory`
 
 ## Status Flow
 

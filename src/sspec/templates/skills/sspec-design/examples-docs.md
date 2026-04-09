@@ -63,7 +63,7 @@ intact. Only rewrite the interaction layer: how agents communicate with users du
 ### What Stays Unchanged
 
 - Change lifecycle (Research → Design → Plan → Implement → Review → Handover)
-- spec.md / tasks.md / handover.md structure and templates
+- spec.md / tasks.md / memory.md structure and templates
 - Scale assessment logic (micro/single/multi)
 - Design and Implement hard gate nature
 
@@ -109,7 +109,7 @@ created: 2026-03-17T01:00:00
    question tool → sspec tool ask → plain output (fallback chain)
 
 ## 3. After Align
-   record decisions in natural home (spec.md / handover.md / tasks.md)
+   record decisions in natural home (spec.md / memory.md / tasks.md)
 ```
 
 ## Removed Directives

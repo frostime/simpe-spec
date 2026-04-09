@@ -54,7 +54,7 @@ The system has its own truth. Investigate to ground the dialogue.
 - Map existing architecture relevant to the work
 - Find integration points, patterns already in use
 - Surface hidden complexity, edge cases, or constraints
-- Read `project.md`, `spec-docs/`, existing change handovers
+- Read `project.md`, `spec-docs/`, existing change memory files
 - If the user's request involves external APIs/systems, understand how they actually work (not how the user assumes they work)
 - To locate existing changes: `sspec change list` or `sspec change find <name>`
 
@@ -89,7 +89,7 @@ In re-entry mode, the process is lighter: focus on the specific point of confusi
 - Investigation materials → `.sspec/tmp/clarify_<YY-MM-DDTHH-MM>_<topic>.md`
 - Naming follows the change timestamp format — sortable, greppable
 - After change creation (early Design), move relevant materials to `change/reference/`
-- Key decisions and turning points → write into handover.md Durable Memory during Design
+- Key decisions and turning points → write into memory.md Knowledge during Design
 - Don't wait until Design to write things down — context compression can erase the reasoning behind your conclusions
 
 ## Exit Criteria

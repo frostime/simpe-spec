@@ -88,8 +88,8 @@ Alignment without record = information lost on next session.
 |---|---|
 | Design confirmed/revised | `spec.md` / `design.md` |
 | Plan confirmed/revised | `tasks.md` |
-| Direction changed, key decision made | `handover.md` Durable Memory |
-| User feedback received | `handover.md` Session Log (new `user-feedback` entry) |
+| Direction changed, key decision made | `memory.md` Knowledge |
+| User feedback received | `memory.md` Knowledge (new entry) |
 | Scope/design change after gate | `revisions/NNN-*.md` + `tasks.md` |
 
 **No separate ask record is required.** Put the decision in its natural home.

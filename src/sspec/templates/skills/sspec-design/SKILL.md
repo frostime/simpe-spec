@@ -40,7 +40,7 @@ The goal is to converge on a single approach before formalizing into spec.md.
 ## Step 3: Create Change
 
 ```bash
-sspec change new <name>                         # minimal: spec.md + handover.md
+sspec change new <name>                         # minimal: spec.md + memory.md
 sspec change new <name> --scaffold tasks         # also create tasks.md
 sspec change new <name> --scaffold tasks,design  # also create design.md
 sspec change new --from <request>                # create + link request

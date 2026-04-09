@@ -14,7 +14,7 @@ User's question: "What will the content structure be?"
 
 - Writing or restructuring documentation, spec-docs, READMEs
 - Changing SKILL files, AGENTS.md, or protocol templates
-- Designing template structures (handover, spec, tasks)
+- Designing template structures (memory, spec, tasks)
 - Any change where the primary deliverable is text content, not code
 
 ## How to Write

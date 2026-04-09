@@ -57,7 +57,7 @@ def _git_stdout(project_root: Path, *args: str) -> str | None:
 
 
 def _render_git_snapshot(project_root: Path) -> str:
-    """Render the immutable git baseline section for handover templates."""
+    """Render the immutable git baseline section for memory templates."""
 
     repo_root = _git_stdout(project_root, 'rev-parse', '--show-toplevel')
     if repo_root is None:
@@ -258,9 +258,9 @@ def _display_path(path: Path, base: Path) -> str:
         return path.as_posix()
 
 
-def _extract_updated(handover_content: str) -> str | None:
-    """Extract Updated field from handover content."""
-    match = re.search(r'^\*\*Updated\*\*:\s*(.+?)\s*$', handover_content, re.MULTILINE)
+def _extract_updated(memory_content: str) -> str | None:
+    """Extract Updated field from memory content."""
+    match = re.search(r'^\*\*Updated\*\*:\s*(.+?)\s*$', memory_content, re.MULTILINE)
     if not match:
         return None
 
@@ -268,9 +268,9 @@ def _extract_updated(handover_content: str) -> str | None:
     return None if value.startswith('<!--') else value
 
 
-def _extract_latest_session_log(handover_content: str) -> SessionLogSummary | None:
-    """Extract the newest session log entry summary from handover.md."""
-    lines = handover_content.splitlines()
+def _extract_latest_session_log(memory_content: str) -> SessionLogSummary | None:
+    """Extract the newest session log entry summary from memory.md."""
+    lines = memory_content.splitlines()
 
     try:
         start = next(i for i, line in enumerate(lines) if line.startswith('## Session Log'))
@@ -330,9 +330,9 @@ def _extract_latest_session_log(handover_content: str) -> SessionLogSummary | No
     )
 
 
-def _extract_root_snapshot_rows(handover_content: str) -> list[dict[str, str]] | None:
+def _extract_root_snapshot_rows(memory_content: str) -> list[dict[str, str]] | None:
     """Extract rows from the root change volatile snapshot table."""
-    lines = handover_content.splitlines()
+    lines = memory_content.splitlines()
 
     try:
         start = next(i for i, line in enumerate(lines) if line.startswith('## Sub-Change Status'))
@@ -387,13 +387,15 @@ def summarize_change(change_path: Path, cwd: Path | None = None) -> ChangeStatus
     raw_change_type = change.frontmatter.get('change-type', '')
     change_type = raw_change_type if isinstance(raw_change_type, str) else ''
 
-    handover_file = change_path / 'handover.md'
-    handover_content = handover_file.read_text(encoding='utf-8') if handover_file.exists() else ''
+    memory_file = change_path / 'memory.md'
+    if not memory_file.exists():
+        memory_file = change_path / 'handover.md'  # backward compat
+    memory_content = memory_file.read_text(encoding='utf-8') if memory_file.exists() else ''
 
     source_links = {
         'spec': _display_path(change_path / 'spec.md', base),
         'tasks': _display_path(change_path / 'tasks.md', base),
-        'handover': _display_path(handover_file, base),
+        'memory': _display_path(memory_file, base),
     }
     research_file = change_path / 'reference' / 'status-research.md'
     if research_file.exists():
@@ -406,10 +408,10 @@ def summarize_change(change_path: Path, cwd: Path | None = None) -> ChangeStatus
         change_type=change_type,
         tasks_done=change.progress['done'],
         tasks_total=change.progress['total'],
-        updated=_extract_updated(handover_content),
+        updated=_extract_updated(memory_content),
         linked_requests=_extract_linked_request_paths(change),
-        latest_log=_extract_latest_session_log(handover_content),
-        root_snapshot_rows=_extract_root_snapshot_rows(handover_content),
+        latest_log=_extract_latest_session_log(memory_content),
+        root_snapshot_rows=_extract_root_snapshot_rows(memory_content),
         source_links=source_links,
     )
 
@@ -423,7 +425,7 @@ def create_change(
 ) -> Path:
     """Create a new change directory with base files + optional scaffolded files.
 
-    Base files (always created): spec.md, handover.md
+    Base files (always created): spec.md, memory.md
     Scaffold types: tasks, design (single only), revision (single only)
 
     Args:
@@ -681,7 +683,7 @@ def validate_change(change_path: Path) -> list[str]:
     """
     issues: list[str] = []
 
-    # Check base required files (spec.md + handover.md)
+    # Check base required files (spec.md + memory.md)
     for fname in CHANGE_BASE_FILES:
         fpath = change_path / fname
         if not fpath.exists():
@@ -732,10 +734,14 @@ def validate_change(change_path: Path) -> list[str]:
         if total == 0:
             issues.append('tasks.md: No tasks defined (still template)')
 
-    handover_file = change_path / 'handover.md'
-    if handover_file.exists():
-        content = handover_file.read_text(encoding='utf-8')
-        if '## Background' in content:
+    memory_file = change_path / 'memory.md'
+    if not memory_file.exists():
+        memory_file = change_path / 'handover.md'  # backward compat
+    if memory_file.exists():
+        content = memory_file.read_text(encoding='utf-8')
+        # Support both new (## State) and legacy (## Background) formats
+        has_state = '## State' in content
+        if '## Background' in content and not has_state:
             bg_idx = content.index('## Background')
             next_heading = content.find('\n## ', bg_idx + 13)
             bg_body = content[bg_idx:next_heading] if next_heading > 0 else content[bg_idx:]
@@ -745,6 +751,6 @@ def validate_change(change_path: Path) -> list[str]:
                 if line.strip() and not line.startswith('#') and not line.strip().startswith('<!--')
             ]
             if len(lines) == 0:
-                issues.append('handover.md: Background section empty')
+                issues.append('memory.md: Background section empty')
 
     return issues

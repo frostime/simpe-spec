@@ -163,7 +163,8 @@ def _parse_scaffold_option(value: tuple[str, ...]) -> list[str]:
 @click.option(
     '--scaffold',
     multiple=True,
-    help='Additional files to scaffold (tasks, design). Comma-separated or repeated.',
+    help='Additional files to scaffold (for example: design, revision). '
+    'Comma-separated or repeated.',
 )
 def new(
     name: str | None = None,
@@ -173,7 +174,8 @@ def new(
 ) -> None:
     """Create a new change proposal.
 
-    Creates spec.md + memory.md by default. Use --scaffold to add more files.
+    Creates spec.md + tasks.md + memory.md by default. Use --scaffold to add
+    design/revision files as needed.
 
     NAME is optional when --from is provided; the change name will be
     derived from the request name.
@@ -253,7 +255,7 @@ def new(
     console.print('[yellow]Next:[/yellow]')
     console.print('  1. Read sspec-design skill')
     console.print('  2. Fill spec.md, then @align with the user before implementation')
-    console.print('  3. Use `sspec change scaffold` to add tasks/design/revision when needed')
+    console.print('  3. Use `sspec change scaffold` to add design/revision files when needed')
 
 
 # ============================================================================

@@ -425,8 +425,8 @@ def create_change(
 ) -> Path:
     """Create a new change directory with base files + optional scaffolded files.
 
-    Base files (always created): spec.md, memory.md
-    Scaffold types: tasks, design (single only), revision (single only)
+    Base files (always created): spec.md, tasks.md, memory.md
+    Additional scaffold types: design (single only), revision (single only)
 
     Args:
         sspec_root: Path to .sspec directory
@@ -683,7 +683,7 @@ def validate_change(change_path: Path) -> list[str]:
     """
     issues: list[str] = []
 
-    # Check base required files (spec.md + memory.md)
+    # Check base required files (spec.md + tasks.md + memory.md)
     for fname in CHANGE_BASE_FILES:
         fpath = change_path / fname
         if not fpath.exists():

@@ -2,6 +2,12 @@
 
 **Updated**: <!-- ISO timestamp, minute precision -->
 
+## Git Baseline (Immutable)
+<!-- Captured during `sspec change new` before any change files are written.
+This section records the root change starting point in git and MUST NOT be edited or refreshed later. -->
+
+{{GIT}}
+
 ## Coordination
 <!-- 子 change 状态总览。状态变更时 MUST 更新。 -->
 

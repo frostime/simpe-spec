@@ -2,6 +2,12 @@
 
 **Updated**: <!-- ISO timestamp, minute precision -->
 
+## Git Baseline (Immutable)
+<!-- Captured during `sspec change new` before any change files are written.
+This section records the change starting point in git and MUST NOT be edited or refreshed later. -->
+
+{{GIT}}
+
 ## State
 <!-- 当前在哪、下一步做什么 — 一到三行
 Agent 冷启动时第一个读的 section。 -->

@@ -6,103 +6,126 @@
 
 ## What sspec is
 
-sspec is a doc-driven collaboration workflow for coding agents.
+sspec is a document-driven workflow for coding with agents.
 
-It keeps the request entrypoint, design, task list, and handover records in the repository instead of leaving them only in chat history. Chat moves the work forward; repository files hold long-lived state. You define goals, constraints, and key decisions; the agent researches, implements, and updates the docs so work can continue across sessions.
+It keeps project context, request entrypoints, change specs, execution plans, and scoped memory in the repository instead of leaving them only in chat. Chat moves the work forward; repository files keep the durable state.
 
 ## What problems sspec solves
 
 If you rely on chat alone for AI coding, common problems include:
 
-- context and key decisions getting lost in long or cross-session work;
-- the agent continuing to modify code while the developer loses visibility into what changed and why;
-- repeating the same project background, conventions, and constraints;
-- complex work growing inside chat until it becomes one large, hard-to-track change.
+- context and key decisions disappearing across sessions;
+- design and implementation checkpoints becoming implicit;
+- project conventions needing to be restated repeatedly;
+- complex work growing into one opaque, hard-to-review thread.
 
-sspec writes long-lived working state into the repository:
+sspec writes the working state into the repository:
 
 - `AGENTS.md` defines the collaboration protocol;
 - `.sspec/project.md` records project identity, stack, key paths, and conventions;
 - `.sspec/requests/` stores request entrypoints;
-- `.sspec/changes/` stores the spec, tasks, and handover for each change;
-- `.sspec/asks/` stores important questions and answers.
+- `.sspec/changes/` stores per-change specs, tasks, memory, and supporting files;
+- `.sspec/spec-docs/` stores architecture knowledge that should outlive one change;
+- `.sspec/asks/` stores structured questions when important decisions need an explicit record.
 
-When work resumes, the agent reads explicit repository context instead of reconstructing state from the previous chat.
+When work resumes, the agent reads repository context instead of reconstructing state from prior chat.
 
 ## What this requires from the user
 
-sspec assumes that the developer defines requirements and reviews results, while the agent handles research, design, implementation, and documentation updates.
+sspec assumes a human-led, agent-accelerated workflow.
 
-Using it usually requires:
+The developer is expected to:
 
-- the ability to write a clear `request`;
-- the ability to give direct feedback during design alignment and implementation review;
-- enough development skill to judge whether the implementation is correct and spot agent mistakes.
+- define the request clearly enough for the agent to work from it;
+- answer design and scope questions at alignment points;
+- review implementation results and catch mistakes;
+- decide when work should stay in one `change` and when it should be split.
 
-If you do not plan to write `request` files, review results, or judge whether the implementation is correct, this workflow is usually not a good fit.
+If you do not plan to review the design, review the code, or judge whether the implementation is correct, sspec is usually not a good fit.
 
-## Core concepts and folder layout
+## Core concepts
 
 Start with two core concepts: `request` and `change`.
 
-- `request`: the task entrypoint written by the developer. It describes background, constraints, direction, and success criteria.
-- `change`: a cohesive, atomic, trackable change proposal. A `change` should stay small enough to review and track as one unit.
+- `request`: the task entrypoint written by the developer. It captures background, constraints, direction, and success criteria.
+- `change`: a cohesive, trackable unit of work. A `change` should stay small enough to review and reason about as one unit.
 
-The three most important files inside a `change` are:
+The core files inside a `change` are:
 
-- `spec.md`: how the change should work, and why;
-- `tasks.md`: execution steps and current progress;
-- `handover.md`: current session state, key findings, and what the next session needs.
+- `spec.md`: the problem and the solution contract;
+- `tasks.md`: the execution checklist and progress;
+- `memory.md`: the current state, durable knowledge, and milestones for continuity.
 
-If work grows beyond the trackable scope of a single `change`, split it by:
+Optional files inside a `change`:
 
-- using `root-change` to coordinate multiple `sub-change` items;
-- or creating a follow-up `change` that references `prev-change`, instead of expanding one old change into a large, untrackable container.
+- `design.md`: detailed technical design when interfaces, data models, or architecture matter;
+- `revisions/`: amendments after the design gate;
+- `reference/`: supporting notes, investigation material, and auxiliary files.
 
-For more concepts and advanced usage, see `Advanced` later in this README.
+For work that is too large for one `change`, use a root change to coordinate multiple sub-changes.
 
-`sspec project init` creates the minimal structure:
+## Folder layout
+
+`sspec project init` creates the project scaffold:
 
 ```text
 project/
 ├── AGENTS.md
+├── .agents/               # optional synced host location
 └── .sspec/
     ├── project.md
     ├── requests/
     ├── changes/
-    │   └── <ts>_<name>/
-    │       ├── spec.md
-    │       ├── tasks.md
-    │       ├── handover.md
-    │       └── reference/
     ├── asks/
     ├── skills/
     ├── spec-docs/
+    ├── howto/
     └── tmp/
+```
+
+A typical change directory looks like this:
+
+```text
+.sspec/changes/<ts>_<name>/
+├── spec.md
+├── tasks.md
+├── memory.md
+├── design.md        # optional
+├── revisions/       # optional
+└── reference/
 ```
 
 Main directories:
 
-- `project.md`: project identity. Record the stack, key paths, conventions, and project-level notes.
-- `requests/`: request entry files written by the developer.
-- `changes/`: per-change document directories; each change contains `spec.md`, `tasks.md`, and `handover.md`.
-- `asks/`: recorded questions and answers, so decisions do not live only in chat.
-- `spec-docs/`: long-lived architectural knowledge that goes beyond a single change.
-- `skills/`: phase-specific skills that can be synced into different agent hosts.
+- `project.md`: project identity and conventions;
+- `requests/`: request files written by the developer;
+- `changes/`: per-change working documents;
+- `asks/`: structured questions and answers when needed;
+- `skills/`: agent-facing skills synced into host-specific locations;
+- `spec-docs/`: long-lived architecture and project knowledge;
+- `howto/`: focused operational guides for specific jobs;
+- `tmp/`: scratch space for temporary notes and drafts.
 
-## Minimal workflow
+## Workflow
 
-A typical flow looks like this:
+sspec’s default lifecycle is:
 
-1. Run `sspec project init`, then fill in `.sspec/project.md`.
-2. Run `sspec request new <name>` and write the `request`.
-3. Send the request file path to the agent and tell it to follow `AGENTS.md`.
-4. The agent researches the background and codebase, then proposes the design and plan, and stops at key checkpoints for alignment.
-5. After alignment, the agent implements the change; you review the result and provide feedback.
-6. The agent iterates on that feedback until you are satisfied.
-7. At session end, the agent updates `handover.md`; when the work is complete, archive the `change`.
+```text
+Clarify → Design → Plan → Implement → Review
+```
 
-This workflow includes document updates and user confirmation points. It does not depend on a single chat session.
+What each stage does:
+
+- **Clarify**: build shared understanding from user intent and codebase reality;
+- **Design**: create the change, write `spec.md`, add `design.md` when needed, then align with the user;
+- **Plan**: turn the design into file-level tasks in `tasks.md`;
+- **Implement**: execute tasks, update progress, and keep `memory.md` current;
+- **Review**: collect feedback, iterate, and close the loop.
+
+Two practical rules:
+
+- `memory.md` is the continuity file agents resume from;
+- if approved scope or design needs to change later, record it in `revisions/NNN-*.md` and update `tasks.md`.
 
 ## Quick Start
 
@@ -169,11 +192,32 @@ Please work from this request:
 .sspec/requests/<your-request-file>.md
 
 Follow `AGENTS.md` and `.sspec/skills/`.
-Create and maintain the corresponding change docs for this work.
-Stop and ask me before making key decisions.
+Start with `sspec-clarify`, then create and maintain the change docs.
+Stop at design and implementation gates for review.
 ```
 
-### 5) Archive when done
+The agent will typically create the working change with:
+
+```bash
+sspec change new --from <request>
+```
+
+### 5) Track the change
+
+Use the CLI to inspect progress and current state:
+
+```bash
+sspec change list
+sspec change status <name>
+```
+
+When the design needs a dedicated technical document:
+
+```bash
+sspec change scaffold design <change>
+```
+
+### 6) Archive when done
 
 When the work is complete, archive the change and its linked request:
 
@@ -186,23 +230,23 @@ sspec change archive --with-request [name]
 **Developer responsibilities**
 
 - write the `request`, including background, constraints, and success criteria;
-- answer key decision questions;
+- answer key design and scope questions;
 - approve the design direction and implementation result;
-- decide when a `change` should be split to keep scope trackable.
+- decide when a `change` should be split.
 
 **Agent responsibilities**
 
-- research the code, background, and constraints before designing;
+- clarify the problem before designing;
 - create and maintain the `change` docs for the work;
 - propose a solution, align with the user, then implement;
-- keep `tasks.md` and `handover.md` current, and keep iterating after review feedback.
+- keep `tasks.md` and `memory.md` current while the change is active.
 
 **Workflow rules**
 
 - start from a `request`, not from chat history alone;
-- `Design` and `Implement` both include mandatory confirmation points;
-- `Handover` is a formal lifecycle phase, not optional cleanup;
-- long-lived state lives in `change` docs, not only in chat history.
+- design and implementation both stop at explicit review points;
+- long-lived state belongs in repository files, not only in chat;
+- complex work should be split into trackable changes instead of accumulating in one thread.
 
 ## Common commands
 
@@ -221,6 +265,8 @@ sspec project update --dry-run
 ```bash
 sspec request new <name>
 sspec request list
+sspec request show <name>
+sspec request find <query>
 sspec request archive [name] --with-change
 ```
 
@@ -230,50 +276,93 @@ sspec request archive [name] --with-change
 sspec change new <name>
 sspec change new --from <request>
 sspec change new <name> --root
+sspec change new <name> --scaffold design
+sspec change scaffold design <change>
+sspec change scaffold revision <change> --title "scope-update"
+sspec change status <name>
 sspec change list --all
+sspec change validate <name>
 sspec change archive [name] --with-request
 ```
 
-## Advanced
-
-### `ask`: persist important Q&A
-
-Use `ask` when the agent needs a key decision, finds ambiguity in the requirement, or needs to record an important question formally.
-
-Common commands:
+### Ask
 
 ```bash
-sspec ask create <topic>
+sspec ask create <name>
 sspec ask prompt <ask-file>
 sspec ask list --all
 sspec ask archive [name]
 ```
 
-### `spec-docs/`: store long-lived knowledge across changes
-
-`spec-docs/` stores knowledge that should outlive a single change, such as architecture interfaces, data models, design patterns, or conventions.
-
-Common commands:
+### Docs, HOWTOs, skills, and tools
 
 ```bash
 sspec doc list
 sspec doc new "<name>"
+sspec howto list
+sspec howto resume-change
+sspec skill list
+sspec tool now
+sspec tool mdtoc README.md
+sspec tool view-tree .
 ```
 
-### `skills/`: `.sspec/skills/` is the source directory
+## Advanced
 
-sspec installs skills with a hub-spoke layout:
+### Root changes
 
-- `.sspec/skills/` is the hub and the source directory for skills
-- `.agents/skills/`, `.claude/skills/`, `.github/skills/`, and similar external locations are spokes
-- spokes usually reference `.sspec/skills/` via symlink or junction
-- `sspec project init` and `sspec project update` manage this hub-spoke sync; users do not need to update it manually
+Use a root change when the work is too large for one trackable unit:
 
-## Other
+```bash
+sspec change new <name> --root
+```
 
-### Compatibility
+A root change defines the overall problem and phase breakdown. File-level design and execution stay in the sub-changes.
 
-sspec depends on an agent environment that can:
+### `design.md` and `revisions/`
+
+Create `design.md` when the change introduces new interfaces, data models, or architectural behavior.
+
+When approved design or scope changes later, create a revision file and update the plan:
+
+```bash
+sspec change scaffold revision <change> --title "<reason>"
+```
+
+### `memory.md`
+
+`memory.md` is the continuity surface for a change. It typically carries:
+
+- `State`: where the work is now and what happens next;
+- `Key Files`: non-obvious files that matter to continuation;
+- `Knowledge`: durable decisions, constraints, and gotchas;
+- `Milestones`: one-line factual session records.
+
+Root changes also use `Coordination` to summarize sub-change status.
+
+### Skills and sync layout
+
+`.sspec/skills/` is the source directory for skills. Host-specific locations such as `.agents/skills/` are synced from it by `sspec project init` and `sspec project update`.
+
+### Builtin tools
+
+`sspec tool` provides CLI complements for agent workflows, including:
+
+- `now`
+- `ask`
+- `mdtoc`
+- `view-tree`
+- `fileinfo`
+- `patch`
+- `write`
+- `treesitter`
+- `pack-zip`
+
+Run `sspec tool --help` for the full list.
+
+## Compatibility
+
+sspec assumes an agent environment that can:
 
 - read and write local repository files;
 - follow instructions from `AGENTS.md`;

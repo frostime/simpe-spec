@@ -30,7 +30,7 @@ and `@force-end-align` create unnecessary cognitive load for agents without addi
 
 ### Approach
 
-Keep the change lifecycle skeleton (Research → Design → Plan → Implement → Review → Handover)
+Keep the change lifecycle skeleton (Clarify → Design → Plan → Implement → Review)
 intact. Only rewrite the interaction layer: how agents communicate with users during the workflow.
 
 ### Key Change
@@ -62,7 +62,7 @@ intact. Only rewrite the interaction layer: how agents communicate with users du
 
 ### What Stays Unchanged
 
-- Change lifecycle (Research → Design → Plan → Implement → Review → Handover)
+- Change lifecycle (Clarify → Design → Plan → Implement → Review)
 - spec.md / tasks.md / memory.md structure and templates
 - Scale assessment logic (micro/single/multi)
 - Design and Implement hard gate nature

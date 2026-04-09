@@ -1,6 +1,6 @@
 ---
 name: sspec-design
-description: "Assess scale, create change, fill spec.md + design.md, align with user. Use after research when ready to define the solution."
+description: "Assess scale, create change, fill spec.md + design.md, align with user. Use after clarify when ready to define the solution."
 metadata:
   author: frostime
   version: 5.0.0

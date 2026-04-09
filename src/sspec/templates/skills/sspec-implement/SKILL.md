@@ -37,11 +37,11 @@ Execute the approved plan. Work through tasks.md systematically.
 - If a task grows but still belongs to the current change → split it, add new tasks to tasks.md
 - If the work now belongs in a follow-up or replacement change → `@align` user before creating a new change
 
-## Handover During Implementation
+## Memory During Implementation
 
 For long sessions (>30 exchanges or multi-file work):
 - Promote durable decisions / constraints to `memory.md` Knowledge
-- Record blockers, discoveries, or user feedback in Session Log
+- Record session facts and checkpoints in `memory.md` Milestones
 - Update Key Files as you discover important files
 
 **Test**: "Would I struggle to continue if context was compressed right now?" → Write to memory.

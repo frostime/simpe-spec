@@ -9,7 +9,8 @@ This section records the root change starting point in git and MUST NOT be edite
 {{GIT}}
 
 ## Coordination
-<!-- 子 change 状态总览。状态变更时 MUST 更新。 -->
+<!-- 子 change 状态总览。状态变更时 MUST 更新。
+这是 root change 协调总览，`change status` 直接读取此表。 -->
 
 | Phase | Sub-Change | Status | Blocker |
 |-------|------------|--------|---------|
@@ -30,5 +31,6 @@ Types: CoordinationDecision, Dependency, CrossChangeFinding, Constraint, Gotcha
 项目级发现 → ALSO append to project.md Notes。 -->
 
 ## Milestones
-<!-- 每 session 一行
+<!-- 每 session 一行；新记录直接追加
+CLI 会把最后一条有效 bullet 视为 latest milestone
 - [ISO timestamp] 一句话概要 -->

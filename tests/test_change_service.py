@@ -17,6 +17,7 @@ from sspec.services.change_service import (
     find_change_matches,
     list_changes,
     parse_change,
+    summarize_change,
     validate_change,
 )
 
@@ -422,6 +423,74 @@ class TestArchiveChange:
 # ---------------------------------------------------------------------------
 
 
+class TestSummarizeChange:
+    def test_new_memory_summary_reads_state_and_latest_milestone(self, sspec_root: Path):
+        change_path = create_change(sspec_root, 'summary-new')
+        (change_path / 'memory.md').write_text(
+            '# Memory: summary-new\n\n'
+            '**Updated**: 2026-04-09T19:00\n\n'
+            '## Git Baseline (Immutable)\n\n'
+            '- Repository: unavailable\n\n'
+            '## State\n'
+            'Implementing phase 1.\n'
+            'Next: update parser.\n\n'
+            '## Milestones\n'
+            '- [2026-04-09T18:00] Created change\n'
+            '- [2026-04-09T19:00] Planning finished\n',
+            encoding='utf-8',
+        )
+
+        summary = summarize_change(change_path)
+        assert summary.memory_exists is True
+        assert summary.state_lines == ['Implementing phase 1.', 'Next: update parser.']
+        assert summary.latest_milestone == '[2026-04-09T19:00] Planning finished'
+        assert summary.coordination_rows is None
+
+    def test_new_root_memory_summary_reads_coordination(self, sspec_root: Path):
+        change_path = create_change(sspec_root, 'summary-root', is_root=True)
+        (change_path / 'memory.md').write_text(
+            '# Memory: summary-root\n\n'
+            '**Updated**: 2026-04-09T19:00\n\n'
+            '## Git Baseline (Immutable)\n\n'
+            '- Repository: unavailable\n\n'
+            '## Coordination\n\n'
+            '| Phase | Sub-Change | Status | Blocker |\n'
+            '|-------|------------|--------|---------|\n'
+            '| Phase 1 | alpha | ✅ | — |\n'
+            '| Phase 2 | beta | ⏳ | waiting |\n\n'
+            '## State\n'
+            'Coordinating phase rollout.\n\n'
+            '## Milestones\n'
+            '- [2026-04-09T19:00] Root planning finished\n',
+            encoding='utf-8',
+        )
+
+        summary = summarize_change(change_path)
+        assert summary.memory_exists is True
+        assert summary.coordination_rows == [
+            {'Phase': 'Phase 1', 'Sub-Change': 'alpha', 'Status': '✅', 'Blocker': '—'},
+            {'Phase': 'Phase 2', 'Sub-Change': 'beta', 'Status': '⏳', 'Blocker': 'waiting'},
+        ]
+
+    def test_legacy_handover_is_unsupported_in_summary(self, sspec_root: Path):
+        change_path = create_change(sspec_root, 'legacy-summary')
+        (change_path / 'memory.md').unlink()
+        (change_path / 'handover.md').write_text(
+            '# Handover: legacy-summary\n\n'
+            '## Session Log\n\n'
+            '### 2026-04-09T19:00 [work-log] Legacy session\n\n'
+            '**Next**\n'
+            '- old next step\n',
+            encoding='utf-8',
+        )
+
+        summary = summarize_change(change_path)
+        assert summary.memory_exists is False
+        assert summary.state_lines == []
+        assert summary.latest_milestone is None
+        assert summary.coordination_rows is None
+
+
 class TestValidateChange:
     def test_fresh_template_passes_validation(self, sspec_root: Path):
         """Freshly created change should satisfy the current validator semantics."""
@@ -476,3 +545,11 @@ class TestValidateChange:
 
         issues = validate_change(change_path)
         assert issues == []
+
+    def test_legacy_handover_fails_validation_without_memory(self, sspec_root: Path):
+        change_path = create_change(sspec_root, 'legacy-validate')
+        (change_path / 'memory.md').unlink()
+        (change_path / 'handover.md').write_text('## Background\nLegacy note\n', encoding='utf-8')
+
+        issues = validate_change(change_path)
+        assert 'Missing required file: memory.md' in issues

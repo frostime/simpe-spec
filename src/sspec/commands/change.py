@@ -461,35 +461,45 @@ def _show_change_detail(change_path: Path) -> None:
         console.print(f'  - {label}: {path}')
 
     console.print()
-    if summary.latest_log:
-        tag_str = f' [{", ".join(summary.latest_log.tags)}]' if summary.latest_log.tags else ''
-        title = f' {summary.latest_log.title}' if summary.latest_log.title else ''
-        console.print('[bold]Latest Session Log[/bold]')
-        console.print(f'- {summary.latest_log.timestamp or "(no timestamp)"}{tag_str}{title}')
-        if summary.latest_log.next_items:
-            console.print('[dim]Next:[/dim]')
-            for item in summary.latest_log.next_items:
-                console.print(f'  - {item}')
+    if summary.memory_exists:
+        console.print('[bold]Current State[/bold]')
+        if summary.state_lines:
+            for line in summary.state_lines:
+                console.print(f'- {line}')
         else:
-            console.print('[dim]Next:[/dim] (not recorded)')
-    else:
-        console.print('[dim]Latest Session Log:[/dim] not available')
+            console.print('[dim]not recorded[/dim]')
 
-    if summary.root_snapshot_rows:
-        table = Table(title='Sub-Change Snapshot')
-        table.add_column('Phase')
-        table.add_column('Sub-Change')
-        table.add_column('Status')
-        table.add_column('Notes')
-        for row in summary.root_snapshot_rows:
-            table.add_row(
-                row.get('Phase', ''),
-                row.get('Sub-Change', ''),
-                row.get('Status', ''),
-                row.get('Notes', ''),
-            )
         console.print()
-        console.print(table)
+        console.print('[bold]Latest Milestone[/bold]')
+        if summary.latest_milestone:
+            console.print(f'- {summary.latest_milestone}')
+        else:
+            console.print('[dim]not recorded[/dim]')
+
+        if summary.coordination_rows:
+            table = Table(title='Coordination')
+            table.add_column('Phase')
+            table.add_column('Sub-Change')
+            table.add_column('Status')
+            table.add_column('Blocker')
+            for row in summary.coordination_rows:
+                table.add_row(
+                    row.get('Phase', ''),
+                    row.get('Sub-Change', ''),
+                    row.get('Status', ''),
+                    row.get('Blocker', ''),
+                )
+            console.print()
+            console.print(table)
+    else:
+        console.print('[bold]Memory[/bold]')
+        console.print('[yellow]unsupported or missing (`memory.md` not found)[/yellow]')
+        console.print()
+        console.print('[bold]Current State[/bold]')
+        console.print('[dim]not recorded[/dim]')
+        console.print()
+        console.print('[bold]Latest Milestone[/bold]')
+        console.print('[dim]not recorded[/dim]')
 
 
 @change.command()

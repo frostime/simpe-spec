@@ -8,7 +8,7 @@ memory.md captures information that doesn't belong in spec/design/tasks/revision
 ## Sections
 
 ### State
-One to three lines: where are we, what's next. First thing the next agent reads.
+One to three lines: where are we, what's next. This is the authoritative resume pointer and the first thing the next agent reads.
 ```
 Implementing Phase 3 task 2. Next: create `services/cache.py` per spec.
 ```
@@ -34,14 +34,14 @@ Rules:
 - Obsolete items → mark with timestamp, don't silently delete
 
 ### Milestones
-One line per session. Pure facts.
+One line per session. Pure facts. Append new entries; the latest valid bullet is what CLI status surfaces as the newest milestone.
 ```
 - [2026-04-09T01:00] Clarify: Research→Clarify rename decided
 - [2026-04-09T02:15] Design+Implement: rename complete
 ```
 
 ### Coordination (Root Only)
-Sub-change status table. MUST update when status changes.
+Sub-change status table. MUST update when status changes. This is the authoritative root summary that `change status` renders.
 
 ## Quality Check
 

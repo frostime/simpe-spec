@@ -21,7 +21,6 @@ from sspec.core import (
     ChangeStatus,
     ChangeStatusSummary,
     InvalidChangeNameError,
-    SessionLogSummary,
     copy_template,
     get_template_dir,
     normalize_status,
@@ -268,74 +267,54 @@ def _extract_updated(memory_content: str) -> str | None:
     return None if value.startswith('<!--') else value
 
 
-def _extract_latest_session_log(memory_content: str) -> SessionLogSummary | None:
-    """Extract the newest session log entry summary from memory.md."""
+def _extract_section_lines(memory_content: str, heading: str) -> list[str]:
+    """Extract non-comment, non-heading lines from a markdown section."""
     lines = memory_content.splitlines()
 
     try:
-        start = next(i for i, line in enumerate(lines) if line.startswith('## Session Log'))
+        start = next(i for i, line in enumerate(lines) if line.startswith(heading))
     except StopIteration:
-        return None
+        return []
 
-    heading_index = None
-    heading_match = None
-    heading_pattern = re.compile(
-        r'^###\s+(?P<timestamp>\S+)(?:\s+\[(?P<tags>[^\]]+)\])?(?:\s+(?P<title>.+))?$'
-    )
+    collected: list[str] = []
     in_comment = False
     for idx in range(start + 1, len(lines)):
         raw_line = lines[idx]
-        candidate = raw_line.strip()
+        stripped = raw_line.strip()
+        if stripped.startswith('## '):
+            break
         if '<!--' in raw_line:
             in_comment = True
         if in_comment:
             if '-->' in raw_line:
                 in_comment = False
             continue
-        match = heading_pattern.match(candidate)
-        if match and not match.group('timestamp').startswith('<'):
-            heading_index = idx
-            heading_match = match
-            break
-
-    if heading_index is None or heading_match is None:
-        return None
-
-    next_items: list[str] = []
-    in_next_block = False
-    bullet_pattern = re.compile(r'^(-|\d+\.)\s+(.*\S)\s*$')
-    for idx in range(heading_index + 1, len(lines)):
-        stripped = lines[idx].strip()
-        if stripped.startswith('### ') or stripped.startswith('## '):
-            break
-        if stripped == '**Next**':
-            in_next_block = True
+        if not stripped:
             continue
-        if stripped.startswith('**') and stripped != '**Next**':
-            in_next_block = False
-            continue
-        if not in_next_block or not stripped:
-            continue
-        if match := bullet_pattern.match(stripped):
-            next_items.append(match.group(2))
+        collected.append(stripped)
 
-    tags_raw = heading_match.group('tags') or ''
-    tags = [tag.strip() for tag in tags_raw.split(',') if tag.strip()]
-    title = (heading_match.group('title') or '').strip() or None
-    return SessionLogSummary(
-        timestamp=heading_match.group('timestamp'),
-        tags=tags,
-        title=title,
-        next_items=next_items,
-    )
+    return collected
 
 
-def _extract_root_snapshot_rows(memory_content: str) -> list[dict[str, str]] | None:
-    """Extract rows from the root change volatile snapshot table."""
+def _extract_state_lines(memory_content: str) -> list[str]:
+    """Extract meaningful lines from the State section."""
+    return _extract_section_lines(memory_content, '## State')
+
+
+def _extract_latest_milestone(memory_content: str) -> str | None:
+    """Extract the newest milestone entry from the Milestones section."""
+    for line in reversed(_extract_section_lines(memory_content, '## Milestones')):
+        if line.startswith('- '):
+            return line[2:].strip()
+    return None
+
+
+def _extract_coordination_rows(memory_content: str) -> list[dict[str, str]] | None:
+    """Extract rows from the root change Coordination table."""
     lines = memory_content.splitlines()
 
     try:
-        start = next(i for i, line in enumerate(lines) if line.startswith('## Sub-Change Status'))
+        start = next(i for i, line in enumerate(lines) if line.startswith('## Coordination'))
     except StopIteration:
         return None
 
@@ -388,9 +367,8 @@ def summarize_change(change_path: Path, cwd: Path | None = None) -> ChangeStatus
     change_type = raw_change_type if isinstance(raw_change_type, str) else ''
 
     memory_file = change_path / 'memory.md'
-    if not memory_file.exists():
-        memory_file = change_path / 'handover.md'  # backward compat
-    memory_content = memory_file.read_text(encoding='utf-8') if memory_file.exists() else ''
+    memory_exists = memory_file.exists()
+    memory_content = memory_file.read_text(encoding='utf-8') if memory_exists else ''
 
     source_links = {
         'spec': _display_path(change_path / 'spec.md', base),
@@ -410,8 +388,10 @@ def summarize_change(change_path: Path, cwd: Path | None = None) -> ChangeStatus
         tasks_total=change.progress['total'],
         updated=_extract_updated(memory_content),
         linked_requests=_extract_linked_request_paths(change),
-        latest_log=_extract_latest_session_log(memory_content),
-        root_snapshot_rows=_extract_root_snapshot_rows(memory_content),
+        memory_exists=memory_exists,
+        state_lines=_extract_state_lines(memory_content),
+        latest_milestone=_extract_latest_milestone(memory_content),
+        coordination_rows=_extract_coordination_rows(memory_content),
         source_links=source_links,
     )
 
@@ -735,22 +715,9 @@ def validate_change(change_path: Path) -> list[str]:
             issues.append('tasks.md: No tasks defined (still template)')
 
     memory_file = change_path / 'memory.md'
-    if not memory_file.exists():
-        memory_file = change_path / 'handover.md'  # backward compat
     if memory_file.exists():
         content = memory_file.read_text(encoding='utf-8')
-        # Support both new (## State) and legacy (## Background) formats
-        has_state = '## State' in content
-        if '## Background' in content and not has_state:
-            bg_idx = content.index('## Background')
-            next_heading = content.find('\n## ', bg_idx + 13)
-            bg_body = content[bg_idx:next_heading] if next_heading > 0 else content[bg_idx:]
-            lines = [
-                line
-                for line in bg_body.split('\n')
-                if line.strip() and not line.startswith('#') and not line.strip().startswith('<!--')
-            ]
-            if len(lines) == 0:
-                issues.append('memory.md: Background section empty')
+        if '## State' not in content:
+            issues.append('memory.md: Missing section "## State"')
 
     return issues

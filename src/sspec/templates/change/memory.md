@@ -10,7 +10,7 @@ This section records the change starting point in git and MUST NOT be edited or 
 
 ## State
 <!-- 当前在哪、下一步做什么 — 一到三行
-Agent 冷启动时第一个读的 section。 -->
+这是恢复入口；Agent 冷启动时第一个读的 section。 -->
 
 ## Key Files
 <!-- 对理解/继续这个 change 至关重要的文件
@@ -25,5 +25,6 @@ Types: Decision, Constraint, Gotcha, Rejected
 过时项标注时间戳，不要静默删除。 -->
 
 ## Milestones
-<!-- 每 session 一行，纯事实记录
+<!-- 每 session 一行，纯事实记录；新记录直接追加
+CLI 会把最后一条有效 bullet 视为 latest milestone
 - [ISO timestamp] 一句话概要 -->

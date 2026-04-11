@@ -7,7 +7,9 @@ SSPEC_SCHEMA::{{SCHEMA_VERSION}}
 
 SSPEC is a doc-driven workflow. Planning, tracking, and memory live in `.sspec/`.
 
-**Goal**: Any Agent resumes in 30 seconds from `.sspec/`.
+**Goal**:
+- **Harness**: Human takes in control with sspec
+- **Trackable**: Agent make trackable work with sspec
 
 **Normative language**: MUST, SHOULD, MAY etc. follow BCP 14 (RFC 2119 / RFC 8174).
 
@@ -35,7 +37,7 @@ SSPEC is a doc-driven workflow. Planning, tracking, and memory live in `.sspec/`
 | Input | Action |
 |-------|--------|
 | Directive (`@resume`, `@memory`, etc.) | Execute → §5 |
-| Request (attached or described) | Assess scale → §3 |
+| Request file under `.sspec/requests` (attached or described) | Assess scale → §3 |
 | Resume existing change | `read(memory→tasks→spec)` → continue |
 | Micro task (≤3 files, ≤30min, obvious) | Do directly — no change, no @align gates |
 
@@ -53,7 +55,7 @@ SSPEC is a doc-driven workflow. Planning, tracking, and memory live in `.sspec/`
 
 Each phase has a dedicated SKILL. Read it before starting.
 
-```
+```phase
 Clarify → sspec-clarify
   posture, not phase — reusable when understanding drifts
   output: Problem Statement + direction sketch, reference/ notes
@@ -155,6 +157,7 @@ Architecture knowledge that outlives a single change. When change is DONE with a
 **HOWTO**: Micro-guides for specific operations. `sspec howto list` to browse; batch-read with `sspec howto read <n1> <n2>`.
 
 **SKILL**: Read the SKILL for the current phase before starting. If a SKILL references a file → **MUST** read it. If a SKILL mentions `sspec howto xxx` → load on-demand.
+IF `sspec-*` skill not auto-loaded → list&find under `.sspec/skills/`
 
 ### Template Markers
 

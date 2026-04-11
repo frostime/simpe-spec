@@ -127,16 +127,12 @@ class SkillInstaller:
             shutil.rmtree(target)
 
     @staticmethod
-    def _upsert_gitignore_fence(gitignore_path: Path, entry: str) -> None:
-        """Insert or update sspec managed block in .gitignore."""
-        gitignore_path.parent.mkdir(parents=True, exist_ok=True)
+    def _read_gitignore_state(gitignore_path: Path) -> tuple[str, list[str], list[str]]:
+        """Read .gitignore and split preserved lines from managed fenced entries."""
+        before = gitignore_path.read_text(encoding='utf-8') if gitignore_path.exists() else ''
+        lines = before.splitlines()
 
-        if gitignore_path.exists():
-            lines = gitignore_path.read_text(encoding='utf-8').splitlines()
-        else:
-            lines = []
-
-        managed_entries: set[str] = {entry}
+        managed_entries: list[str] = []
         in_managed = False
         preserved: list[str] = []
 
@@ -151,29 +147,87 @@ class SkillInstaller:
 
             if in_managed:
                 if stripped:
-                    managed_entries.add(stripped)
+                    managed_entries.append(stripped)
                 continue
 
             preserved.append(line)
 
-        while preserved and preserved[-1] == '':
-            preserved.pop()
+        return before, preserved, managed_entries
 
-        if preserved:
-            preserved.append('')
+    @staticmethod
+    def _render_gitignore_content(preserved: list[str], managed_entries: list[str]) -> str:
+        """Render .gitignore content with preserved lines and an optional managed block."""
+        rendered = preserved.copy()
 
-        preserved.append(GITIGNORE_FENCE_START)
-        preserved.extend(sorted(managed_entries))
-        preserved.append(GITIGNORE_FENCE_END)
+        while rendered and rendered[-1] == '':
+            rendered.pop()
 
-        gitignore_path.write_text('\n'.join(preserved) + '\n', encoding='utf-8')
+        normalized_entries = sorted(
+            {entry.strip() for entry in managed_entries if isinstance(entry, str) and entry.strip()}
+        )
+
+        if normalized_entries:
+            if rendered:
+                rendered.append('')
+            rendered.append(GITIGNORE_FENCE_START)
+            rendered.extend(normalized_entries)
+            rendered.append(GITIGNORE_FENCE_END)
+
+        if not rendered:
+            return ''
+
+        return '\n'.join(rendered) + '\n'
+
+    @staticmethod
+    def sync_managed_gitignore_entries(
+        gitignore_path: Path, entries: list[str], dry_run: bool = False
+    ) -> bool:
+        """Replace the sspec-managed fenced block with exactly the provided entries."""
+        before, preserved, _managed_entries = SkillInstaller._read_gitignore_state(gitignore_path)
+        after = SkillInstaller._render_gitignore_content(preserved, entries)
+        changed = after != before
+
+        if not changed or dry_run:
+            return changed
+
+        if after:
+            gitignore_path.parent.mkdir(parents=True, exist_ok=True)
+            gitignore_path.write_text(after, encoding='utf-8')
+        else:
+            gitignore_path.unlink(missing_ok=True)
+
+        return True
+
+    @staticmethod
+    def _upsert_gitignore_fence(gitignore_path: Path, entry: str) -> None:
+        """Insert or update sspec managed block in .gitignore."""
+        _before, _preserved, managed_entries = SkillInstaller._read_gitignore_state(gitignore_path)
+        SkillInstaller.sync_managed_gitignore_entries(
+            gitignore_path,
+            [*managed_entries, entry],
+            dry_run=False,
+        )
 
     @staticmethod
     def _add_to_gitignore(target: Path) -> None:
-        """将 skill 目录添加到父目录的 .gitignore"""
+        """将 spoke 的 `skills` 目录添加到父目录的 .gitignore。"""
         gitignore_path = target.parent / '.gitignore'
         skill_name = target.name
         SkillInstaller._upsert_gitignore_fence(gitignore_path, skill_name)
+
+    @staticmethod
+    def _add_hub_skills_to_gitignore(sspec_root: Path, skill_names: list[str]) -> None:
+        """Write managed hub skill ignores into `.sspec/.gitignore`."""
+        entries = [
+            f'skills/{name.strip()}'
+            for name in skill_names
+            if isinstance(name, str) and name.strip()
+        ]
+        SkillInstaller.sync_managed_gitignore_entries(
+            sspec_root / '.gitignore',
+            entries,
+            dry_run=False,
+        )
 
     def _try_create_symlink(self, source: Path, target: Path) -> bool:
         """尝试创建符号链接（不提权）"""
@@ -358,6 +412,11 @@ class SkillInstaller:
         """
         SkillInstaller._add_to_gitignore(target_dir)
 
+    @staticmethod
+    def add_hub_skills_to_gitignore(sspec_root: Path, skill_names: list[str]) -> None:
+        """Maintain hub-managed skill ignores in `.sspec/.gitignore`."""
+        SkillInstaller._add_hub_skills_to_gitignore(sspec_root, skill_names)
+
     def install_hub_and_spokes_batch(
         self, items: list[tuple[Path, Path, list[Path]]], prefer_symlink: bool = True
     ) -> dict[Path, SkillStrategy]:
@@ -371,13 +430,20 @@ class SkillInstaller:
             {target_path: strategy} 字典
         """
         result_dict: dict[Path, SkillStrategy] = {}
+        hub_skill_names: list[str] = []
+        hub_sspec_root: Path | None = None
 
         # 第一步：安装所有 hubs（总是复制）
         for source, hub, _spokes in items:
             self._prepare_target(hub)
             shutil.copytree(source, hub)
-            self._add_to_gitignore(hub)
+            hub_skill_names.append(hub.name)
+            if hub_sspec_root is None:
+                hub_sspec_root = hub.parent.parent
             result_dict[hub] = 'copy'
+
+        if hub_sspec_root is not None:
+            self._add_hub_skills_to_gitignore(hub_sspec_root, hub_skill_names)
 
         # 第二步：收集所有 spokes 对，按平台创建 link。
         all_spoke_pairs: list[tuple[Path, Path]] = []

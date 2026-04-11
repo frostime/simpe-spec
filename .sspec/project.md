@@ -67,3 +67,4 @@ Prune entries that become outdated or graduate to Conventions/spec-docs. -->
 - 2026-03-07: Windows skill sync currently prefers junction on `win32` and falls back to copy; 旧的 elevated symlink 流程说明已不再适用。
 - 2026-03-07: 当前 builtin tool 集合已扩展为 `patch`、`pack-zip`、`view-tree`、`fileinfo`、`write`、`mdtoc`、`now`、`ask`；修改它们时要同步更新 spec-doc。
 - 2026-03-07: 新创建的 change handover 现在会记录创建前的 immutable Git Baseline，包含 repo/branch/HEAD 和原始 `git status --short --branch` 快照；Agent 无需改 SKILL/AGENTS 即可在 resume 时看到它。
+- 2026-04-11: 当 `.agents/skills` 等 spoke 指向 `.sspec/skills` 时，hub-local `.sspec/skills/.gitignore` 会泄漏为 Pi 运行时 discovery 过滤条件；受管 hub skill ignore 必须维护在 `.sspec/.gitignore` 而不是 hub 目录内部。

@@ -243,11 +243,13 @@ def test_migrate_legacy_skill_layouts_detects_legacy_in_dry_run(monkeypatch, tmp
     assert migrations[0].location == '.github/skills'
 
 
-def test_sync_hub_skills_gitignore_updates_only_hub_file(tmp_path: Path):
+def test_sync_hub_skills_gitignore_writes_sspec_root_and_cleans_legacy_file(tmp_path: Path):
     sspec_root = _init_project(tmp_path)
     hub_gitignore = sspec_root / 'skills' / '.gitignore'
-    sspec_gitignore = sspec_root / '.gitignore'
-    sspec_before = sspec_gitignore.read_text(encoding='utf-8')
+    hub_gitignore.write_text(
+        '# >>> sspec-managed skills >>>\nlegacy-skill\n# <<< sspec-managed skills <<<\n',
+        encoding='utf-8',
+    )
 
     changed = sync_hub_skills_gitignore(
         sspec_root=sspec_root,
@@ -256,17 +258,23 @@ def test_sync_hub_skills_gitignore_updates_only_hub_file(tmp_path: Path):
     )
 
     assert changed is True
-    content = hub_gitignore.read_text(encoding='utf-8')
-    assert '# >>> sspec-managed skills >>>' in content
-    assert 'alpha-skill' in content
-    assert 'beta-skill' in content
-    assert sspec_gitignore.read_text(encoding='utf-8') == sspec_before
+    sspec_content = (sspec_root / '.gitignore').read_text(encoding='utf-8')
+    assert '# >>> sspec-managed skills >>>' in sspec_content
+    assert 'skills/alpha-skill' in sspec_content
+    assert 'skills/beta-skill' in sspec_content
+    assert not hub_gitignore.exists()
 
 
 def test_sync_hub_skills_gitignore_dry_run_does_not_write(tmp_path: Path):
     sspec_root = _init_project(tmp_path)
+    root_gitignore = sspec_root / '.gitignore'
     hub_gitignore = sspec_root / 'skills' / '.gitignore'
-    before = hub_gitignore.read_text(encoding='utf-8') if hub_gitignore.exists() else ''
+    root_before = root_gitignore.read_text(encoding='utf-8')
+    hub_gitignore.write_text(
+        '# >>> sspec-managed skills >>>\nlegacy-skill\n# <<< sspec-managed skills <<<\n',
+        encoding='utf-8',
+    )
+    hub_before = hub_gitignore.read_text(encoding='utf-8')
 
     changed = sync_hub_skills_gitignore(
         sspec_root=sspec_root,
@@ -275,8 +283,8 @@ def test_sync_hub_skills_gitignore_dry_run_does_not_write(tmp_path: Path):
     )
 
     assert changed is True
-    after = hub_gitignore.read_text(encoding='utf-8') if hub_gitignore.exists() else ''
-    assert after == before
+    assert root_gitignore.read_text(encoding='utf-8') == root_before
+    assert hub_gitignore.read_text(encoding='utf-8') == hub_before
 
 
 def test_recover_missing_skill_locations_dry_run_reports_without_writing(tmp_path: Path):

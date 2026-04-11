@@ -43,6 +43,43 @@ def test_gitignore_fence_upsert_is_idempotent(tmp_path: Path):
     assert '\nskills\n' in content
 
 
+def test_add_hub_skills_to_gitignore_writes_sspec_scoped_entries(tmp_path: Path):
+    sspec_root = tmp_path / '.sspec'
+    sspec_root.mkdir(parents=True)
+    gitignore_path = sspec_root / '.gitignore'
+    gitignore_path.write_text('tmp/**\n', encoding='utf-8')
+
+    SkillInstaller.add_hub_skills_to_gitignore(sspec_root, ['sspec-plan', 'sspec-align'])
+    SkillInstaller.add_hub_skills_to_gitignore(sspec_root, ['sspec-align', 'sspec-plan'])
+
+    content = gitignore_path.read_text(encoding='utf-8')
+    assert content.count(GITIGNORE_FENCE_START) == 1
+    assert content.count(GITIGNORE_FENCE_END) == 1
+    assert 'tmp/**' in content
+    assert 'skills/sspec-align' in content
+    assert 'skills/sspec-plan' in content
+
+
+def test_sync_managed_gitignore_entries_removes_empty_legacy_file(tmp_path: Path):
+    gitignore_path = tmp_path / '.gitignore'
+    gitignore_path.write_text(
+        '\n'.join(
+            [
+                GITIGNORE_FENCE_START,
+                'sspec-align',
+                GITIGNORE_FENCE_END,
+                '',
+            ]
+        ),
+        encoding='utf-8',
+    )
+
+    changed = SkillInstaller.sync_managed_gitignore_entries(gitignore_path, [], dry_run=False)
+
+    assert changed is True
+    assert not gitignore_path.exists()
+
+
 def test_install_batch_uses_junction_fallback(monkeypatch, tmp_path: Path):
     source = tmp_path / 'source-skills'
     source.mkdir()

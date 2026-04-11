@@ -358,10 +358,10 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
 
     if dry_run:
         if hub_gitignore_synced:
-            console.print('[cyan]Would sync .sspec/skills/.gitignore managed skill list[/cyan]')
+            console.print('[cyan]Would sync hub managed skill ignores in .sspec/.gitignore[/cyan]')
     else:
         if hub_gitignore_synced:
-            console.print('[green]+[/green] Synced .sspec/skills/.gitignore managed skill list')
+            console.print('[green]+[/green] Synced hub managed skill ignores in .sspec/.gitignore')
 
     gitignore_updated_count = int(bool(hub_gitignore_synced))
 

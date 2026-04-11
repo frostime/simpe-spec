@@ -1,9 +1,9 @@
 {
   "meta_schema": "2.1",
   "sspec_schema": "5.0",
-  "sspec_version": "1.6.4.dev15+gad8ec1c5c",
+  "sspec_version": "2.0.1.dev0+g82645c452.d20260411",
   "created_at": "2026-02-07T18:42:39.297150",
-  "updated_at": "2026-04-09T21:16:39.531280",
+  "updated_at": "2026-04-11T19:25:46.297987",
   "file_hashes": {
     "skills/use-powershell": "c14a032ce16697b8",
     "skills/write-patch": "c0b333d770306c08",

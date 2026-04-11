@@ -56,7 +56,7 @@ graph TD
 ## Update Flow
 
 `project update` 执行顺序：
-1. 同步 `.sspec/skills/.gitignore` 中的受管 skill 列表
+1. 同步 `.sspec/.gitignore` 中的 hub 受管 skill 列表，并清理 legacy `.sspec/skills/.gitignore` managed block
 2. legacy layout 迁移（旧版逐 skill 子链接）
 3. orphan skill 清理
 4. template + skill 更新候选计算
@@ -81,9 +81,10 @@ Skill 候选状态语义（copy 目录）：
 - `# <<< sspec-managed skills <<<`
 
 规则：
-- hub 场景写入 `.sspec/skills/.gitignore`，精确列出当前受管理的 skill 名称；未受管理的自定义 skill 仍可被跟踪
+- hub 场景写入 `.sspec/.gitignore`，精确维护 `skills/<name>` 形式的受管条目；未受管理的自定义 skill 仍可被跟踪
+- `.sspec/skills/.gitignore` 不再承载受管 skill ignore，因为 hub-local ignore 会在外部工具通过 `.agents/skills -> .sspec/skills` 发现技能时泄漏为 runtime 过滤语义
 - spoke 场景写入父目录（例如 `.github/.gitignore`）并维护 `skills` 条目
-- 幂等更新，不重复追加
+- 幂等更新，不重复追加；legacy hub-local managed block 在 update 时会被清理
 
 ## Legacy Design (Previous Scheme)
 

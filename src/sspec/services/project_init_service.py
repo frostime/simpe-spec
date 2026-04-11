@@ -118,6 +118,12 @@ def initialize_project(
     (sspec_path / 'spec-docs').mkdir(exist_ok=True)
     (sspec_path / 'tmp').mkdir(exist_ok=True)
 
+    # Create .gitignore before skill install so managed hub entries are merged
+    # into the default ignore rules instead of replacing them.
+    gitignore_path = sspec_path / '.gitignore'
+    if not gitignore_path.exists():
+        gitignore_path.write_text(DEFAULT_GITIGNORE, encoding='utf-8')
+
     # Install skills using hub-and-spoke pattern
     template_skills = list_template_skills()
     skill_targets = get_skill_targets_from_locations(
@@ -163,11 +169,6 @@ def initialize_project(
 
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         copy_template(template_path, dest_path, common_replacements)
-
-    # Create .gitignore
-    gitignore_path = sspec_path / '.gitignore'
-    if not gitignore_path.exists():
-        gitignore_path.write_text(DEFAULT_GITIGNORE, encoding='utf-8')
 
     # Compute hashes for installed skills (for update tracking)
     skill_hashes: dict[str, str] = {}

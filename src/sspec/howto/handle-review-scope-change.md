@@ -5,6 +5,13 @@ desc: Decide whether review feedback stays in the current change, becomes a foll
 
 When review feedback adds work, do not default to `memory.md` and do not open a new change automatically.
 
+## Revision Trigger Test
+
+Apply this before classifying any feedback:
+
+> **Can the original spec/design still accurately predict the post-change code?**
+> YES → `minor-fix` | NO → `amend` → revision required
+
 ## Quick Classifier
 
 | If the feedback... | Class | What to do |
@@ -22,8 +29,19 @@ When review feedback adds work, do not default to `memory.md` and do not open a 
    - If still in PLANNING, update `spec.md` / `design.md` directly.
 3. If the answer is yes but the feedback is really "what to do next", stop and `@align` before opening a follow-up change.
 4. If the answer is no because the current direction is wrong, stop and `@align` before any `BLOCKED` + replacement-change action.
-5. Record the outcome:
-   - current-change amend -> `revisions/NNN-*.md` (if post-gate) + `tasks.md` + `memory.md`
+5. Cross-reference (post-gate amend only):
+   - Append to `spec.md` frontmatter `reference:`:
+     ```yaml
+     - source: ".sspec/changes/<change>/revisions/NNN-xxx.md"
+       type: "revision"
+       note: "<one-line summary of what changed>"
+     ```
+   - Use this header format for the Feedback Tasks block in `tasks.md`:
+     ```markdown
+     ### Feedback Tasks (→ [NNN-xxx](./revisions/NNN-xxx.md))
+     ```
+6. Record the outcome:
+   - current-change amend -> `revisions/NNN-*.md` (if post-gate) + `tasks.md` + `spec.md` reference + `memory.md`
    - follow-up / supersede -> `memory.md` plus the new change's `spec.md` reference chain
 
 ## Hard Rules

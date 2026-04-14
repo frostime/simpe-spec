@@ -25,12 +25,29 @@ Execute the approved plan. Work through tasks.md systematically.
 | Situation | Action |
 |-----------|--------|
 | Task is ambiguous | `@align` for clarification |
-| Implementation reveals design issue | Re-enter Clarify posture to understand the gap; create `revisions/NNN-*.md` if spec/design already gated, then update tasks.md; `@align` if scope changes |
+| Implementation reveals design issue | See **Post-Gate Design Changes** below |
 | Blocker encountered | Record in `memory.md`, `@align` user |
 | Multiple valid approaches | Pick the simpler one, note in memory |
 | Design assumption was wrong | Re-enter Clarify posture: "Design says X but I found Y" → re-sync with user before revising |
 
 **Do not guess on blockers.** One `@align` < one rework cycle.
+
+### Post-Gate Design Changes
+
+Apply this test first:
+> Can the original spec/design still accurately predict the post-change code?
+> **YES** → note in memory, continue | **NO** → revision required
+
+If revision required:
+
+1. **Stop** — do not implement the deviation silently
+2. `@align` user: explain the gap, get confirmation
+3. `sspec change scaffold revision <change> --title "..."` — create revision file
+4. Fill revision: Reason / Spec Impact / Design Impact / Task Impact
+5. Update `tasks.md` to reflect new work
+6. Resume implementation
+
+This applies whether the issue was triggered by a user comment or self-discovered.
 
 ## Keep Changes Focused
 

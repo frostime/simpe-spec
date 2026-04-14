@@ -9,7 +9,7 @@ reference: null
 <!-- @RULE: Frontmatter
 status: PLANNING | DOING | REVIEW | DONE | BLOCKED
 change-type: single | sub
-reference?: Array<{source, type: 'request'|'root-change'|'sub-change'|'prev-change'|'doc', note?}>
+reference?: Array<{source, type: 'request'|'root-change'|'sub-change'|'prev-change'|'doc'|'revision', note?}>
 
 Sub-change MUST link root:
 reference:

@@ -8,8 +8,7 @@ metadata:
 
 # Write-Patch Skill
 
-GATE: Want to write a complete file instead of fine-grained edits? → Use other methods like built in tool, `sspec tool write` or bash/shell etc.
-`sspec tool patch` is only for local patch edits of complete file.
+GATE: Want to write a complete file directly with a simpler workflow? `sspec tool write` or shell is still fine. Use `sspec tool patch` when you want the whole change bundle to stay reviewable as structured patch blocks, including file creation or whole-file replacement.
 
 ---
 
@@ -19,7 +18,10 @@ GATE: Want to write a complete file instead of fine-grained edits? → Use other
 
 ## Workflow
 
-1. Write one or more SEARCH/REPLACE patch blocks
+1. Write one or more patch blocks using the right operation:
+   - `SEARCH` — edit inside an existing file
+   - `CREATE` — create a new file with full content
+   - `OVERWRITE` — replace the full content of an existing file
 2. Apply with one of:
    - `sspec tool patch PATCH_FILE`
    - `sspec tool patch --file PATCH_FILE`
@@ -65,6 +67,8 @@ EOF
 
 ## Quick Format Reference
 
+### SEARCH
+
 ```text
 # <path>[:<range>]
 <<<<<<< SEARCH
@@ -74,7 +78,29 @@ new content
 >>>>>>> REPLACE
 ```
 
-Line range examples: `:L10-L25`, `:L10-`, `:-L25`. Multiple blocks and interleaved text are allowed.
+### CREATE
+
+```text
+# <path>
+<<<<<<< CREATE
+=======
+new file content
+>>>>>>> REPLACE
+```
+
+### OVERWRITE
+
+```text
+# <path>
+<<<<<<< OVERWRITE
+=======
+full replacement content
+>>>>>>> REPLACE
+```
+
+Line range examples: `:L10-L25`, `:L10-`, `:-L25`.
+Line ranges apply only to `SEARCH`.
+Multiple blocks and interleaved text are allowed.
 
 For full format specification (markers, matching behavior, path rules), run `sspec tool patch --prompt`.
 
@@ -93,6 +119,29 @@ def main():
     setup()
     init_logging()    # Added
     return 0
+>>>>>>> REPLACE
+```
+
+### Creating a New File
+
+```text
+# docs/new-page.md
+<<<<<<< CREATE
+=======
+# New Page
+
+Hello.
+>>>>>>> REPLACE
+```
+
+### Replacing a Whole File
+
+```text
+# config/app.env
+<<<<<<< OVERWRITE
+=======
+DEBUG=false
+PORT=3000
 >>>>>>> REPLACE
 ```
 
@@ -177,6 +226,8 @@ if value is None:
 >>>>>>> REPLACE
 ```
 
+`CREATE` and `OVERWRITE` are file-level operations and do not take line ranges.
+
 ### Preserve Indentation Exactly
 
 ```text
@@ -206,8 +257,13 @@ def foo():
 
 ❌ **Mixed line endings** — if the file uses `\r\n`, SEARCH content should match
 
+❌ **Using empty SEARCH to create a missing file** — use `CREATE` for new files
+
+❌ **Non-empty upper block for CREATE/OVERWRITE** — the section before `=======` must be whitespace-only
+
 ## Failure Recovery
 
 - Failed patches are saved into one markdown bundle
 - Fenced `patch` blocks in the bundle are directly reusable as future patch input
 - `already_applied` status usually means the change is already in place — do not regenerate unless the target is wrong
+- `file_exists` on `CREATE` means the target already exists with different content — inspect before choosing `OVERWRITE`

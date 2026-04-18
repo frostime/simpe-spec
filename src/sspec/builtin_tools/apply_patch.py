@@ -22,6 +22,7 @@ import re
 import sys
 import tempfile
 from dataclasses import dataclass
+from importlib.resources import as_file, files
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
@@ -45,6 +46,8 @@ TOOL_DESCRIPTION = 'Apply SEARCH/REPLACE format patches to files'
 
 # ============ 数据结构 ============
 
+PatchOperation = Literal['search', 'create', 'overwrite']
+
 
 @dataclass
 class PatchBlock:
@@ -52,6 +55,7 @@ class PatchBlock:
 
     file_path: Path
     display_path: str
+    operation: PatchOperation
     line_range: tuple[int | None, int | None] | None  # (start, end) 1-based, inclusive
     search_content: str
     replace_content: str
@@ -83,6 +87,7 @@ class PatchApplyResult:
         'missing_file',
         'not_a_file',
         'invalid_line_range',
+        'file_exists',
         'out_of_range',
         'parse_error',
         'write_error',
@@ -346,7 +351,7 @@ def is_patch_header_line(lines: list[str], index: int) -> bool:
     while next_index < len(lines) and strip_line_ending(lines[next_index]).strip() == '':
         next_index += 1
 
-    return next_index < len(lines) and strip_line_ending(lines[next_index]) == SEARCH_MARK
+    return next_index < len(lines) and strip_line_ending(lines[next_index]) in PATCH_OPEN_MARKERS
 
 
 def atomic_write_text(path: Path, text: str, *, encoding: str = 'utf-8') -> None:
@@ -381,15 +386,26 @@ def atomic_write_text(path: Path, text: str, *, encoding: str = 'utf-8') -> None
 # ============ LRR Phase 1: 行分类 ============
 
 SEARCH_MARK = '<<<<<<< SEARCH'
+CREATE_MARK = '<<<<<<< CREATE'
+OVERWRITE_MARK = '<<<<<<< OVERWRITE'
 DELIM_MARK = '======='
 REPLACE_MARK = '>>>>>>> REPLACE'
+
+PATCH_OPEN_MARKERS: dict[str, PatchOperation] = {
+    SEARCH_MARK: 'search',
+    CREATE_MARK: 'create',
+    OVERWRITE_MARK: 'overwrite',
+}
+OPERATION_TO_MARKER: dict[PatchOperation, str] = {
+    operation: marker for marker, operation in PATCH_OPEN_MARKERS.items()
+}
 
 
 def classify_line(lines: list[str], index: int) -> str:
     """
     分类规则：
     F - File path (# path/to/file[:L10-L25])
-    S - Search marker (<<<<<<< SEARCH)
+    S - Patch opener marker (<<<<<<< SEARCH/CREATE/OVERWRITE)
     D - Delimiter (=======)
     R - Replace marker (>>>>>>> REPLACE)
     B - Blank line (仅空白)
@@ -402,7 +418,7 @@ def classify_line(lines: list[str], index: int) -> str:
         return 'F'
 
     # 标记行必须精确匹配（不允许额外空格）
-    if stripped == SEARCH_MARK:
+    if stripped in PATCH_OPEN_MARKERS:
         return 'S'
     if stripped == DELIM_MARK:
         return 'D'
@@ -449,6 +465,44 @@ def lrr_scan(text: str) -> LRRResult:
 PATCH_PATTERN = re.compile(r'F(?P<gap>B*)S(?P<search>[BC]*?)D(?P<replace>[BC]*?)R')
 
 
+def parse_patch_operation(marker_line: str) -> PatchOperation:
+    """Decode the concrete patch operation from the raw opener marker line."""
+    stripped = strip_line_ending(marker_line)
+    try:
+        return PATCH_OPEN_MARKERS[stripped]
+    except KeyError as e:
+        raise ValueError(f'Invalid patch opener: {marker_line}') from e
+
+
+def validate_patch_block(
+    *,
+    operation: PatchOperation,
+    display_path: str,
+    file_path: Path,
+    line_range: tuple[int | None, int | None] | None,
+    search_content: str,
+) -> str | None:
+    """Return an error message when a parsed block violates operation rules."""
+    if file_path.exists() and not file_path.is_file():
+        return f'Not a file: {display_path}'
+
+    if operation in {'create', 'overwrite'}:
+        if line_range is not None:
+            return (
+                f'Line range is only supported for SEARCH patches, got '
+                f'{operation.upper()}: {display_path}'
+            )
+        if search_content.strip() != '':
+            return (
+                f'{operation.upper()} upper block must be whitespace-only: {display_path}'
+            )
+
+    if operation == 'search' and not file_path.exists():
+        return f'File does not exist: {display_path}'
+
+    return None
+
+
 def parse_patches(patch_text: str, *, project_root: Path | None = None) -> PatchParseResult:
     """解析 patch 文本，提取所有 patch 块（保持 LRR 风格）"""
     root = (project_root or Path.cwd()).resolve()
@@ -462,6 +516,8 @@ def parse_patches(patch_text: str, *, project_root: Path | None = None) -> Patch
             # match.start() == 文件路径行在 schema 中的位置 == 行索引
             file_line_idx = match.start()
             file_line = strip_line_ending(lrr.lines[file_line_idx])
+            opener_line_idx = file_line_idx + 1 + len(lrr.extract_lines(match, 'gap'))
+            opener_line = strip_line_ending(lrr.lines[opener_line_idx])
 
             # 解析文件路径和行范围
             try:
@@ -477,25 +533,37 @@ def parse_patches(patch_text: str, *, project_root: Path | None = None) -> Patch
                 errors.append(f'Line {file_line_idx + 1}: Invalid path: {file_line} ({e})')
                 continue
 
-            # 检查文件是否存在
-            if not file_path.exists():
-                errors.append(f'Line {file_line_idx + 1}: File does not exist: {display_path}')
-                continue
-            if not file_path.is_file():
-                errors.append(f'Line {file_line_idx + 1}: Not a file: {display_path}')
+            try:
+                operation = parse_patch_operation(opener_line)
+            except ValueError as e:
+                errors.append(f'Line {opener_line_idx + 1}: {e}')
                 continue
 
             # 提取 SEARCH / REPLACE 内容（不包括标记行）
             search_lines = lrr.extract_lines(match, 'search')
             replace_lines = lrr.extract_lines(match, 'replace')
+            search_content = ''.join(search_lines)
+            replace_content = ''.join(replace_lines)
+
+            block_error = validate_patch_block(
+                operation=operation,
+                display_path=display_path,
+                file_path=file_path,
+                line_range=line_range,
+                search_content=search_content,
+            )
+            if block_error is not None:
+                errors.append(f'Line {file_line_idx + 1}: {block_error}')
+                continue
 
             patches.append(
                 PatchBlock(
                     file_path=file_path,
                     display_path=display_path,
+                    operation=operation,
                     line_range=line_range,
-                    search_content=''.join(search_lines),
-                    replace_content=''.join(replace_lines),
+                    search_content=search_content,
+                    replace_content=replace_content,
                     source_line_start=file_line_idx + 1,
                 )
             )
@@ -615,10 +683,99 @@ def format_line_range(line_range: tuple[int | None, int | None] | None) -> str:
 def apply_patch(patch: PatchBlock, *, dry_run: bool = False) -> PatchApplyResult:
     """应用单个 patch。"""
     try:
+        if patch.operation == 'create':
+            replace_text = convert_newlines(patch.replace_content, '\n')
+            replace_lines = split_lines_keepends(replace_text)
+
+            if patch.file_path.exists():
+                if not patch.file_path.is_file():
+                    return PatchApplyResult(
+                        patch=patch,
+                        success=False,
+                        status='not_a_file',
+                        error=f'Not a file: {patch.display_path}',
+                        source_line_start=patch.source_line_start,
+                        replace_line_count=len(replace_lines),
+                    )
+
+                existing_content, _ = read_target_text_with_encoding(patch.file_path)
+                normalized_existing = convert_newlines(existing_content, '\n')
+                if normalized_existing == replace_text:
+                    return PatchApplyResult(
+                        patch=patch,
+                        success=True,
+                        status='already_applied',
+                        error='CREATE target already exists with identical content',
+                        source_line_start=patch.source_line_start,
+                        replace_line_count=len(replace_lines),
+                    )
+                return PatchApplyResult(
+                    patch=patch,
+                    success=False,
+                    status='file_exists',
+                    error='CREATE target already exists with different content',
+                    source_line_start=patch.source_line_start,
+                    replace_line_count=len(replace_lines),
+                )
+
+            if not dry_run:
+                patch.file_path.parent.mkdir(parents=True, exist_ok=True)
+                atomic_write_text(patch.file_path, replace_text, encoding='utf-8')
+
+            return PatchApplyResult(
+                patch=patch,
+                success=True,
+                status='applied',
+                source_line_start=patch.source_line_start,
+                replace_line_count=len(replace_lines),
+            )
+
+        if not patch.file_path.exists():
+            return PatchApplyResult(
+                patch=patch,
+                success=False,
+                status='missing_file',
+                error=f'File does not exist: {patch.display_path}',
+                source_line_start=patch.source_line_start,
+            )
+
+        if not patch.file_path.is_file():
+            return PatchApplyResult(
+                patch=patch,
+                success=False,
+                status='not_a_file',
+                error=f'Not a file: {patch.display_path}',
+                source_line_start=patch.source_line_start,
+            )
+
         # 保留原文件换行，并尽量保留原编码写回能力
         content, file_encoding = read_target_text_with_encoding(patch.file_path)
-
         file_newline = detect_newline_style(content)
+        replace_text = convert_newlines(patch.replace_content, file_newline)
+        replace_lines = split_lines_keepends(replace_text)
+
+        if patch.operation == 'overwrite':
+            if content == replace_text:
+                return PatchApplyResult(
+                    patch=patch,
+                    success=True,
+                    status='no_change_patch',
+                    error='OVERWRITE would not change the file',
+                    source_line_start=patch.source_line_start,
+                    replace_line_count=len(replace_lines),
+                )
+
+            if not dry_run:
+                atomic_write_text(patch.file_path, replace_text, encoding=file_encoding)
+
+            return PatchApplyResult(
+                patch=patch,
+                success=True,
+                status='applied',
+                source_line_start=patch.source_line_start,
+                replace_line_count=len(replace_lines),
+            )
+
         file_lines = split_lines_keepends(content)
         total_lines = len(file_lines)
 
@@ -669,10 +826,7 @@ def apply_patch(patch: PatchBlock, *, dry_run: bool = False) -> PatchApplyResult
 
         # patch 内容换行统一为文件风格（避免混合换行）
         search_text = convert_newlines(patch.search_content, file_newline)
-        replace_text = convert_newlines(patch.replace_content, file_newline)
-
         search_lines = split_lines_keepends(search_text)
-        replace_lines = split_lines_keepends(replace_text)
         is_empty_file = content == ''
         is_empty_search = len(search_lines) == 0
 
@@ -841,92 +995,79 @@ def apply_patches(
 
 # ============ Prompt 模板 ============
 
-PATCH_PROMPT = r"""# patch — SEARCH/REPLACE Format Specification
+PATCH_PROMPT = r"""# patch — authoring guide for `sspec tool patch`
 
-`sspec tool patch` is a helper for editing existing files with structured SEARCH/REPLACE patch blocks.
+`sspec tool patch` accepts structured patch blocks, for local file edit.
 
-## Block Structure
+## SEARCH
 
-Each patch block consists of three parts:
+Search str in <path> and replace.
 
-1. **Header line**: `# <path>` or `# <path>:<range>`
-2. **SEARCH section**: content to find (between `<<<<<<< SEARCH` and `=======`)
-3. **REPLACE section**: replacement content (between `=======` and `>>>>>>> REPLACE`)
-
-```patch
+````patch
 # <path>[:<range>]
 <<<<<<< SEARCH
 old content
 =======
 new content
 >>>>>>> REPLACE
-```
-
-## Header Syntax
-
-**Path**: relative (resolved from project root / cwd) or absolute.
-
-**Line range** (optional, narrows search scope):
-- `L10-L25` — lines 10 to 25
-- `L10-` — line 10 to end of file
-- `-L25` — start of file to line 25
-
-If the exact line range is uncertain, it SHOULD NOT be provided to avoid potential mismatches within a narrow scope.
-
-Examples:
-
-```text
-# src/utils.py
-# src/utils.py:L10-L25
-# C:\My Project\docs\my file.md:L3-
-```
-
-## Bundle Multiple Blocks
-
-Multi-blocks patch is allowed to include concise human-readable explanations before, after, or between patch blocks, as long as each patch block remains structurally valid, arbitrary text between blocks is ignored by parser.
-
-
-````markdown
-First, do xxx, this patch will xxx
-
-<Patch Block>
-
-Next, do xxx
-
-<Patch Block>
 ````
 
-## Marker Rules
+Path: relative(cwd) or absolute; `src/utils.py` etc.
+Line range (optional): 1based; `L10-L25`, `L10-`, `-L25`
 
-The three markers must each appear alone on their own line, with no extra characters:
-- `<<<<<<< SEARCH`
-- `=======`
-- `>>>>>>> REPLACE`
+## CREATE
 
-## Matching Behavior
+````patch
+# <path>
+<<<<<<< CREATE
+=======
+new file content
+>>>>>>> REPLACE
+````
 
-1. **Exact match first**: content and whitespace must match perfectly
-2. **Loose fallback**: ignores trailing spaces/tabs and blank-line-only differences
-3. **Unique match required**: multiple matches → patch fails; add a line range to disambiguate
-4. **Already applied**: if SEARCH is absent but REPLACE exists uniquely in scope, status is `already_applied` (not an error)
+## OVERWRITE
 
-## Path and Safety Rules
+````patch
+# <path>
+<<<<<<< OVERWRITE
+=======
+full replacement content
+>>>>>>> REPLACE
+````
 
-- Target files must already exist
-- Relative paths must stay within the project root / cwd
-- Absolute paths are allowed; those outside the workspace require confirmation or `--unsafe`
-- SEARCH content may be empty only when the target file is empty
+## Rules
 
-## CLI Quick Reference
+- markers must appear alone on their own lines
+- line ranges apply only to SEARCH
+- CREATE and OVERWRITE are file-level operations
+- the upper section of CREATE and OVERWRITE must be whitespace-only
+- use SEARCH for targeted edits in an existing file
+- use CREATE for new files
+- use OVERWRITE for full replacement of an existing file
 
-```text
-sspec tool patch [PATCH_FILE] [--file PATH] [--stdin] [--input]
-                 [--dry-run] [--yes] [--unsafe] [--output-failed PATH]
-                 [--prompt] [--help]
-```
+## Multi-block bundles
 
-Use `--help` for full option descriptions.
+`sspec tool patch` can extract valid patch blocks from a longer markdown reply or report.
+
+Valid patch blocks may appear:
+- by themselves
+- inside a longer explanation
+- before, between, or after other text
+- in multiple blocks in one reply
+
+## Local reference
 """
+
+
+def build_patch_prompt() -> str:
+    """Build the prompt text with an installed-package local reference when available."""
+    try:
+        resource = files('sspec').joinpath('templates/skills/write-patch/SKILL.md')
+        with as_file(resource) as skill_path:
+            return PATCH_PROMPT + f'\n\nLocal reference (if readable): {skill_path}'
+    except Exception:
+        return PATCH_PROMPT
+
 
 # Alias for Tool Interface
 TOOL_PROMPT = PATCH_PROMPT
@@ -1008,7 +1149,7 @@ def register_command(group):
 
         # Show prompt specification
         if prompt:
-            console.print(TOOL_PROMPT)
+            console.print(build_patch_prompt())
             return
 
         # Determine input source (default to --input when no file is provided)
@@ -1269,8 +1410,9 @@ def _truncate_patch_chunk(text: str, *, max_lines: int = 8) -> list[str]:
 
 
 def _format_patch_preview(patch: PatchBlock) -> str:
-    """Build a compact SEARCH/REPLACE preview for failed patch output."""
-    preview_lines = ['<<<<<<< SEARCH']
+    """Build a compact patch preview for failed patch output."""
+    opener = OPERATION_TO_MARKER[patch.operation]
+    preview_lines = [opener]
     preview_lines.extend(_truncate_patch_chunk(patch.search_content))
     preview_lines.append('=======')
     preview_lines.extend(_truncate_patch_chunk(patch.replace_content))
@@ -1395,7 +1537,7 @@ def _save_failed_patches(
                 '',
                 '```patch',
                 format_patch_header(result.patch),
-                '<<<<<<< SEARCH',
+                OPERATION_TO_MARKER[result.patch.operation],
                 result.patch.search_content.rstrip('\n'),
                 '=======',
                 result.patch.replace_content.rstrip('\n'),

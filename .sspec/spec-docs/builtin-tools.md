@@ -104,16 +104,20 @@ mdtoc.register_command(tool)
 - Accepts relative targets rooted at the detected project root / cwd, plus absolute target paths
 - Patch header paths may contain spaces, for example `# C:\My Project\docs\my file.md:L3-`
 - Absolute target paths outside the current workspace require explicit confirmation, or `--unsafe` to bypass in automation
-- Supports canonical and open-ended line ranges such as `L10-L25`, `L10-`, and `-L25`
+- Supports three patch operations: `SEARCH`, `CREATE`, and `OVERWRITE`
+- Supports canonical and open-ended line ranges such as `L10-L25`, `L10-`, and `-L25` for `SEARCH` blocks
+- `CREATE` creates missing files, auto-creates missing parent directories, returns `already_applied` for identical existing content, and returns `file_exists` for conflicting existing content
+- `OVERWRITE` replaces the full content of an existing file, returns `no_change_patch` for identical content, and fails on missing files
 - Repeated apply attempts can report `already_applied` instead of a generic `SEARCH` failure
-- Patch headers are recognized only when followed by a SEARCH marker (after optional blank lines), reducing false positives in markdown/prose bundles
-- Empty SEARCH is allowed only when the target file is empty; this supports initializing existing empty files without creating ambiguous matches
+- Patch headers are recognized only when followed by a supported opener marker (after optional blank lines), reducing false positives in markdown/prose bundles
+- Empty SEARCH is allowed only when the target file is empty; this supports initializing existing empty files without creating ambiguous matches and does not create missing files
+- `CREATE` and `OVERWRITE` are file-level operations: they reject line ranges and require a whitespace-only upper block
 - Non-empty input with zero valid patch blocks is treated as a parse error instead of a no-op
 - `--dry-run` performs full match simulation and reports apply/already-applied/failure outcomes without writing files
 - `--dry-run` still surfaces outside-workspace absolute path warnings even though no write occurs
 - Rich preview before apply
 - Failed patches are bundled into one markdown file; inside `.sspec/tmp/failed-patches/` for sspec projects or system temp otherwise
-- Failure summaries print patch-source and target-file line numbers plus a truncated SEARCH/REPLACE preview
+- Failure summaries print patch-source and target-file line numbers plus a truncated operation-aware patch preview
 - `--prompt` prints the agent-facing patch spec instead of applying
 
 ### `pack-zip` — Package Project Snapshot

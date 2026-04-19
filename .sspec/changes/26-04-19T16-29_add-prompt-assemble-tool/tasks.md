@@ -45,3 +45,4 @@ updated: ""
 - [2026-04-19T18:45+08:00] Implemented `prompt_service.py` and passing service tests for source normalization, rendering, shell gating, preset export, and tmp output.
 - [2026-04-19T18:55+08:00] Implemented builtin `prompt` CLI and passing prompt-focused command tests.
 - [2026-04-19T19:02+08:00] Updated builtin-tools spec-doc and completed targeted manual verification in `tmp/test_prompt_tool`.
+- [2026-04-19T19:16+08:00] Hardened gitignore scanning with `os.walk(..., followlinks=False, onerror=...)` and added regression coverage for broken-link traversal.

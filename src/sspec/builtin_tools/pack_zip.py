@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import zipfile
 from datetime import datetime
 from pathlib import Path
@@ -65,16 +66,27 @@ class GitignoreParser:
         if not self.has_pathspec:
             return
 
-        for gitignore_path in self.root.rglob('.gitignore'):
+        def _ignore_walk_error(_error: OSError) -> None:
+            return
+
+        for dirpath, _dirnames, filenames in os.walk(
+            self.root,
+            topdown=True,
+            onerror=_ignore_walk_error,
+            followlinks=False,
+        ):
+            if '.gitignore' not in filenames:
+                continue
+
+            gitignore_path = Path(dirpath) / '.gitignore'
             try:
                 patterns = gitignore_path.read_text(encoding='utf-8').splitlines()
-                # Filter out comments and empty lines
                 patterns = [p.strip() for p in patterns if p.strip() and not p.startswith('#')]
 
                 if patterns:
-                    parent = gitignore_path.parent
+                    parent = gitignore_path.parent.resolve()
                     self.specs[parent] = self.pathspec.PathSpec.from_lines('gitwildmatch', patterns)
-            except Exception:
+            except OSError:
                 continue
 
     def _load_simple_patterns(self) -> None:

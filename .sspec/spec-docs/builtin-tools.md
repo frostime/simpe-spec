@@ -1,7 +1,7 @@
 ---
 name: builtin-tools
 description: "Extensible CLI tool system for cross-project development utilities via sspec tool command"
-updated: 2026-03-07
+updated: 2026-04-19
 scope:
   - /src/sspec/commands/tool.py
   - /src/sspec/builtin_tools/**
@@ -54,7 +54,7 @@ def register_command(group: click.Group) -> None:
 Location: `/src/sspec/commands/tool.py`
 
 ```python
-from sspec.builtin_tools import apply_patch, mdtoc, pack_zip, view_tree
+from sspec.builtin_tools import apply_patch, mdtoc, pack_zip, prompt, view_tree
 
 
 @click.group()
@@ -66,9 +66,10 @@ apply_patch.register_command(tool)
 pack_zip.register_command(tool)
 view_tree.register_command(tool)
 mdtoc.register_command(tool)
+prompt.register_command(tool)
 ```
 
-**Current tool set**: `patch`, `pack-zip`, `view-tree`, `fileinfo`, `write`, `mdtoc`, `now`, `ask`
+**Current tool set**: `patch`, `pack-zip`, `view-tree`, `fileinfo`, `write`, `mdtoc`, `now`, `ask`, `treesitter`, `prompt`
 
 **Adding a new tool**:
 1. Create module in `src/sspec/builtin_tools/new_tool.py`
@@ -94,6 +95,8 @@ mdtoc.register_command(tool)
 | `mdtoc` | `/src/sspec/builtin_tools/mdtoc.py` | Pre-scan Markdown size/headings before targeted reading |
 | `now` | `/src/sspec/builtin_tools/now.py` | Provide stable local/UTC timestamps for agent-authored docs |
 | `ask` | `/src/sspec/builtin_tools/ask.py` | Fallback user consultation workflow when no native question tool exists |
+| `treesitter` | `/src/sspec/builtin_tools/treesitter.py` | Render symbol outlines for Python and TS/JS files when tree-sitter deps are available |
+| `prompt` | `/src/sspec/builtin_tools/prompt.py` | Assemble local files, file chunks, shell output, trees, and globs into one agent-friendly prompt bundle |
 
 ### `patch` — Apply SEARCH/REPLACE Patches
 
@@ -168,6 +171,19 @@ mdtoc.register_command(tool)
 - Reports char count, line count, and heading structure with `L<n>` line tags
 - Skips fenced code blocks while parsing headings
 - Serves as the standard pre-read tool for large Markdown docs in this repo
+
+### `prompt` — Inline-first Prompt Assembly
+
+**Module**: `/src/sspec/builtin_tools/prompt.py`
+
+**Notable behavior**:
+- Supports inline-first runtime assembly through repeated `--add-file`, `--add-chunk`, `--add-shell`, `--add-tree`, and `--add-glob` flags
+- Loads reusable source sets from `--from-preset` and exports the merged runtime source list via `--to-preset`
+- Bare preset names resolve to `.sspec/prompts/<name>.yml`
+- No-args invocation enters an interactive assembly flow with per-source prompts
+- Non-interactive shell sources require `--allow-shell`; interactive shell sources are confirmed one by one
+- Output blocks use `BEGIN/END` sentinels, YAML frontmatter metadata, and four-backtick fenced content
+- Default output writes to `.sspec/tmp/*.prompt.txt` and reuses editor integration when available
 
 ## Common Patterns
 

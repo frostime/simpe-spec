@@ -1048,6 +1048,8 @@ Next, xxx
 [[Patch Block]]
 ````
 
+WARN: patch-blocks are applied sequentially, lines affected by previous blocks may cause later blocks to fail.
+
 ## Local reference
 """
 

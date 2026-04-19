@@ -65,9 +65,7 @@ def test_tool_treesitter_supports_depth_option(monkeypatch) -> None:
         monkeypatch.setattr(
             treesitter,
             'pyfile_symbols_outline',
-            lambda file_path, max_depth: (
-                f'outline depth={max_depth} file={Path(file_path).name}'
-            ),
+            lambda file_path, max_depth: f'outline depth={max_depth} file={Path(file_path).name}',
         )
 
         result = runner.invoke(main, ['tool', 'treesitter', str(target), '--depth', '2'])
@@ -428,3 +426,73 @@ def test_tool_fileinfo_supports_directories_globs_and_json() -> None:
         assert by_name['a.txt']['newline'] == 'lf'
         assert by_name['a.txt']['line_count'] == 2
         assert by_name['b.txt']['newline'] == 'crlf'
+
+
+def _make_sspec_project() -> None:
+    sspec_root = Path('.sspec')
+    sspec_root.mkdir()
+    (sspec_root / 'project.md').write_text('# Project\n', encoding='utf-8')
+
+
+def test_tool_prompt_prompt_output() -> None:
+    runner = CliRunner()
+    result = runner.invoke(main, ['tool', 'prompt', '--prompt'])
+
+    assert result.exit_code == 0
+    assert '# prompt' in result.output
+    assert '--add-file PATH' in result.output
+
+
+def test_tool_prompt_inline_dry_run() -> None:
+    runner = CliRunner()
+
+    with runner.isolated_filesystem():
+        _make_sspec_project()
+        target = Path('demo.py')
+        target.write_text('print(1)\n', encoding='utf-8')
+
+        result = runner.invoke(main, ['tool', 'prompt', '--dry-run', '--add-file', 'demo.py'])
+
+        assert result.exit_code == 0
+        assert '========== BEGIN FILE ==========' in result.output
+        assert '---\nlabel: demo.py\n' in result.output
+        assert '````\nprint(1)\n````' in result.output
+
+
+def test_tool_prompt_preset_export_and_import() -> None:
+    runner = CliRunner()
+
+    with runner.isolated_filesystem():
+        _make_sspec_project()
+        target = Path('demo.py')
+        target.write_text('print(1)\n', encoding='utf-8')
+
+        export_result = runner.invoke(
+            main,
+            ['tool', 'prompt', '--dry-run', '--add-file', 'demo.py', '--to-preset', 'demo'],
+        )
+
+        assert export_result.exit_code == 0
+        preset_path = Path('.sspec/prompts/demo.yml')
+        assert preset_path.exists()
+        assert 'path: demo.py' in preset_path.read_text(encoding='utf-8')
+
+        import_result = runner.invoke(
+            main,
+            ['tool', 'prompt', '--dry-run', '--from-preset', 'demo'],
+        )
+
+        assert import_result.exit_code == 0
+        assert '========== BEGIN FILE ==========' in import_result.output
+        assert 'print(1)' in import_result.output
+
+
+def test_tool_prompt_shell_requires_allow_shell() -> None:
+    runner = CliRunner()
+
+    with runner.isolated_filesystem():
+        _make_sspec_project()
+        result = runner.invoke(main, ['tool', 'prompt', '--dry-run', '--add-shell', 'echo hi'])
+
+        assert result.exit_code != 0
+        assert 'Shell sources require --allow-shell' in result.output

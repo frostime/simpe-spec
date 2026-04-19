@@ -9,6 +9,7 @@ from sspec.builtin_tools import (
     mdtoc,
     now,
     pack_zip,
+    prompt,
     treesitter,
     view_tree,
     write,
@@ -31,3 +32,4 @@ mdtoc.register_command(tool)
 now.register_command(tool)
 ask.register_command(tool)
 treesitter.register_command(tool)
+prompt.register_command(tool)

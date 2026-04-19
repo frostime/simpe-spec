@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, cast
 import questionary
 
 from sspec.core import SspecNotFoundError, get_sspec_root
-from sspec.services.context_service import (
+from sspec.builtin_tools.context_service import (
     PromptError,
     PromptSource,
     PromptSourceType,

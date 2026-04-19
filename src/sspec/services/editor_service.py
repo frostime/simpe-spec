@@ -6,11 +6,20 @@ These are used by CLI commands to optionally open files after creation.
 from __future__ import annotations
 
 import os
+import shlex
 import subprocess
 from collections.abc import Mapping
 from pathlib import Path
 
 from dotenv import dotenv_values
+
+
+def _quote_for_shell(path: Path) -> str:
+    """Quote a path for the current platform shell."""
+    path_str = str(path)
+    if os.name == 'nt':
+        return subprocess.list2cmdline([path_str])
+    return shlex.quote(path_str)
 
 
 def get_editor_command(
@@ -56,10 +65,15 @@ def open_in_editor(
     if not editor_cmd:
         return False
 
+    quoted_file = _quote_for_shell(file_path)
+
     if '{file}' in editor_cmd:
-        cmd = editor_cmd.replace('{file}', str(file_path))
+        # Replace pre-quoted placeholders first to avoid accidental double quoting.
+        cmd = editor_cmd.replace('"{file}"', quoted_file)
+        cmd = cmd.replace("'{file}'", quoted_file)
+        cmd = cmd.replace('{file}', quoted_file)
     else:
-        cmd = f'{editor_cmd} {file_path}'
+        cmd = f'{editor_cmd} {quoted_file}'
 
     try:
         subprocess.run(cmd, shell=True, check=True)

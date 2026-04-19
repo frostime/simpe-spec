@@ -20,17 +20,24 @@ def tmp() -> None:
 
 @tmp.command()
 @click.argument('name', required=False)
-@click.option('--dir', 'is_dir', is_flag=True, help='Create a directory instead of a file')
-def new(name: str | None, is_dir: bool) -> None:
+@click.option(
+    '--dir', 'is_dir', is_flag=True, help='Create a directory instead of a file'
+)
+@click.option('--no-time', is_flag=True, help='Do not add timestamp prefix in the name')
+def new(name: str | None, is_dir: bool, no_time: bool) -> None:
     """Create a new file/dir under `.sspec/tmp`."""
 
     try:
         sspec_root = get_sspec_root()
     except SspecNotFoundError:
-        raise click.ClickException("Not a sspec project. Run 'sspec project init' first.") from None
+        raise click.ClickException(
+            "Not a sspec project. Run 'sspec project init' first."
+        ) from None
 
     try:
-        result = create_tmp_entry(sspec_root=sspec_root, name=name, is_dir=is_dir)
+        result = create_tmp_entry(
+            sspec_root=sspec_root, name=name, is_dir=is_dir, add_timestamp=not no_time
+        )
     except (ValueError, FileExistsError) as e:
         raise click.ClickException(str(e)) from None
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import final
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,6 +22,7 @@ def create_tmp_entry(
     sspec_root: Path,
     name: str | None,
     is_dir: bool,
+    add_timestamp: bool = True,
 ) -> TmpEntryResult:
     """Create a file or directory under `.sspec/tmp`.
 
@@ -29,8 +31,12 @@ def create_tmp_entry(
 
     tmp_root = sspec_root / 'tmp'
     tmp_root.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime('%y-%m-%dT%H-%M')
 
-    final_name = (name or datetime.now().strftime('%y-%m-%dT%H-%M-%S')).strip()
+    if name:
+        final_name = f'{timestamp}_{name.strip()}' if add_timestamp else name.strip()
+    else:
+        final_name = timestamp
     if not final_name:
         raise ValueError('Name cannot be empty')
 

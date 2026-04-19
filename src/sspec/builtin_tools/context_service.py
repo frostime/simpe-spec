@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import subprocess
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
+from importlib import import_module
 from pathlib import Path
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal, TypedDict, cast
 
-import yaml
-from rich.console import Console
+import yaml  # pyright: ignore[reportMissingModuleSource]
 
 from sspec.services.tmp_service import create_tmp_entry
 
@@ -28,18 +28,55 @@ SOURCE_KIND_TITLES: dict[PromptSourceType, str] = {
 }
 
 
-class PromptSource(TypedDict, total=False):
-    type: PromptSourceType
+class FileSource(TypedDict):
+    type: Literal['file']
     label: str
     path: str
-    glob: str
+
+
+class FileChunkSource(TypedDict):
+    type: Literal['file-chunk']
+    label: str
+    path: str
     start: int
     end: int
+
+
+class ShellSource(TypedDict):
+    type: Literal['shell']
+    label: str
     command: str
+
+
+class ShellSourceOptional(ShellSource, total=False):
     cwd: str
+
+
+class FileTreeSource(TypedDict):
+    type: Literal['file-tree']
+    label: str
+    path: str
+
+
+class FileTreeSourceOptional(FileTreeSource, total=False):
     depth: int
     no_gitignore: bool
     dirs_only: bool
+
+
+class GlobSource(TypedDict):
+    type: Literal['glob']
+    label: str
+    glob: str
+
+
+PromptSource = (
+    FileSource
+    | FileChunkSource
+    | ShellSourceOptional
+    | FileTreeSourceOptional
+    | GlobSource
+)
 
 
 class PromptPreset(TypedDict, total=False):
@@ -85,8 +122,8 @@ class PromptSourceParseError(PromptValidationError):
     """Raised when inline source syntax is invalid."""
 
 
-def build_file_source(path: str, *, label: str | None = None) -> PromptSource:
-    return PromptSource(type='file', path=path, label=label or path)
+def build_file_source(path: str, *, label: str | None = None) -> FileSource:
+    return {'type': 'file', 'path': path, 'label': label or path}
 
 
 def build_chunk_source(
@@ -95,14 +132,14 @@ def build_chunk_source(
     end: int,
     *,
     label: str | None = None,
-) -> PromptSource:
-    return PromptSource(
-        type='file-chunk',
-        path=path,
-        start=start,
-        end=end,
-        label=label or f'{path}:L{start}-L{end}',
-    )
+) -> FileChunkSource:
+    return {
+        'type': 'file-chunk',
+        'path': path,
+        'start': start,
+        'end': end,
+        'label': label or f'{path}:L{start}-L{end}',
+    }
 
 
 def build_shell_source(
@@ -110,26 +147,26 @@ def build_shell_source(
     *,
     cwd: str | None = None,
     label: str | None = None,
-) -> PromptSource:
-    source: PromptSource = PromptSource(
-        type='shell',
-        command=command,
-        label=label or command,
-    )
+) -> ShellSourceOptional:
+    source: ShellSourceOptional = {
+        'type': 'shell',
+        'command': command,
+        'label': label or command,
+    }
     if cwd:
         source['cwd'] = cwd
     return source
 
 
-def build_tree_source(path: str, *, label: str | None = None) -> PromptSource:
-    return PromptSource(type='file-tree', path=path, label=label or path)
+def build_tree_source(path: str, *, label: str | None = None) -> FileTreeSourceOptional:
+    return {'type': 'file-tree', 'path': path, 'label': label or path}
 
 
-def build_glob_source(pattern: str, *, label: str | None = None) -> PromptSource:
-    return PromptSource(type='glob', glob=pattern, label=label or pattern)
+def build_glob_source(pattern: str, *, label: str | None = None) -> GlobSource:
+    return {'type': 'glob', 'glob': pattern, 'label': label or pattern}
 
 
-def parse_chunk_value(raw: str) -> PromptSource:
+def parse_chunk_value(raw: str) -> FileChunkSource:
     if ':' not in raw:
         raise PromptSourceParseError(f"Invalid --add-chunk value: '{raw}'. Use PATH:START-END.")
 
@@ -208,64 +245,87 @@ def parse_inline_source_tokens(tokens: list[str]) -> list[PromptSource]:
     return sources
 
 
-def validate_source(source: PromptSource) -> PromptSource:
-    source_type = source.get('type')
-    if source_type not in {'file', 'file-chunk', 'shell', 'file-tree', 'glob'}:
-        raise PromptValidationError(f'Unsupported prompt source type: {source_type!r}')
+def validate_source(source: Mapping[str, Any]) -> PromptSource:
+    source_type_raw = source.get('type')
+    if source_type_raw not in {'file', 'file-chunk', 'shell', 'file-tree', 'glob'}:
+        raise PromptValidationError(f'Unsupported prompt source type: {source_type_raw!r}')
 
-    normalized = dict(source)
+    source_type = cast(PromptSourceType, source_type_raw)
 
     if source_type == 'file':
-        path = str(normalized.get('path', '')).strip()
+        path = str(source.get('path', '')).strip()
         if not path:
             raise PromptValidationError('file source requires path')
-        normalized['path'] = path
-        normalized['label'] = str(normalized.get('label') or path)
+        label = str(source.get('label') or path)
+        return {'type': 'file', 'path': path, 'label': label}
 
-    elif source_type == 'file-chunk':
-        path = str(normalized.get('path', '')).strip()
-        start = normalized.get('start')
-        end = normalized.get('end')
+    if source_type == 'file-chunk':
+        path = str(source.get('path', '')).strip()
+        start = source.get('start')
+        end = source.get('end')
         if not path:
             raise PromptValidationError('file-chunk source requires path')
         if not isinstance(start, int) or not isinstance(end, int):
             raise PromptValidationError('file-chunk source requires integer start/end')
         if start < 1 or end < start:
             raise PromptValidationError('file-chunk requires 1 <= start <= end')
-        normalized['path'] = path
-        normalized['label'] = str(normalized.get('label') or f'{path}:L{start}-L{end}')
+        label = str(source.get('label') or f'{path}:L{start}-L{end}')
+        return {
+            'type': 'file-chunk',
+            'path': path,
+            'start': start,
+            'end': end,
+            'label': label,
+        }
 
-    elif source_type == 'shell':
-        command = str(normalized.get('command', '')).strip()
+    if source_type == 'shell':
+        command = str(source.get('command', '')).strip()
         if not command:
             raise PromptValidationError('shell source requires command')
-        normalized['command'] = command
-        if 'cwd' in normalized and normalized['cwd'] is not None:
-            normalized['cwd'] = str(normalized['cwd']).strip()
-        normalized['label'] = str(normalized.get('label') or command)
+        normalized_shell: ShellSourceOptional = {
+            'type': 'shell',
+            'command': command,
+            'label': str(source.get('label') or command),
+        }
+        cwd = source.get('cwd')
+        if cwd is not None:
+            normalized_shell['cwd'] = str(cwd).strip()
+        return normalized_shell
 
-    elif source_type == 'file-tree':
-        path = str(normalized.get('path', '')).strip()
+    if source_type == 'file-tree':
+        path = str(source.get('path', '')).strip()
         if not path:
             raise PromptValidationError('file-tree source requires path')
-        normalized['path'] = path
-        normalized['label'] = str(normalized.get('label') or path)
-        if 'depth' in normalized and normalized['depth'] is not None:
-            depth = normalized['depth']
+        normalized_tree: FileTreeSourceOptional = {
+            'type': 'file-tree',
+            'path': path,
+            'label': str(source.get('label') or path),
+        }
+
+        depth = source.get('depth')
+        if depth is not None:
             if not isinstance(depth, int) or depth < 1:
                 raise PromptValidationError('file-tree depth must be a positive integer')
+            normalized_tree['depth'] = depth
 
-    elif source_type == 'glob':
-        pattern = str(normalized.get('glob', '')).strip()
-        if not pattern:
-            raise PromptValidationError('glob source requires glob pattern')
-        normalized['glob'] = pattern
-        normalized['label'] = str(normalized.get('label') or pattern)
+        if 'no_gitignore' in source:
+            normalized_tree['no_gitignore'] = bool(source.get('no_gitignore', False))
+        if 'dirs_only' in source:
+            normalized_tree['dirs_only'] = bool(source.get('dirs_only', False))
 
-    return PromptSource(**normalized)
+        return normalized_tree
+
+    pattern = str(source.get('glob', '')).strip()
+    if not pattern:
+        raise PromptValidationError('glob source requires glob pattern')
+    return {
+        'type': 'glob',
+        'glob': pattern,
+        'label': str(source.get('label') or pattern),
+    }
 
 
-def validate_sources(sources: list[PromptSource]) -> list[PromptSource]:
+def validate_sources(sources: Sequence[Mapping[str, Any]]) -> list[PromptSource]:
     return [validate_source(source) for source in sources]
 
 
@@ -290,7 +350,7 @@ def load_preset(sspec_root: Path, preset_ref: str) -> PromptPreset:
     for item in raw_sources:
         if not isinstance(item, dict):
             raise PromptPresetError(f'Preset source entries must be mappings: {preset_ref}')
-        sources.append(validate_source(PromptSource(**item)))
+        sources.append(validate_source(cast(dict[str, Any], item)))
 
     return PromptPreset(
         name=str(data.get('name') or preset_path.stem),
@@ -406,17 +466,15 @@ def resolve_prompt_blocks(
     blocks: list[ResolvedPromptBlock] = []
 
     for source in validate_sources(sources):
-        source_type = source['type']
-
-        if source_type == 'file':
+        if source['type'] == 'file':
             blocks.append(_resolve_file_block(project_root, source))
-        elif source_type == 'file-chunk':
+        elif source['type'] == 'file-chunk':
             blocks.append(_resolve_chunk_block(project_root, source))
-        elif source_type == 'file-tree':
+        elif source['type'] == 'file-tree':
             blocks.append(_resolve_tree_block(project_root, source))
-        elif source_type == 'glob':
+        elif source['type'] == 'glob':
             blocks.extend(_resolve_glob_blocks(project_root, source))
-        elif source_type == 'shell':
+        elif source['type'] == 'shell':
             blocks.append(
                 _resolve_shell_block(
                     project_root,
@@ -429,7 +487,7 @@ def resolve_prompt_blocks(
     return blocks
 
 
-def _resolve_file_block(project_root: Path, source: PromptSource) -> ResolvedPromptBlock:
+def _resolve_file_block(project_root: Path, source: FileSource) -> ResolvedPromptBlock:
     target = _resolve_project_path(project_root, source['path'])
     if not target.exists() or not target.is_file():
         raise PromptValidationError(f'File source not found: {source["path"]}')
@@ -448,7 +506,7 @@ def _resolve_file_block(project_root: Path, source: PromptSource) -> ResolvedPro
     )
 
 
-def _resolve_chunk_block(project_root: Path, source: PromptSource) -> ResolvedPromptBlock:
+def _resolve_chunk_block(project_root: Path, source: FileChunkSource) -> ResolvedPromptBlock:
     target = _resolve_project_path(project_root, source['path'])
     if not target.exists() or not target.is_file():
         raise PromptValidationError(f'File chunk source not found: {source["path"]}')
@@ -476,7 +534,7 @@ def _resolve_chunk_block(project_root: Path, source: PromptSource) -> ResolvedPr
     )
 
 
-def _resolve_tree_block(project_root: Path, source: PromptSource) -> ResolvedPromptBlock:
+def _resolve_tree_block(project_root: Path, source: FileTreeSourceOptional) -> ResolvedPromptBlock:
     from sspec.builtin_tools.view_tree import build_tree, collect_stats, format_size
 
     target = _resolve_project_path(project_root, source['path'])
@@ -498,7 +556,8 @@ def _resolve_tree_block(project_root: Path, source: PromptSource) -> ResolvedPro
         gitignore_root=project_root,
     )
 
-    console = Console(record=True, width=120)
+    console_module = import_module('rich.console')
+    console = console_module.Console(record=True, width=120)
     console.print(tree)
     console.print()
     stats_line = (
@@ -514,13 +573,14 @@ def _resolve_tree_block(project_root: Path, source: PromptSource) -> ResolvedPro
         'content_format': 'fenced',
         'fence': DEFAULT_FENCE,
     }
-    if source.get('depth') is not None:
-        meta['depth'] = source['depth']
+    depth = source.get('depth')
+    if depth is not None:
+        meta['depth'] = depth
 
     return ResolvedPromptBlock(kind='file-tree', label=source['label'], meta=meta, body=body)
 
 
-def _resolve_glob_blocks(project_root: Path, source: PromptSource) -> list[ResolvedPromptBlock]:
+def _resolve_glob_blocks(project_root: Path, source: GlobSource) -> list[ResolvedPromptBlock]:
     pattern = source['glob']
     matches = sorted(project_root.glob(pattern))
     file_matches = [match for match in matches if match.is_file()]
@@ -550,7 +610,7 @@ def _resolve_glob_blocks(project_root: Path, source: PromptSource) -> list[Resol
 
 def _resolve_shell_block(
     project_root: Path,
-    source: PromptSource,
+    source: ShellSourceOptional,
     *,
     allow_shell: bool,
     interactive_shell_confirm: Callable[[PromptSource], bool] | None,

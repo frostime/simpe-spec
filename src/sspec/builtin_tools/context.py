@@ -8,8 +8,7 @@ from typing import TYPE_CHECKING, cast
 import questionary
 
 from sspec.core import SspecNotFoundError, get_sspec_root
-from sspec.services.editor_service import open_in_editor
-from sspec.services.prompt_service import (
+from sspec.services.context_service import (
     PromptError,
     PromptSource,
     PromptSourceType,
@@ -23,14 +22,15 @@ from sspec.services.prompt_service import (
     run_prompt_assembly,
     validate_sources,
 )
+from sspec.services.editor_service import open_in_editor
 
 if TYPE_CHECKING:
     import click
 
 __all__ = ['TOOL_NAME', 'TOOL_DESCRIPTION', 'TOOL_PROMPT', 'register_command']
 
-TOOL_NAME = 'prompt'
-TOOL_DESCRIPTION = 'Assemble agent-friendly prompt context from local workspace sources'
+TOOL_NAME = 'context'
+TOOL_DESCRIPTION = 'Assemble agent-friendly context bundle from local workspace sources'
 
 TOOL_PROMPT = """
 # prompt — Inline-first Prompt Assembly Tool
@@ -43,19 +43,19 @@ Supports inline `--add-*` flags, preset import/export, and interactive assembly.
 ## Usage
 
 ```bash
-sspec tool prompt \
+sspec tool context \
   --add-file src/sspec/commands/tool.py \
   --add-chunk src/sspec/core.py:190-240 \
   --add-shell "git status --short --branch" \
   --add-tree src/sspec/builtin_tools \
   --to-preset tool_context
 
-sspec tool prompt --from-preset tool_context
-sspec tool prompt --from-preset tool_context \
+sspec tool context --from-preset tool_context
+sspec tool context --from-preset tool_context \
   --add-shell "uv run pytest tests/test_tool_command.py" \
   --allow-shell
-sspec tool prompt --dry-run --add-file README.md
-sspec tool prompt
+sspec tool context --dry-run --add-file README.md
+sspec tool context
 ```
 
 ## Source Flags
@@ -70,7 +70,7 @@ sspec tool prompt
 
 - `--from-preset NAME|PATH` loads reusable sources
 - `--to-preset NAME|PATH` exports the merged source list used in this run
-- Bare preset names resolve to `.sspec/prompts/<name>.yml`
+- Bare preset names resolve to `.sspec/commands/<name>.context-preset.yml`
 
 ## Output Contract
 
@@ -169,21 +169,21 @@ def register_command(group: click.Group) -> None:
         context_settings={'ignore_unknown_options': True, 'allow_extra_args': True},
     )
     @click.option(
-        '--from-preset', 'from_preset', help='Load prompt sources from preset name or path.'
+        '--from-preset', 'from_preset', help='Load context sources from preset name or path.'
     )
     @click.option(
         '--to-preset', 'to_preset', help='Save the merged source list as a preset name or path.'
     )
     @click.option(
-        '-o', '--output', type=click.Path(path_type=Path), help='Write prompt output to a file.'
+        '-o', '--output', type=click.Path(path_type=Path), help='Write context output to a file.'
     )
-    @click.option('--dry-run', is_flag=True, help='Print prompt text instead of writing a file.')
+    @click.option('--dry-run', is_flag=True, help='Print context text instead of writing a file.')
     @click.option(
         '--allow-shell', is_flag=True, help='Allow shell execution in non-interactive mode.'
     )
     @click.option('--prompt', 'show_prompt', is_flag=True, help='Show tool usage guide.')
     @click.pass_context
-    def prompt_command(
+    def context_command(
         ctx: click.Context,
         from_preset: str | None,
         to_preset: str | None,
@@ -192,7 +192,7 @@ def register_command(group: click.Group) -> None:
         allow_shell: bool,
         show_prompt: bool,
     ) -> None:
-        """Assemble local workspace context into an agent-friendly prompt bundle."""
+        """Assemble local workspace context into an agent-friendly context bundle."""
         if show_prompt:
             click.echo(TOOL_PROMPT)
             return
@@ -216,7 +216,7 @@ def register_command(group: click.Group) -> None:
             if is_interactive:
                 sources = _build_interactive_sources()
                 if not sources:
-                    raise click.ClickException('No prompt sources were provided.')
+                    raise click.ClickException('No context sources were provided.')
                 if to_preset is None:
                     save_choice = questionary.confirm(
                         'Save this source set as a preset?', default=False
@@ -248,7 +248,7 @@ def register_command(group: click.Group) -> None:
             return
 
         assert result.output_path is not None
-        click.echo(f'[OK] Wrote prompt: {result.output_path}')
+        click.echo(f'[OK] Wrote context: {result.output_path}')
         click.echo(f'[OK] Blocks: {result.block_count}')
         if open_in_editor(file_path=result.output_path, sspec_root=sspec_root):
             click.echo('[dim]Opened in editor[/dim]')

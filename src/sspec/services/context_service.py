@@ -1,4 +1,4 @@
-"""Prompt assembly service for builtin `sspec tool prompt`."""
+"""Context assembly service for builtin `sspec tool context`."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ PromptSourceType = Literal['file', 'file-chunk', 'shell', 'file-tree', 'glob']
 PromptOutputFormat = Literal['hybrid-headers']
 DEFAULT_OUTPUT_FORMAT: PromptOutputFormat = 'hybrid-headers'
 DEFAULT_FENCE = '````'
-DEFAULT_TMP_NAME = 'prompt.prompt.txt'
+DEFAULT_TMP_NAME = 'context.txt'
 
 SOURCE_KIND_TITLES: dict[PromptSourceType, str] = {
     'file': 'FILE',
@@ -334,7 +334,7 @@ def resolve_preset_ref(sspec_root: Path, preset_ref: str) -> Path:
     if ref_path.suffix in {'.yml', '.yaml'} or len(ref_path.parts) > 1:
         return (sspec_root.parent / ref_path).resolve(strict=False)
 
-    return (sspec_root / 'prompts' / f'{preset_ref}.yml').resolve(strict=False)
+    return (sspec_root / 'commands' / f'{preset_ref}.context-preset.yml').resolve(strict=False)
 
 
 def render_blocks(blocks: list[ResolvedPromptBlock]) -> str:

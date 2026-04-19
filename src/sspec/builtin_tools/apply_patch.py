@@ -995,14 +995,13 @@ def apply_patches(
 
 # ============ Prompt 模板 ============
 
-PATCH_PROMPT = r"""# patch — authoring guide for `sspec tool patch`
+PATCH_PROMPT = r"""# Use CLI `sspec tool patch`
 
-`sspec tool patch` accepts structured patch blocks, for local file edit.
+It accepts structured patch blocks for local file edit.
 
-## SEARCH
+## Patch Block | 3 Type
 
-Search str in <path> and replace.
-
+1) Targeted edit by str replace
 ````patch
 # <path>[:<range>]
 <<<<<<< SEARCH
@@ -1011,12 +1010,9 @@ old content
 new content
 >>>>>>> REPLACE
 ````
+Line range (optional): 1based; `L10-L25`, `L10-`, `-L25`; only in SEARCH method.
 
-Path: relative(cwd) or absolute; `src/utils.py` etc.
-Line range (optional): 1based; `L10-L25`, `L10-`, `-L25`
-
-## CREATE
-
+2) Create new file
 ````patch
 # <path>
 <<<<<<< CREATE
@@ -1024,9 +1020,7 @@ Line range (optional): 1based; `L10-L25`, `L10-`, `-L25`
 new file content
 >>>>>>> REPLACE
 ````
-
-## OVERWRITE
-
+3) Full overwrite
 ````patch
 # <path>
 <<<<<<< OVERWRITE
@@ -1035,25 +1029,24 @@ full replacement content
 >>>>>>> REPLACE
 ````
 
-## Rules
+---
 
-- markers must appear alone on their own lines
-- line ranges apply only to SEARCH
-- CREATE and OVERWRITE are file-level operations
-- the upper section of CREATE and OVERWRITE must be whitespace-only
-- use SEARCH for targeted edits in an existing file
-- use CREATE for new files
-- use OVERWRITE for full replacement of an existing file
+- Markers ('<<<<<<<', '=======', '>>>>>>>') MUST appear alone per line
+- Section before '===' of CREATE and OVERWRITE MUST be empty
 
 ## Multi-block bundles
 
-`sspec tool patch` can extract valid patch blocks from a longer markdown reply or report.
+Multi-blocks patch is allowed to include concise human-readable explanations surrounding patch blocks. i.e. A text report includes patch blocks.
 
-Valid patch blocks may appear:
-- by themselves
-- inside a longer explanation
-- before, between, or after other text
-- in multiple blocks in one reply
+````example
+First, xxx
+
+[[Patch Block]]
+
+Next, xxx
+
+[[Patch Block]]
+````
 
 ## Local reference
 """

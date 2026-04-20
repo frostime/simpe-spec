@@ -501,11 +501,8 @@ def _resolve_file_block(project_root: Path, source: FileSource) -> ResolvedPromp
         kind='file',
         label=source['label'],
         meta={
-            'label': source['label'],
             'path': _display_path(target, project_root),
             'kind': 'file',
-            'content_format': 'fenced',
-            'fence': DEFAULT_FENCE,
         },
         body=body,
     )
@@ -528,12 +525,8 @@ def _resolve_chunk_block(project_root: Path, source: FileChunkSource) -> Resolve
         kind='file-chunk',
         label=source['label'],
         meta={
-            'label': source['label'],
             'path': _display_path(target, project_root),
             'range': f'L{start}-L{end}',
-            'kind': 'file-chunk',
-            'content_format': 'fenced',
-            'fence': DEFAULT_FENCE,
         },
         body=excerpt,
     )
@@ -574,9 +567,6 @@ def _resolve_tree_block(project_root: Path, source: FileTreeSourceOptional) -> R
     meta: dict[str, Any] = {
         'label': source['label'],
         'path': _display_path(target, project_root),
-        'kind': 'file-tree',
-        'content_format': 'fenced',
-        'fence': DEFAULT_FENCE,
     }
     depth = source.get('depth')
     if depth is not None:
@@ -603,9 +593,6 @@ def _resolve_glob_blocks(project_root: Path, source: GlobSource) -> list[Resolve
                     'label': f'{source["label"]} :: {_display_path(match, project_root)}',
                     'path': _display_path(match, project_root),
                     'glob': pattern,
-                    'kind': 'glob',
-                    'content_format': 'fenced',
-                    'fence': DEFAULT_FENCE,
                 },
                 body=body,
             )
@@ -626,9 +613,6 @@ def _resolve_shell_block(
         'label': source['label'],
         'command': command,
         'cwd': str(shell_cwd).replace('\\', '/'),
-        'kind': 'shell',
-        'content_format': 'fenced',
-        'fence': DEFAULT_FENCE,
     }
 
     if interactive_shell_confirm is not None:

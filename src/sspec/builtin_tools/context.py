@@ -17,6 +17,7 @@ from sspec.builtin_tools.context_service import (
     build_glob_source,
     build_shell_source,
     build_tree_source,
+    parse_chunk_value,
     load_preset,
     parse_inline_source_tokens,
     run_prompt_assembly,

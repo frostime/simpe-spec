@@ -186,7 +186,9 @@ def parse_chunk_value(raw: str) -> FileChunkSource:
     return build_chunk_source(path_text, start, end)
 
 
-def parse_inline_source_tokens(tokens: list[str]) -> list[PromptSource]:
+def parse_inline_source_tokens(
+    tokens: list[str], *, allow_positional_globs: bool = False
+) -> list[PromptSource]:
     sources: list[PromptSource] = []
     index = 0
 
@@ -236,6 +238,9 @@ def parse_inline_source_tokens(tokens: list[str]) -> list[PromptSource]:
             sources.append(build_glob_source(tokens[index]))
         elif token.startswith('--'):
             raise PromptSourceParseError(f'Unknown inline prompt option: {token}')
+        elif allow_positional_globs:
+            # Treat positional tokens as file sources (for shell-expanded globs)
+            sources.append(build_file_source(token))
         else:
             raise PromptSourceParseError(
                 f"Unexpected positional token in prompt source list: '{token}'"

@@ -182,6 +182,11 @@ def register_command(group: click.Group) -> None:
         '--allow-shell', is_flag=True, help='Allow shell execution in non-interactive mode.'
     )
     @click.option('--prompt', 'show_prompt', is_flag=True, help='Show tool usage guide.')
+    @click.option('--add-file', 'add_files', multiple=True, help='Add file source (can be used multiple times).')
+    @click.option('--add-chunk', 'add_chunks', multiple=True, help='Add file chunk source (PATH:START-END, can be used multiple times).')
+    @click.option('--add-shell', 'add_shells', multiple=True, help='Add shell command source (can be used multiple times).')
+    @click.option('--add-tree', 'add_trees', multiple=True, help='Add directory tree source (can be used multiple times).')
+    @click.option('--add-glob', 'add_globs', multiple=True, help='Add glob pattern source (can be used multiple times).')
     @click.pass_context
     def context_command(
         ctx: click.Context,
@@ -191,6 +196,11 @@ def register_command(group: click.Group) -> None:
         dry_run: bool,
         allow_shell: bool,
         show_prompt: bool,
+        add_files: tuple[str, ...],
+        add_chunks: tuple[str, ...],
+        add_shells: tuple[str, ...],
+        add_trees: tuple[str, ...],
+        add_globs: tuple[str, ...],
     ) -> None:
         """Assemble local workspace context into an agent-friendly context bundle."""
         if show_prompt:
@@ -200,8 +210,7 @@ def register_command(group: click.Group) -> None:
         try:
             sspec_root = get_sspec_root()
         except SspecNotFoundError:
-            message = "Not a sspec project. Run 'sspec project init' first."
-            raise click.ClickException(message) from None
+            sspec_root = Path.cwd() / '.sspec'
 
         try:
             sources: list[PromptSource] = []
@@ -209,8 +218,21 @@ def register_command(group: click.Group) -> None:
                 preset = load_preset(sspec_root, from_preset)
                 sources.extend(preset.get('sources', []))
 
+            # Build sources from explicit options
+            for path in add_files:
+                sources.append(build_file_source(path))
+            for chunk in add_chunks:
+                sources.append(parse_chunk_value(chunk))
+            for command in add_shells:
+                sources.append(build_shell_source(command))
+            for path in add_trees:
+                sources.append(build_tree_source(path))
+            for pattern in add_globs:
+                sources.append(build_glob_source(pattern))
+
+            # Also handle inline args for backward compatibility (and shell-expanded globs)
             if ctx.args:
-                sources.extend(parse_inline_source_tokens(list(ctx.args)))
+                sources.extend(parse_inline_source_tokens(list(ctx.args), allow_positional_globs=True))
 
             is_interactive = not sources
             if is_interactive:

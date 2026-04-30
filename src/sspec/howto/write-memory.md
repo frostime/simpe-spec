@@ -21,17 +21,25 @@ Files critical to this change, NOT already in spec Scope Summary.
 ```
 
 ### Knowledge
-Facts that would cause wrong decisions if lost. NOT duplicates of spec/design/tasks.
+Write-gate: "If lost, would the next agent make a wrong decision?" Yes → write. No → skip.
 
-Types: `Decision`, `Constraint`, `Gotcha`, `Rejected`, `VitalFinding` etc. Use a custom type only when the recommended labels are not clear enough.
+Types: `Decision` | `Constraint` | `Gotcha` | `Rejected` | `Insight`
+- Decision = directional choice + rationale
+- Constraint = external/user hard limit
+- Gotcha = trap invisible without reading code/docs
+- Rejected = discarded approach + why (prevents re-trying)
+- Insight = finding that shaped understanding, not a decision itself
+
 ```
-- [2026-04-09T02:00] [Rejected] Considered "Understand" — too passive
-- [2026-04-09T02:30] [Gotcha] sspec-align §1 had proto-Clarify content
+- [2026-04-09T02:00] [Rejected] "Understand" as phase name — too passive; user chose "Clarify"
+- [2026-04-09T02:30] [Gotcha] sspec-align §1 had proto-Clarify content, needed extraction
+- [2026-04-09T03:00] [Insight] tmp_service create writes no template content, only empty files
 ```
 
 Rules:
+- NOT duplicates of spec/design/tasks
 - Project-level discoveries → ALSO append to project.md Notes
-- Obsolete items → mark with timestamp, don't silently delete
+- Obsolete items → mark `[obsolete: timestamp]`, never silently delete
 
 ### Milestones
 One line per session. Pure facts. Append new entries; the latest valid bullet is what CLI status surfaces as the newest milestone.

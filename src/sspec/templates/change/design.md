@@ -5,14 +5,12 @@ created: {{TIME}}
 
 # Design: {{CHANGE_NAME}}
 
-<!-- 本文件记录技术设计详情。创建条件：
-变更涉及新接口定义、数据模型变更、或架构逻辑改动。
-简单 bugfix/文案修改不需要此文件。 -->
+<!-- @RULE: QUALITY BAR (non-negotiable):
+Use semi-structured, formalized expression over flat prose.
+Goal: maximize information density, minimize ambiguity, optimize reader comprehension.
+In Short: show, don't describe.
 
-<!-- QUALITY BAR (不可违反):
-用半结构化、形式化的表达替代平铺直叙的纯文本。
-核心目标：提高信息密度，降低不确定性，提高用户理解效率。
-一句话：能展示的不要叙述 (show, don't describe)。
+Fence nesting: when showing content that contains ```, outer fence MUST use more backticks. Always outer > inner.
 
 常见手段 (非穷举):
 - typed code block: 接口、类型、Schema、配置、prompt...
@@ -29,7 +27,7 @@ Anti-pattern:
   ✅ request → A.validate() → B.process() → response
 -->
 
-<!-- 按变更性质组织本文档。没有固定章节要求。
+<!-- @RULE: 按变更性质组织本文档。没有固定章节要求。
 以下是不同类型变更的参考组织方式 (选用，不强制):
 
 Feature/Bugfix  → 接口签名 + 行为流程 + 数据模型
@@ -39,4 +37,4 @@ Prompt/规则     → Before/After 示例 + 决策逻辑
 配置/Schema     → Schema 定义 + 迁移路径 + 兼容性策略
 -->
 
-<!-- @REPLACE -->
+<!-- @REPLACE:DESIGN -->

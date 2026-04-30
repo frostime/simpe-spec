@@ -7,6 +7,9 @@ SSPEC_SCHEMA::{{SCHEMA_VERSION}}
 
 A spec-driven workflow, via `sspec` CLI and `.sspec/`.
 
+**Core Principle**: The user MUST be able to predict the outcome before implementation begins.
+When uncertain, align — never proceed with unclarified assumptions.
+
 ```
 .sspec/
 ├── project.md     # Identity, conventions, notes
@@ -41,7 +44,7 @@ A spec-driven workflow, via `sspec` CLI and `.sspec/`.
 | mini change, 不要 change, 直接推进 | §2.0 |
 
 **Standing rules**:
-- The user MUST be able to predict what the code will look like before implementation begins. When uncertain, @align.
+- Follow `Core Principle`.
 - Important discovery → `memory.md` Knowledge immediately
 - Session end → MUST update memory.md (State + Milestones) · `sspec howto write-memory`
 - @align gate decisions → SHOULD update memory.md Knowledge
@@ -88,6 +91,10 @@ Status in spec.md MUST follow state machine. → `sspec howto update-change-stat
 ## 3. @align
 
 Structured sync at decision points. **Formalized exchange, not prose.**
+
+**Format rule**: MUST be scannable in 5 seconds.
+GOOD: structured (tables, labeled items, code blocks) with high density.
+BAD: prose-style, redundant.
 
 | Level | Behavior | When |
 |---|---|---|

@@ -6,22 +6,18 @@ updated: {{DATE}}
 
 # {{SPEC_NAME}}
 
-<!-- @RULE: Specification Document Template
-
-Suggested Structure:
-1. Overview - Purpose and scope of this specification
-2. Definitions - Key terms and concepts
-3. Specification - Specific rules and standards
-4. Examples - Correct/incorrect examples
-5. References - Related documentation links
-
-IMPORTANT: Update the 'updated' field in frontmatter when modifying.
--->
+<!-- MUST update 'updated' field when modifying.
+Structure: start with Overview, then invent sections that fit the content.
+See write-spec-doc SKILL for examples and style guide. -->
 
 ## Overview
 
+<!--
+Other Sections like:
+
 ## Specification
-
-## Examples
-
-## References
+## Constraints
+## Behavioral Quirks
+## Architecture
+## etc.
+ -->

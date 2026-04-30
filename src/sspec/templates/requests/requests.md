@@ -6,10 +6,9 @@ attach-change: null
 tldr: ""
 ---
 
-<!-- @RULE: Frontmatter Type
-status: OPEN | DOING | DONE | CLOSED;
-tldr: One-sentence summary for list views — fill this!
- -->
+<!-- MUST follow frontmatter schema:
+status: OPEN | DOING | DONE | CLOSED
+tldr: One-sentence summary for list views — fill this! -->
 
 # Request: {{NAME}}
 
@@ -21,22 +20,21 @@ tldr: One-sentence summary for list views — fill this!
 
 ## Initial Direction
 <!-- Your rough idea or preferred direction — details are fine but not required.
-This becomes the starting point for the change's spec.md Section A/B. -->
+This becomes the starting point for the change's spec.md Approach. -->
 
 ## Success Criteria
-<!-- The conditions or criteria that indicate
-the problem has been resolved and meets the user's intention -->
+<!-- Conditions that indicate the problem has been resolved and meets the user's intention -->
 
 ## Relational Context
-<!-- Constraints, preferences, related filelinks -->
+<!-- Constraints, preferences, related file links -->
 
 
 ---
 
 ## @AGENT
 <!-- What should Agent do to implement this request -->
-Adhere to the SSPEC protocol specifications and commence development from the current Request file, following the SSPEC/Development Lifecycle.
-Next step: Read `sspec-clarify` SKILL + `sspec-design` SKILLs + `sspec change new --from <this>`.
+Adhere to the SSPEC protocol and commence development from the current Request file, following the SSPEC Change Lifecycle.
+Next step: Read `sspec-clarify` SKILL + `sspec-design` SKILL + `sspec change new --from <this>`.
 
 ---
 

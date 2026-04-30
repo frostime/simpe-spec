@@ -6,7 +6,7 @@ created: {{TIME}}
 reference: null
 ---
 
-<!-- @RULE: Frontmatter
+<!-- MUST follow frontmatter schema:
 status: PLANNING | DOING | REVIEW | DONE | BLOCKED
 change-type: single | sub
 reference?: Array<{source, type: 'request'|'root-change'|'sub-change'|'prev-change'|'doc'|'revision', note?}>
@@ -29,27 +29,26 @@ reference:
 # {{CHANGE_NAME}}
 
 ## Problem Statement
-<!-- @REPLACE -->
 
-<!-- 量化影响。格式："[指标] 导致 [影响]"。
-简单：单段。复杂：拆分 "现状" + "用户需求"。 -->
+<!-- Quantify impact. Format: "[metric] causing [impact]".
+Simple: single paragraph. Complex: split into "Current state" + "User need". -->
 
 ## Proposed Solution
-<!-- @REPLACE -->
 
 ### Approach
-<!-- 核心方案 (1-3 段) + 为什么选这个方案 -->
+<!-- Core solution (1-3 paragraphs) + why this approach over alternatives -->
 
 ### Key Change
-<!-- REQUIRED. 每个独立变更项用 **Type Label: Title** 格式标注核心决策与约束。
-例：**Fix A: 请求链接** / **Feat B: 缓存 TTL 抖动**
-tasks.md 引用这些标签 — 不复制设计描述。
-如果范围边界不明显，在 Scope Summary 后加 "What Stays Unchanged" 块。 -->
+<!-- MUST label each independent change item as **Type Label: Title**.
+Examples: **Fix A: Request linking** / **Feat B: Cache TTL jitter**
+tasks.md references these labels — MUST NOT copy the design description.
+If scope boundary is unclear, add a "What Stays Unchanged" block after Scope Summary.
+Fence nesting: when showing content containing ```, outer fence MUST use more backticks (outer > inner). -->
 
 ### Scope Summary
-<!-- REQUIRED. File | Change 表 — 每个 spec 都必须以此结尾。 -->
+<!-- MUST end every spec with a File | Change table. -->
 
 ### Design Reference
-<!-- 技术设计复杂时（新接口/数据模型/架构变更），MUST 创建 design.md。
-在此标注：→ 详细技术设计见 [design.md](./design.md)
-简单变更可删除此节，在 Approach 中直接说明技术方案。 -->
+<!-- MUST create design.md when the change involves new interfaces, data model changes,
+or architectural logic changes. Link here: → See [design.md](./design.md)
+Simple changes MAY delete this section and describe the technical approach inline. -->

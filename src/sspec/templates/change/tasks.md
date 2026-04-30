@@ -9,9 +9,8 @@ updated: ""
 `[ ]` Todo | `[x]` Done
 
 ## Tasks
-<!-- @REPLACE -->
 
-<!-- @RULE: Organize by phases. Each task <2h, independently testable.
+<!-- MUST organize by phases. Each task <2h, independently testable.
 Phase emoji: ⏳ pending | 🚧 in progress | ✅ done
 
 ### Phase 1: <name> ⏳
@@ -33,7 +32,6 @@ If the work belongs in a new follow-up or replacement change, the agent MUST NOT
 ---
 
 ## Progress
-<!-- @REPLACE -->
 
 **Overall**: 0%
 

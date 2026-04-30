@@ -29,9 +29,9 @@ Examples: "snake_case for Python, camelCase for JS", "All API routes: /api/v1/*"
 
 ## Spec-Docs Index
 <!-- Quick reference to spec-docs in `.sspec/spec-docs/`.
-Spec-docs capture knowledge that code alone cannot express:
-  A) Cross-module architecture maps (call chains, data flows, layer relationships)
-  B) External constraints invisible in code (platform rules, API quirks, system limitations)
+Spec-docs capture knowledge that code alone cannot adequately convey:
+  A) In code, but scattered or hard to reconstruct (cross-module architecture, UX requirements, design norms, trade-offs)
+  B) Outside code entirely (platform rules, API quirks, business constraints, deployment assumptions)
 NOT a restating of code behavior — if readable from code+comments, it doesn't belong here.
 MUST keep entries in sync with actual spec-doc files.
 Format: `- [name](spec-docs/<file>) — one-line summary` -->

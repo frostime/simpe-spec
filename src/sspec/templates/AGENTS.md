@@ -10,7 +10,7 @@ A spec-driven workflow, via `sspec` CLI and `.sspec/`.
 ```
 .sspec/
 ├── project.md     # Identity, conventions, notes
-├── spec-docs/     # Cross-module architecture maps & external constraints & complex specifications
+├── spec-docs/     # Knowledge: in-code-but-scattered or outside-code
 ├── changes/<n>/   # spec.md | tasks.md | memory.md [+ design.md | revisions/ | reference/]
 ├── requests/      # User intent records
 └── tmp/           # Informal drafts
@@ -101,7 +101,7 @@ Decisions → natural home: design → spec.md, direction → memory.md Knowledg
 
 **Directives**: `@change <n>` | `@resume` | `@memory` | `@sync` | `@argue` | `@subagent-audits`
 
-**Spec-Docs**: Knowledge that code alone cannot express — cross-module architecture maps and external constraints invisible in code. Registered in `project.md` Spec-Docs Index. → `write-spec-doc` SKILL
+**Spec-Docs**: Knowledge that code alone cannot adequately convey — either in code but scattered or hard to reconstruct (cross-module architecture, UX requirements, design norms, deliberate trade-offs), or entirely outside code (platform rules, API quirks, business constraints). Registered in `project.md` Spec-Docs Index. → `write-spec-doc` SKILL
 
 **CLI**:
 

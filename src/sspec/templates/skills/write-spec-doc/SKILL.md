@@ -1,42 +1,41 @@
 ---
 name: write-spec-doc
-description: Guide for writing project specifications in .sspec/spec-docs/. Use when creating or updating spec documents.
+description: Create and maintain spec-docs — knowledge in code but scattered or hard to reconstruct, and knowledge outside code entirely.
 metadata:
   author: frostime
-  version: 2.0.0
+  version: 3.0.0
 ---
 
-# Write-Spec
+# Write-Spec-Doc
 
 This skill covers:
-- [When to Create](#when-to-create) (L25-42) - Decision criteria
-- [Frontmatter](#frontmatter) (L43-69) - Required metadata fields
-- [Body Structure](#body-structure) (L70-107) - Template and organization
-- [Scope Definition](#scope-definition) (L108-123) - File path patterns
-- [Style Guide](#style-guide) (L124-154) - What to include/exclude
-- [Diagramming](#diagramming) (L155-179) - Mermaid examples
-- [Relationship to Changes](#relationship-to-changes) (L180-198) - Keeping specs current
-- [Deprecation](#deprecation) (L199-207) - Archiving obsolete specs
-- [Multi-File Specs](#multi-file-specs) (L208-225) - Complex subsystems
-- [Examples](#examples) (L226-235) - Good vs bad specs
-- [Maintenance Checklist](#maintenance-checklist) (L236-END) - Review triggers
+- [When to Create](#when-to-create) - Decision criteria
+- [Frontmatter](#frontmatter) - Required metadata fields
+- [Body Structure](#body-structure) - Template and organization
+- [Scope Definition](#scope-definition) - File path patterns
+- [Style Guide](#style-guide) - What to include/exclude
+- [Diagramming](#diagramming) - Mermaid examples
+- [Relationship to Changes](#relationship-to-changes) - Keeping specs current
+- [Deprecation](#deprecation) - Archiving obsolete specs
+- [Multi-File Specs](#multi-file-specs) - Complex subsystems
+- [Maintenance Checklist](#maintenance-checklist) - Review triggers
 
 
 ## When to Create
 
-Create a spec-doc when:
-- A subsystem has design decisions that aren't obvious from code alone
-- Multiple changes will touch the same area and need shared context
-- The architecture involves non-trivial component interactions
-- API contracts need to be documented for external consumers
-- A convention or standard applies across multiple files/modules
+Spec-docs capture knowledge that code alone cannot adequately convey, in two categories:
+
+**A) In code, but scattered or hard to reconstruct** — Cross-module architecture (call chains, data flows, layer relationships) lives in code but is scattered across files; UX requirements and design norms are implicit in implementation choices; deliberate design trade-offs are reflected as outcomes but require significant effort to recover from code alone. A spec-doc condenses and makes explicit what would otherwise demand a full codebase traversal and deep inference.
+
+**B) Outside code entirely** — Platform rules, API quirks, business constraints, deployment environment assumptions. Code reflects these as outcomes, but the constraints themselves are not in the code and cannot be inferred from it. Example: a plugin written for system X may look odd without knowing X's sandboxing rules; a SQLite-over-Postgres choice is invisible without knowing the single-machine deployment constraint.
+
+**Write-gate**: "If an agent read only the code (including comments), could they obtain this information — fully and without excessive effort?" Yes → don't create. No → create.
 
 **Don't create** when:
 - Code comments and type signatures adequately capture the design
 - The topic is a single-file implementation detail
-- The information would duplicate framework/library documentation
-
-**Rule of thumb**: If a new developer would need 10+ minutes to understand the design intent from code alone, it deserves a spec-doc.
+- The information duplicates framework/library documentation
+- A one-liner in project.md Conventions or Notes is sufficient
 
 ---
 
@@ -69,39 +68,41 @@ replacement: ""
 
 ## Body Structure
 
-The structure should match the **type of spec**:
+**Structure serves content.** Every spec-doc MUST start with `## Overview`, but beyond that, invent sections that fit the knowledge being captured. The examples below show what worked for common scenarios — adapt or ignore them.
 
-### Architecture Spec
+### Example: Cross-Module Architecture
 ```markdown
-# <System Name>
 ## Overview
-## Architecture (with Mermaid diagram)
+## Architecture (with diagram)
 ## Components
 ## Key Decisions
 ## Configuration
-## Testing Requirements
 ```
 
-### API Contract Spec
+### Example: Platform / External Constraints
 ```markdown
-# <API Name>
+## Overview (what system, how we integrate)
+## Constraints
+## Behavioral Quirks
+## Implications for Code
+## References
+```
+
+### Example: Design Norms / UX Requirements
+```markdown
+## Overview (scope and goals)
+## Principles
+## Rules (with correct/incorrect examples)
+## Exceptions
+```
+
+### Example: API Contract
+```markdown
 ## Overview (Base URL, Auth)
 ## Endpoints
 ## Data Models
 ## Rate Limits
-## Versioning Policy
 ```
-
-### Convention / Standard Spec
-```markdown
-# <Convention Name>
-## Overview (Purpose, Applies to)
-## Rules
-## Examples
-## Exceptions
-```
-
-Key principle: **structure serves content**. Don't force an architecture template on an API contract.
 
 ---
 
@@ -132,9 +133,8 @@ scope:
 ### MUST NOT Include
 1. Change logs (history lives in git)
 2. Multiple unrelated topics
-3. Marketing language
-4. Vague statements — quantify everything
-5. Common knowledge (don't explain REST, HTTP)
+3. Vague statements — quantify everything
+4. Common knowledge (don't explain REST, HTTP)
 
 ### Language
 - **Imperative mood**: "Validate tokens" not "The system should validate"
@@ -143,10 +143,9 @@ scope:
 
 ### File Links
 
-1. **Simple Relative Paths**: For same-level, sub-directories, or up to 2 levels of parent.
-   - `[Link](./other-spec.md)`
-   - `[Link](../../base.md)` (Max two `../`)
-2. **Workspace-Relative Paths**: For different branches or >2 parent levels. Start with `/`.
+1. **Simple Relative Paths**: Same-level, sub-directories, or up to 2 parent levels.
+   - `[Link](./other-spec.md)` / `[Link](../../base.md)`
+2. **Workspace-Relative Paths**: Different branches or >2 parent levels. Start with `/`.
    - `[Link](/src/core.py)`
 3. Use forward slashes `/` for cross-platform compatibility.
 
@@ -173,14 +172,13 @@ sequenceDiagram
     API-->>-Client: {accessToken}
 ```
 
-Avoid ASCII art.
-
 ---
 
 ## Relationship to Changes
 
 ### Change Creates a Spec-Doc
-Link via reference field:
+1. Register in `project.md` Spec-Docs Index
+2. Link via change reference field:
 ```yaml
 reference:
   - source: "spec-docs/auth-system.md"
@@ -188,11 +186,11 @@ reference:
 ```
 
 ### Change Modifies an Existing Spec-Doc
-1. Add task in tasks.md: "Update spec-doc `spec-docs/<n>.md`"
+1. Add task in tasks.md: "Update spec-doc `spec-docs/<name>.md`"
 2. Update the spec-doc's `updated` field and affected sections
 3. Verify `scope` still matches actual files
 
-**Principle**: Spec-docs should never be silently outdated by a change.
+Spec-docs MUST never be silently outdated by a change.
 
 ---
 
@@ -220,16 +218,6 @@ Rules:
 - Each sub-file has its own frontmatter with narrowed scope
 - Cross-references use relative paths
 - Shared concepts go in index.md
-
----
-
-## Examples
-
-### Good Spec
-Concrete, quantified, has file paths, diagrams, and configuration tables.
-
-### Bad Spec
-"Welcome to our revolutionary API!" — marketing fluff, no concrete info, no file paths, includes unbuilt features.
 
 ---
 

@@ -99,7 +99,7 @@ For independent review, consider subagent audits to avoid context blind spots.
 
 When user is satisfied:
 1. Ensure all tasks marked `[x]`; update status: `REVIEW → DONE`
-2. If change produced architectural knowledge → `@align` user about creating/updating a spec-doc
+2. If change produced knowledge that belongs in a spec-doc (cross-module patterns, design norms, external constraints) → `@align` user about creating/updating a spec-doc
 3. Suggest archive or `@memory`
 
 ## Status Flow

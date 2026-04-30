@@ -60,7 +60,7 @@ Implement(sspec-implement)  code + tasks progress   exit: @align gate ■
 Review   (sspec-review)     DONE | fix→Implement | amend→revision | follow-up→new change
 ```
 
-`■` = hard stop, MUST align. `→` = output summary, keep going. Failed gate → return, update, realign.
+`■` = hard stop, **MUST stop & align**. `→` = output summary, COULD keep going. Failed gate → return, update, realign.
 Post-Design gate: spec.md/design.md baselines immutable. Changes → `revisions/NNN-*.md`.
 memory.md: maintained throughout, not a phase. → `sspec howto write-memory`
 

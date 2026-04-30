@@ -1,11 +1,10 @@
 {
   "meta_schema": "2.1",
-  "sspec_schema": "5.0",
+  "sspec_schema": "6.0",
   "sspec_version": "2.1.7.dev2+g2e9bdfd86.d20260430",
   "created_at": "2026-02-07T18:42:39.297150",
-  "updated_at": "2026-04-30T18:39:00.330164",
+  "updated_at": "2026-04-30T18:44:24.863097",
   "file_hashes": {
-    "skills/use-powershell": "c14a032ce16697b8",
     "skills/write-patch": "850929827559ba69",
     "skills/write-spec-doc": "9d90be74022b6ece",
     "skills/sspec-mdtoc": "b9fdfc4a23d816e0",
@@ -24,7 +23,6 @@
     "sspec-mdtoc",
     "sspec-plan",
     "sspec-review",
-    "use-powershell",
     "write-patch",
     "write-spec-doc"
   ],

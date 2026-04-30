@@ -30,7 +30,7 @@ UPDATABLE_FILES: list[str] = []
 
 
 # User-managed files tracked for changes but not auto-updated
-USER_FILES = ['project.md', 'spec-docs/README.md']
+USER_FILES = ['project.md']
 
 # Change base files — always created by `change new`
 CHANGE_BASE_FILES = ['spec.md', 'tasks.md', 'memory.md']

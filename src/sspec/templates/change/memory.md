@@ -9,21 +9,15 @@ This section records the change starting point in git and MUST NOT be edited or 
 {{GIT}}
 
 ## State
-<!-- 当前在哪、下一步做什么 — 一到三行
-这是恢复入口；Agent 冷启动时第一个读的 section。 -->
-
-<!-- @REPLACE:STATE -->
-
+<!-- Where we are and what's next — one to three lines.
+This is the resume entry point; the first section an agent reads on cold start. -->
 
 ## Key Files
-<!-- 对理解/继续这个 change 至关重要的文件
+<!-- Files critical to understanding/continuing this change.
 - `path/file` — what it contains, why it matters -->
 
-<!-- @REPLACE:KEY_FILES -->
-
-
 ## Knowledge
-<!-- @RULE: Write-gate is "If this item were lost, would the next agent make a wrong decision?"
+<!-- MUST apply write-gate: "If this item were lost, would the next agent make a wrong decision?"
 Yes → write it. No → skip.
 
 Target reader: a cold-starting agent that can only see spec + design + tasks + this Knowledge.
@@ -41,12 +35,7 @@ Types: Decision | Constraint | Gotcha | Rejected | Insight
 Project-level discoveries → ALSO append to project.md Notes.
 Obsolete items → mark [obsolete: timestamp], never silently delete. -->
 
-<!-- @REPLACE:KNOWLEDGE -->
-
-
 ## Milestones
-<!-- @RULE: 每 session 一行，纯事实记录；新记录直接追加
-CLI 会把最后一条有效 bullet 视为 latest milestone
-- [ISO timestamp] 一句话概要 -->
-
-<!-- @REPLACE:MILESTONE -->
+<!-- MUST append one line per session. Pure facts; new entries appended at the end.
+CLI treats the last valid bullet as the latest milestone.
+- [ISO timestamp] one-sentence summary -->

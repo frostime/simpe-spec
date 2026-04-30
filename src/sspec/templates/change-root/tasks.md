@@ -10,9 +10,8 @@ updated: ""
 `[ ]` Todo | `[x]` Done (sub-change completed + verified)
 
 ## Milestones
-<!-- @REPLACE -->
 
-<!-- @RULE: Each milestone maps to a sub-change. Track at phase level, not file level.
+<!-- MUST track at phase level, not file level. Each milestone maps to a sub-change.
 Phase emoji: ⏳ pending | 🚧 in progress | ✅ done
 
 ### Phase 1: <name> ⏳

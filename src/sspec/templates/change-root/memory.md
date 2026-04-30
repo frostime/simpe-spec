@@ -9,28 +9,28 @@ This section records the root change starting point in git and MUST NOT be edite
 {{GIT}}
 
 ## Coordination
-<!-- 子 change 状态总览。状态变更时 MUST 更新。
-这是 root change 协调总览，`change status` 直接读取此表。 -->
+<!-- MUST update when sub-change status changes.
+This is the authoritative root coordination summary that `change status` reads. -->
 
 | Phase | Sub-Change | Status | Blocker |
 |-------|------------|--------|---------|
 | Phase 1 | (pending) | ⏳ | — |
 
 ## State
-<!-- 当前协调焦点 — 下一步推进哪个 phase -->
+<!-- Current coordination focus — which phase to advance next. -->
 
 ## Key Files
-<!-- 跨 phase 的关键文件/文档
+<!-- Cross-phase key files/documents.
 - `changes/<sub-name>/` — what this sub-change covers
 - `path/file` — what it contains, why it matters -->
 
 ## Knowledge
-<!-- 跨 change 决策和依赖。
+<!-- Cross-change decisions and dependencies.
 Types: CoordinationDecision, Dependency, CrossChangeFinding, Constraint, Gotcha
-格式：- [timestamp] [Type] content
-项目级发现 → ALSO append to project.md Notes。 -->
+Format: - [timestamp] [Type] content
+Project-level discoveries → ALSO append to project.md Notes. -->
 
 ## Milestones
-<!-- 每 session 一行；新记录直接追加
-CLI 会把最后一条有效 bullet 视为 latest milestone
-- [ISO timestamp] 一句话概要 -->
+<!-- MUST append one line per session. Pure facts; new entries appended at the end.
+CLI treats the last valid bullet as the latest milestone.
+- [ISO timestamp] one-sentence summary -->

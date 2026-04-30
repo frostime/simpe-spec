@@ -6,7 +6,7 @@ created: {{TIME}}
 reference: null
 ---
 
-<!-- @RULE: Frontmatter
+<!-- MUST follow frontmatter schema:
 status: PLANNING | DOING | REVIEW | DONE | BLOCKED
 change-type: root (coordinator for sub-changes)
 reference?: Array<{source, type: 'request'|'sub-change'|'doc', note?}>
@@ -25,18 +25,16 @@ reference:
 # {{CHANGE_NAME}}
 
 ## Problem Statement
-<!-- @REPLACE -->
 
 <!-- Root coordinator — describe the FULL scope across all phases. -->
 
 ## Proposed Solution
-<!-- @REPLACE -->
 
 ### Overall Approach
 <!-- High-level strategy. Delivery order, constraints, cross-phase coordination. -->
 
 ### Phase Overview
-<!-- @RULE: List phases with goals and dependencies. Each phase becomes a sub-change.
+<!-- MUST list phases with goals and dependencies. Each phase becomes a sub-change.
 
 Format (≤3 phases): dependency-annotated list + ASCII dependency tree
 Format (≥4 phases): dependency table
@@ -54,9 +52,9 @@ When a sub-change is created, sync references in BOTH directions:
 - Root spec.md adds `type: sub-change` entry
 - Sub spec.md adds `type: root-change` entry back
 
-Note: root spec MUST NOT include file-level detail.
+Root spec MUST NOT include file-level detail.
 File-level design belongs in each sub-change's own spec.md / design.md. -->
 
 ### Design Reference
-<!-- 如果需要跨 phase 的架构设计约束，创建 design.md。
-大多数 root change 不需要 — 设计在 sub-change 中。 -->
+<!-- SHOULD create design.md only when cross-phase architectural constraints exist.
+Most root changes don't need it — design lives in sub-changes. -->

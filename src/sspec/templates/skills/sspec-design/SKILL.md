@@ -50,7 +50,7 @@ sspec change new <name> --root            # root coordinator
 
 ### spec.md
 
-Follow the template `@RULE` blocks. Key sections:
+Follow the template comment constraints (BCP 14 keywords). Key sections:
 
 - **Problem Statement**: Quantify impact. Format: "[metric] causing [impact]".
 - **Approach**: Core idea (1-3 paragraphs) + why this over alternatives.

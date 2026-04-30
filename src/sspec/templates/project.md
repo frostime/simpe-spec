@@ -11,8 +11,8 @@ Read it first every session. Update Conventions + Notes via @memory. -->
 - [List primary technologies, e.g. TypeScript, React, Node.js]
 
 ## Key Paths
-<!-- @RULE: Most important directories/files for quick navigation.
-Keep ≤10 entries. Agent uses this to orient in the codebase. -->
+<!-- MUST keep ≤10 entries. Most important directories/files for quick navigation.
+Agent uses this to orient in the codebase. -->
 
 | Path | Purpose |
 |------|---------|
@@ -20,22 +20,26 @@ Keep ≤10 entries. Agent uses this to orient in the codebase. -->
 | `tests/` | Test files |
 
 ## Conventions
-<!-- @RULE: Coding rules that apply across ALL work in this project.
-One-liners only. If a convention needs multi-paragraph explanation → write a spec-doc.
+<!-- MUST be one-liners. Coding rules that apply across ALL work in this project.
+If a convention needs multi-paragraph explanation → write a spec-doc.
 Examples: "snake_case for Python, camelCase for JS", "All API routes: /api/v1/*",
 "Never commit .env files", "Prefer composition over inheritance" -->
 
 - [Add conventions here]
 
 ## Spec-Docs Index
-<!-- @RULE: Quick reference to formal specs in `.sspec/spec-docs/`.
-Agent reads this to know what architecture knowledge exists before starting work.
-Keep entries in sync with actual spec-doc files. Format: `- [name](spec-docs/<file>) — one-line description` -->
+<!-- Quick reference to spec-docs in `.sspec/spec-docs/`.
+Spec-docs capture knowledge that code alone cannot express:
+  A) Cross-module architecture maps (call chains, data flows, layer relationships)
+  B) External constraints invisible in code (platform rules, API quirks, system limitations)
+NOT a restating of code behavior — if readable from code+comments, it doesn't belong here.
+MUST keep entries in sync with actual spec-doc files.
+Format: `- [name](spec-docs/<file>) — one-line summary` -->
 
 (none yet — create spec-docs with `sspec doc new "<name>"`)
 
 ## Notes
-<!-- @RULE: Project-level memory. Append-only log of learnings, gotchas, preferences.
+<!-- Project-level memory. Append-only log of learnings, gotchas, preferences.
 Agent appends here during @memory when a discovery is project-wide (not change-specific).
 Format each entry as: `- YYYY-MM-DD: <learning>`
 Prune entries that become outdated or graduate to Conventions/spec-docs. -->

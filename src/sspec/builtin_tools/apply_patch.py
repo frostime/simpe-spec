@@ -92,6 +92,7 @@ class PatchApplyResult:
         'parse_error',
         'write_error',
         'no_change_patch',
+        'overlap_conflict',
     ]
     error: str | None = None
     match_mode: str | None = None  # exact | loose
@@ -115,6 +116,22 @@ class BatchApplyResult:
     @property
     def failed_patches(self) -> list[PatchApplyResult]:
         return [r for r in self.results if not r.success]
+
+
+@dataclass
+class PatchMatch:
+    """Phase 1 match 结果（只读，不做任何写入）"""
+
+    patch: PatchBlock
+    abs_start: int  # 文件绝对行索引（0-based）
+    abs_end: int  # exclusive
+    match_mode: str  # 'exact' | 'loose'
+    match_line: int  # 文件中 1-based 行号（= abs_start + 1）
+    status: str  # 'matched' | 'already_applied' | 'search_not_found' | 'search_ambiguous' | 'overlap_conflict'
+    error: str | None = None
+    related_lines: list[int] | None = None
+    search_line_count: int = 0
+    replace_line_count: int = 0
 
 
 # ============ 工具函数 ============
@@ -493,9 +510,7 @@ def validate_patch_block(
                 f'{operation.upper()}: {display_path}'
             )
         if search_content.strip() != '':
-            return (
-                f'{operation.upper()} upper block must be whitespace-only: {display_path}'
-            )
+            return f'{operation.upper()} upper block must be whitespace-only: {display_path}'
 
     if operation == 'search' and not file_path.exists():
         return f'File does not exist: {display_path}'
@@ -680,6 +695,138 @@ def format_line_range(line_range: tuple[int | None, int | None] | None) -> str:
     return 'Full file'
 
 
+def _match_patch(
+    patch: PatchBlock,
+    file_lines: list[str],
+    file_newline: str,
+    content: str,
+    file_encoding: str,
+) -> PatchMatch:
+    """Phase 1: 在原始文件内容上定位 patch 的 match 位置（只读）。"""
+    total_lines = len(file_lines)
+    search_text = convert_newlines(patch.search_content, file_newline)
+    search_lines = split_lines_keepends(search_text)
+    replace_text = convert_newlines(patch.replace_content, file_newline)
+    replace_lines = split_lines_keepends(replace_text)
+
+    def _fail(status: str, error: str | None = None, **kw: object) -> PatchMatch:
+        return PatchMatch(
+            patch=patch,
+            abs_start=0,
+            abs_end=0,
+            match_mode='',
+            match_line=0,
+            status=status,
+            error=error,
+            **kw,  # type: ignore[arg-type]
+            search_line_count=len(search_lines),
+            replace_line_count=len(replace_lines),
+        )
+
+    is_empty_file = content == ''
+    is_empty_search = len(search_lines) == 0
+
+    if is_empty_search and not is_empty_file:
+        return _fail(
+            'parse_error',
+            'SEARCH content is empty, this is not allowed when the target file is non-empty (ambiguous match)',
+        )
+    if is_empty_search and is_empty_file:
+        if replace_text == content:
+            return _fail('no_change_patch', 'SEARCH is empty and REPLACE would not change the file')
+        return _fail('matched')
+    if search_text == replace_text:
+        return _fail('no_change_patch', 'SEARCH and REPLACE are identical')
+
+    # 确定搜索范围
+    if patch.line_range:
+        try:
+            normalized_range = normalize_line_range(patch.line_range, total_lines)
+            if normalized_range is None:
+                raise ValueError('Resolved line range is empty')
+            scope_start, scope_end = normalized_range
+        except ValueError as e:
+            return _fail('search_not_found', str(e))
+        start_idx = scope_start - 1
+        end_idx_excl = scope_end
+        if start_idx < 0 or end_idx_excl > total_lines:
+            return _fail(
+                'search_not_found',
+                f'Line range {format_line_range(patch.line_range)} is outside file bounds (1-{total_lines})',
+            )
+        prefix_len = start_idx
+        region = file_lines[start_idx:end_idx_excl]
+    else:
+        prefix_len = 0
+        region = file_lines
+
+    search_matches, search_mode = find_preferred_matches(region, search_lines)
+    replace_matches, replace_mode = find_preferred_matches(region, replace_lines)
+
+    if len(search_matches) == 1:
+        abs_start = prefix_len + search_matches[0]
+        return PatchMatch(
+            patch=patch,
+            abs_start=abs_start,
+            abs_end=abs_start + len(search_lines),
+            match_mode=search_mode or '',
+            match_line=abs_start + 1,
+            status='matched',
+            search_line_count=len(search_lines),
+            replace_line_count=len(replace_lines),
+        )
+
+    if len(search_matches) > 1:
+        related = [prefix_len + m + 1 for m in search_matches]
+        return _fail(
+            'search_replace_coexist' if replace_matches else 'search_ambiguous',
+            'SEARCH and REPLACE both exist in scope; narrow the line range'
+            if replace_matches
+            else 'SEARCH matched multiple locations; narrow the line range',
+            match_mode=search_mode or '',
+            related_lines=related,
+        )
+
+    # search 0 matches — 检查 replace 是否已存在
+    if len(replace_matches) == 1:
+        return PatchMatch(
+            patch=patch,
+            abs_start=0,
+            abs_end=0,
+            match_mode=replace_mode or '',
+            match_line=prefix_len + replace_matches[0] + 1,
+            status='already_applied',
+            error='SEARCH not found, but REPLACE already exists',
+            search_line_count=len(search_lines),
+            replace_line_count=len(replace_lines),
+        )
+    if len(replace_matches) > 1:
+        related = [prefix_len + m + 1 for m in replace_matches]
+        return _fail(
+            'replace_ambiguous',
+            'SEARCH not found, and REPLACE matched multiple locations',
+            match_mode=replace_mode or '',
+            related_lines=related,
+        )
+    return _fail('search_not_found', 'SEARCH content not found in scope')
+
+
+def _match_to_result(m: PatchMatch) -> PatchApplyResult:
+    """PatchMatch → PatchApplyResult（用于 batch 失败路径和 already_applied）。"""
+    return PatchApplyResult(
+        patch=m.patch,
+        success=m.status in ('matched', 'already_applied', 'no_change_patch'),
+        status=m.status,
+        error=m.error,
+        match_mode=m.match_mode or None,
+        match_line=m.match_line if m.match_line else None,
+        related_lines=m.related_lines,
+        source_line_start=m.patch.source_line_start,
+        search_line_count=m.search_line_count,
+        replace_line_count=m.replace_line_count,
+    )
+
+
 def apply_patch(patch: PatchBlock, *, dry_run: bool = False) -> PatchApplyResult:
     """应用单个 patch。"""
     try:
@@ -748,7 +895,6 @@ def apply_patch(patch: PatchBlock, *, dry_run: bool = False) -> PatchApplyResult
                 source_line_start=patch.source_line_start,
             )
 
-        # 保留原文件换行，并尽量保留原编码写回能力
         content, file_encoding = read_target_text_with_encoding(patch.file_path)
         file_newline = detect_newline_style(content)
         replace_text = convert_newlines(patch.replace_content, file_newline)
@@ -764,10 +910,8 @@ def apply_patch(patch: PatchBlock, *, dry_run: bool = False) -> PatchApplyResult
                     source_line_start=patch.source_line_start,
                     replace_line_count=len(replace_lines),
                 )
-
             if not dry_run:
                 atomic_write_text(patch.file_path, replace_text, encoding=file_encoding)
-
             return PatchApplyResult(
                 patch=patch,
                 success=True,
@@ -776,183 +920,27 @@ def apply_patch(patch: PatchBlock, *, dry_run: bool = False) -> PatchApplyResult
                 replace_line_count=len(replace_lines),
             )
 
+        # SEARCH: 用 _match_patch 定位，再 splice + write
         file_lines = split_lines_keepends(content)
-        total_lines = len(file_lines)
+        m = _match_patch(patch, file_lines, file_newline, content, file_encoding)
 
-        if content == '' and patch.line_range:
-            return PatchApplyResult(
-                patch=patch,
-                success=False,
-                status='out_of_range',
-                error=f'Line range {format_line_range(patch.line_range)} is outside file bounds (empty file)',
-                source_line_start=patch.source_line_start,
-            )
+        if m.status != 'matched':
+            return _match_to_result(m)
 
-        # 确定搜索范围
-        if patch.line_range:
-            try:
-                normalized_range = normalize_line_range(patch.line_range, total_lines)
-                if normalized_range is None:
-                    raise ValueError('Resolved line range is empty')
-                scope_start, scope_end = normalized_range
-            except ValueError as e:
-                return PatchApplyResult(
-                    patch=patch,
-                    success=False,
-                    status='invalid_line_range',
-                    error=str(e),
-                    source_line_start=patch.source_line_start,
-                )
-
-            start_idx = scope_start - 1
-            end_idx_excl = scope_end
-
-            if start_idx < 0 or end_idx_excl > total_lines:
-                return PatchApplyResult(
-                    patch=patch,
-                    success=False,
-                    status='out_of_range',
-                    error=f'Line range {format_line_range(patch.line_range)} is outside file bounds (1-{total_lines})',
-                    source_line_start=patch.source_line_start,
-                )
-
-            prefix = file_lines[:start_idx]
-            region = file_lines[start_idx:end_idx_excl]
-            suffix = file_lines[end_idx_excl:]
-        else:
-            prefix = []
-            region = file_lines
-            suffix = []
-
-        # patch 内容换行统一为文件风格（避免混合换行）
-        search_text = convert_newlines(patch.search_content, file_newline)
-        search_lines = split_lines_keepends(search_text)
-        is_empty_file = content == ''
-        is_empty_search = len(search_lines) == 0
-
-        if is_empty_search and not is_empty_file:
-            return PatchApplyResult(
-                patch=patch,
-                success=False,
-                status='parse_error',
-                error='SEARCH content is empty, this is not allowed when the target file is non-empty (ambiguous match)',
-                source_line_start=patch.source_line_start,
-                replace_line_count=len(replace_lines),
-            )
-
-        if is_empty_search and is_empty_file:
-            if replace_text == content:
-                return PatchApplyResult(
-                    patch=patch,
-                    success=True,
-                    status='no_change_patch',
-                    error='SEARCH is empty and REPLACE would not change the file',
-                    source_line_start=patch.source_line_start,
-                    replace_line_count=len(replace_lines),
-                )
-
-            if not dry_run:
-                atomic_write_text(patch.file_path, replace_text, encoding=file_encoding)
-
-            return PatchApplyResult(
-                patch=patch,
-                success=True,
-                status='applied',
-                source_line_start=patch.source_line_start,
-                replace_line_count=len(replace_lines),
-            )
-
-        if search_text == replace_text:
-            return PatchApplyResult(
-                patch=patch,
-                success=True,
-                status='no_change_patch',
-                error='SEARCH and REPLACE are identical',
-                source_line_start=patch.source_line_start,
-                search_line_count=len(search_lines),
-                replace_line_count=len(replace_lines),
-            )
-
-        search_matches, search_mode = find_preferred_matches(region, search_lines)
-        replace_matches, replace_mode = find_preferred_matches(region, replace_lines)
-
-        if len(search_matches) == 1:
-            match_start = search_matches[0]
-            match_mode = search_mode
-        elif len(search_matches) > 1:
-            related_lines = absolute_line_numbers(len(prefix), search_matches)
-            status = 'search_replace_coexist' if replace_matches else 'search_ambiguous'
-            reason = (
-                'SEARCH and REPLACE both exist in scope; narrow the line range'
-                if replace_matches
-                else 'SEARCH matched multiple locations; narrow the line range'
-            )
-            return PatchApplyResult(
-                patch=patch,
-                success=False,
-                status=status,
-                error=reason,
-                match_mode=search_mode,
-                related_lines=related_lines,
-                source_line_start=patch.source_line_start,
-                search_line_count=len(search_lines),
-                replace_line_count=len(replace_lines),
-            )
-        else:
-            if len(replace_matches) == 1:
-                return PatchApplyResult(
-                    patch=patch,
-                    success=True,
-                    status='already_applied',
-                    error='SEARCH not found, but REPLACE already exists',
-                    match_mode=replace_mode,
-                    match_line=absolute_line_numbers(len(prefix), replace_matches)[0],
-                    source_line_start=patch.source_line_start,
-                    search_line_count=len(search_lines),
-                    replace_line_count=len(replace_lines),
-                )
-            if len(replace_matches) > 1:
-                return PatchApplyResult(
-                    patch=patch,
-                    success=False,
-                    status='replace_ambiguous',
-                    error='SEARCH not found, and REPLACE matched multiple locations',
-                    match_mode=replace_mode,
-                    related_lines=absolute_line_numbers(len(prefix), replace_matches),
-                    source_line_start=patch.source_line_start,
-                    search_line_count=len(search_lines),
-                    replace_line_count=len(replace_lines),
-                )
-
-            return PatchApplyResult(
-                patch=patch,
-                success=False,
-                status='search_not_found',
-                error='SEARCH content not found in scope',
-                source_line_start=patch.source_line_start,
-                search_line_count=len(search_lines),
-                replace_line_count=len(replace_lines),
-            )
-
-        match_end = match_start + len(search_lines)
-
-        # 计算匹配的文件行号（1-based）
-        match_line = len(prefix) + match_start + 1
-
-        new_region = region[:match_start] + replace_lines + region[match_end:]
-        new_content = ''.join(prefix + new_region + suffix)
-
+        replace_text_conv = convert_newlines(patch.replace_content, file_newline)
+        replace_lines = split_lines_keepends(replace_text_conv)
+        new_content = ''.join(file_lines[: m.abs_start] + replace_lines + file_lines[m.abs_end :])
         if not dry_run:
             atomic_write_text(patch.file_path, new_content, encoding=file_encoding)
         return PatchApplyResult(
             patch=patch,
             success=True,
             status='applied',
-            match_mode=match_mode,
-            match_line=match_line,
+            match_mode=m.match_mode,
+            match_line=m.match_line,
             source_line_start=patch.source_line_start,
-            search_line_count=len(search_lines),
-            replace_line_count=len(replace_lines),
+            search_line_count=m.search_line_count,
+            replace_line_count=m.replace_line_count,
         )
 
     except Exception as e:
@@ -972,13 +960,133 @@ def format_patch_header(patch: PatchBlock) -> str:
     return header
 
 
+def _check_overlap(matches: list[PatchMatch]) -> list[tuple[PatchMatch, PatchMatch]]:
+    """基于绝对行索引返回所有重叠的 match 对"""
+    matched = [m for m in matches if m.status == 'matched']
+    overlaps: list[tuple[PatchMatch, PatchMatch]] = []
+    for i in range(len(matched)):
+        for j in range(i + 1, len(matched)):
+            a, b = matched[i], matched[j]
+            if a.abs_start < b.abs_end and b.abs_start < a.abs_end:
+                overlaps.append((a, b))
+    return overlaps
+
+
+def _apply_search_patches_batch(
+    patches: list[PatchBlock],
+    *,
+    dry_run: bool = False,
+) -> list[PatchApplyResult]:
+    """同文件多条 search patch 的协调 apply。
+
+    Phase 1: 所有 patch 基于原始文件内容 match（只读）
+    Phase 2: 验证无 overlap → 从后往前 splice
+    """
+    if not patches:
+        return []
+
+    file_path = patches[0].file_path
+
+    if not file_path.exists():
+        return [
+            PatchApplyResult(
+                patch=p,
+                success=False,
+                status='missing_file',
+                error=f'File does not exist: {p.display_path}',
+                source_line_start=p.source_line_start,
+            )
+            for p in patches
+        ]
+    if not file_path.is_file():
+        return [
+            PatchApplyResult(
+                patch=p,
+                success=False,
+                status='not_a_file',
+                error=f'Not a file: {p.display_path}',
+                source_line_start=p.source_line_start,
+            )
+            for p in patches
+        ]
+
+    content, file_encoding = read_target_text_with_encoding(file_path)
+    file_newline = detect_newline_style(content)
+    file_lines = split_lines_keepends(content)
+
+    # Phase 1: match all
+    matches = [_match_patch(p, file_lines, file_newline, content, file_encoding) for p in patches]
+
+    # Overlap 检测
+    overlaps = _check_overlap(matches)
+    if overlaps:
+        for m in matches:
+            if m.status == 'matched':
+                m.status = 'overlap_conflict'
+                m.error = 'Overlapping match with another patch in the same batch'
+
+    # 有任何 failure → 全部返回各自结果（matched 但未写入的也标记为失败）
+    if any(m.status not in ('matched', 'already_applied', 'no_change_patch') for m in matches):
+        results: list[PatchApplyResult] = []
+        for m in matches:
+            if m.status == 'matched':
+                results.append(PatchApplyResult(
+                    patch=m.patch,
+                    success=False,
+                    status='write_error',
+                    error='Not applied: another patch in the same batch failed',
+                    match_mode=m.match_mode or None,
+                    match_line=m.match_line if m.match_line else None,
+                    source_line_start=m.patch.source_line_start,
+                    search_line_count=m.search_line_count,
+                    replace_line_count=m.replace_line_count,
+                ))
+            else:
+                results.append(_match_to_result(m))
+        return results
+
+    # Phase 2: 从后往前 splice
+    matched = sorted(
+        [m for m in matches if m.status == 'matched'],
+        key=lambda m: m.abs_start,
+        reverse=True,
+    )
+
+    new_lines = file_lines[:]
+    for m in matched:
+        replace_text = convert_newlines(m.patch.replace_content, file_newline)
+        replace_lines = split_lines_keepends(replace_text)
+        new_lines[m.abs_start : m.abs_end] = replace_lines
+
+    if not dry_run:
+        atomic_write_text(file_path, ''.join(new_lines), encoding=file_encoding)
+
+    return [
+        PatchApplyResult(
+            patch=m.patch,
+            success=True,
+            status='applied' if m.status == 'matched' else 'already_applied',
+            error=m.error,
+            match_mode=m.match_mode or None,
+            match_line=m.match_line if m.match_line else None,
+            source_line_start=m.patch.source_line_start,
+            search_line_count=m.search_line_count,
+            replace_line_count=m.replace_line_count,
+        )
+        for m in matches
+    ]
+
+
 def apply_patches(
     patch_text: str,
     *,
     project_root: Path | None = None,
     dry_run: bool = False,
 ) -> BatchApplyResult:
-    """解析并批量应用 patches（解析阶段出现错误则不应用）。"""
+    """解析并批量应用 patches。
+
+    同文件多条 search patch 走 batch 模式（two-phase match + apply）。
+    """
     parse_result = parse_patches(patch_text, project_root=project_root)
 
     if parse_result.errors:
@@ -989,8 +1097,40 @@ def apply_patches(
             ]
         )
 
-    results = [apply_patch(p, dry_run=dry_run) for p in parse_result.patches]
-    return BatchApplyResult(results=results)
+    return BatchApplyResult(results=_apply_parsed_patches(parse_result.patches, dry_run=dry_run))
+
+
+def _apply_parsed_patches(
+    patches: list[PatchBlock],
+    *,
+    dry_run: bool = False,
+) -> list[PatchApplyResult]:
+    """对已解析的 patch 列表执行 group + batch apply。
+
+    同文件多条 search patch 走 two-phase batch，其余独立 apply。
+    返回结果顺序与输入 patches 一致。
+    """
+    indexed_results: list[tuple[int, PatchApplyResult]] = []
+    file_search_patches: dict[Path, list[tuple[int, PatchBlock]]] = {}
+
+    for idx, p in enumerate(patches):
+        if p.operation == 'search':
+            file_search_patches.setdefault(p.file_path, []).append((idx, p))
+        else:
+            indexed_results.append((idx, apply_patch(p, dry_run=dry_run)))
+
+    for _file_path, indexed_search_ps in file_search_patches.items():
+        if len(indexed_search_ps) == 1:
+            orig_idx, p = indexed_search_ps[0]
+            indexed_results.append((orig_idx, apply_patch(p, dry_run=dry_run)))
+        else:
+            search_ps = [p for _, p in indexed_search_ps]
+            batch_results = _apply_search_patches_batch(search_ps, dry_run=dry_run)
+            for (orig_idx, _), result in zip(indexed_search_ps, batch_results, strict=True):
+                indexed_results.append((orig_idx, result))
+
+    indexed_results.sort(key=lambda x: x[0])
+    return [r for _, r in indexed_results]
 
 
 # ============ Prompt 模板 ============
@@ -1048,7 +1188,7 @@ Next, xxx
 [[Patch Block]]
 ````
 
-WARN: patch-blocks are applied sequentially, lines affected by previous blocks may cause later blocks to fail.
+WARN: Multi-blocks targeting the same file are matched against the original content. Overlapping matches cause all related blocks to fail.
 
 ## Local reference
 """
@@ -1282,7 +1422,7 @@ def register_command(group):
             if not dry_run
             else '[cyan]Simulating patches...[/cyan]'
         )
-        results = [apply_patch(p, dry_run=dry_run) for p in parse_result.patches]
+        results = _apply_parsed_patches(parse_result.patches, dry_run=dry_run)
 
         # Display results
         _display_results(console, results, dry_run=dry_run)

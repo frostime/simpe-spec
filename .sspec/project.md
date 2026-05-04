@@ -46,7 +46,6 @@ Read it first every session. Update Conventions + Notes via @handover. -->
 
 ## Spec-Docs Index
 
-- [Project Specifications](spec-docs/README.md) — master index and maintenance rules for this spec-doc set
 - [Builtin Tools System](spec-docs/builtin-tools.md) — builtin `sspec tool` architecture, registration, and current tool inventory
 - [SKILL Installation & Sync](spec-docs/skill-installation.md) — hub-spoke skill install model, link policy, migration, and gitignore rules
 - [meta.json (Project Metadata)](spec-docs/meta-json.md) — `.sspec/.meta.json` schema, migration, and update-time guarantees

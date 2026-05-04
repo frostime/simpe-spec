@@ -2,6 +2,7 @@
 name: {{SPEC_NAME}}
 description: ""
 updated: {{DATE}}
+scope: []
 ---
 
 # {{SPEC_NAME}}

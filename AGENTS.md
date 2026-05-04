@@ -12,25 +12,17 @@ This project uses sspec to develop sspec. Two sets of rules coexist:
 
 **Rule**: When developing templates, the **template source files** in `src/sspec/templates/` are ground truth.
 
-**Hard rule**: If a change touches AGENTS, SKILLs, or any template content, edit only `src/sspec/templates/`. Do **not** hand-edit `.github/`, `.claude/`, or `.sspec/` copies; refresh them with `uv run sspec project update`.
+**Hard rule**:
+- Edit of sspec itself SHOULD lies within `src/`, `tests/`
+- MUST NOT hand-edit `.github/`, `.claude/`, or `.sspec/` copies, refresh them with `uv run sspec project update`.
 
 **Auto-managed rule**: The SSPEC block below `SSPEC:START` is generated from `src/sspec/templates/AGENTS.md`. If that block needs to change, update the template source and run `uv run sspec project update` instead of editing the block directly.
 
 ---
 
-## 1. Cold Start (Development)
+## 1. Source
 
-1. Read `.sspec/project.md` — tech stack, conventions, project notes.
-2. Classify the request:
-
-| User Message | Action |
-|--------------|--------|
-| `@resume` or `@change` | Load change context (follow SSPEC block below) |
-| Template/SKILL change | Follow **Template Change Protocol** (Section 2) |
-| Python code change | Follow **Code Change Protocol** (Section 3) |
-| Bug report / feature idea | Follow SSPEC workflow in block below |
-
-3. If touching an unfamiliar area, check `src/sspec/` structure:
+`src/sspec/`:
 
 ```
 src/sspec/
@@ -115,30 +107,12 @@ cd tmp/test_<feature>
 uv run sspec <command>       # Test the command
 ```
 
-### Key architectural rules
-
-- `commands/` = CLI layer (click decorators, user I/O, output formatting)
-- `services/` = business logic (no click, no rich — pure functions)
-- `core.py` = shared types and constants (no business logic)
-- Keep commands thin: validate input → call service → format output
-
 ### Windows terminal encoding rule
 
 - Treat Windows GBK/cp936 terminals as a supported environment.
 - Any CLI output path must not crash on non-UTF encodings.
 - Keep `configure_stdio_error_fallback()` wired in CLI startup when refactoring entrypoints.
 - For new symbols/emojis in user-facing text, verify behavior in legacy encodings or provide ASCII fallback.
-
-
----
-
-## Git Commit
-
-When user asks Agent to commit:
-
-- Consult: git-commit-msg SKILL
-- Write suitable commit msg
-- If the change is too broad for one clean commit, ask whether to split it
 
 ---
 
@@ -159,6 +133,9 @@ SSPEC_SCHEMA::6.0
 
 A spec-driven workflow, via `sspec` CLI and `.sspec/`.
 
+**Core Principle**: The user MUST be able to predict the outcome before implementation begins.
+When uncertain, align — never proceed with unclarified assumptions.
+
 ```
 .sspec/
 ├── project.md     # Identity, conventions, notes
@@ -177,8 +154,10 @@ A spec-driven workflow, via `sspec` CLI and `.sspec/`.
 | Directive (`@resume`, `@memory`, etc.) | Execute → §4 |
 | Request under `.sspec/requests` | Assess scale → §2 |
 | Resume existing change | `read(memory)` → infer phase from State → load phase SKILL → continue |
+| Create request | `sspec request new` |
+| Create spec doc | `sspec doc new` |
 | Micro (≤3 files, ≤30min, obvious) | Do directly |
-| Mini (user opts out of formal change) | Clarify+Design thinking → `.sspec/tmp/` → §2.0 |
+| Mini (user opts out of formal change) | Clarify+Design thinking → `sspec tmp new` → §2.0 |
 
 **Trigger-word → SKILL**:
 
@@ -193,7 +172,7 @@ A spec-driven workflow, via `sspec` CLI and `.sspec/`.
 | mini change, 不要 change, 直接推进 | §2.0 |
 
 **Standing rules**:
-- The user MUST be able to predict what the code will look like before implementation begins. When uncertain, @align.
+- Follow `Core Principle`.
 - Important discovery → `memory.md` Knowledge immediately
 - Session end → MUST update memory.md (State + Milestones) · `sspec howto write-memory`
 - @align gate decisions → SHOULD update memory.md Knowledge
@@ -212,7 +191,7 @@ Implement(sspec-implement)  code + tasks progress   exit: @align gate ■
 Review   (sspec-review)     DONE | fix→Implement | amend→revision | follow-up→new change
 ```
 
-`■` = hard stop, MUST align. `→` = output summary, keep going. Failed gate → return, update, realign.
+`■` = hard stop, **MUST stop & align**. `→` = output summary, COULD keep going. Failed gate → return, update, realign.
 Post-Design gate: spec.md/design.md baselines immutable. Changes → `revisions/NNN-*.md`.
 memory.md: maintained throughout, not a phase. → `sspec howto write-memory`
 
@@ -240,6 +219,10 @@ Status in spec.md MUST follow state machine. → `sspec howto update-change-stat
 ## 3. @align
 
 Structured sync at decision points. **Formalized exchange, not prose.**
+
+**Format rule**: MUST be scannable in 5 seconds.
+GOOD: structured (tables, labeled items, code blocks) with high density.
+BAD: prose-style, redundant.
 
 | Level | Behavior | When |
 |---|---|---|

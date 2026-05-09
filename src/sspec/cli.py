@@ -4,7 +4,7 @@ import click
 from rich.console import Console
 
 from sspec.builtin_tools import ask
-from sspec.commands import change, cmd, doc, howto, project, request, skill, tmp, tool
+from sspec.commands import change, cmd, doc, howto, portable, project, request, skill, tmp, tool
 from sspec.core import configure_stdio_error_fallback
 
 configure_stdio_error_fallback()
@@ -30,6 +30,7 @@ def main(ctx: click.Context) -> None:
 main.add_command(project.project)
 main.add_command(change.change)
 main.add_command(howto.howto)
+main.add_command(portable.portable)
 main.add_command(skill.skill)
 main.add_command(request.request)
 main.add_command(doc.doc)

@@ -746,12 +746,12 @@ def _match_patch(
                 raise ValueError('Resolved line range is empty')
             scope_start, scope_end = normalized_range
         except ValueError as e:
-            return _fail('search_not_found', str(e))
+            return _fail('invalid_line_range', str(e))
         start_idx = scope_start - 1
         end_idx_excl = scope_end
         if start_idx < 0 or end_idx_excl > total_lines:
             return _fail(
-                'search_not_found',
+                'out_of_range',
                 f'Line range {format_line_range(patch.line_range)} is outside file bounds (1-{total_lines})',
             )
         prefix_len = start_idx

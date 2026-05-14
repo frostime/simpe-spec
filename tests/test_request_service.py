@@ -12,7 +12,6 @@ from sspec.services.change_service import create_change
 from sspec.services.request_service import (
     archive_request,
     create_request,
-    extract_request_name_from_filename,
     find_request_matches,
     link_request_to_change,
     list_requests,
@@ -40,22 +39,6 @@ class TestNormalizeRequestName:
 
     def test_strips_whitespace(self):
         assert normalize_request_name('  padded  ') == 'padded'
-
-
-# ---------------------------------------------------------------------------
-# extract_request_name_from_filename
-# ---------------------------------------------------------------------------
-
-
-class TestExtractRequestName:
-    def test_new_format(self):
-        assert extract_request_name_from_filename('26-01-02T03-04_my-request') == 'my-request'
-
-    def test_old_format(self):
-        assert extract_request_name_from_filename('250102030405-old-request') == 'old-request'
-
-    def test_plain_name(self):
-        assert extract_request_name_from_filename('simple') == 'simple'
 
 
 # ---------------------------------------------------------------------------

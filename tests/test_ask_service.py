@@ -11,7 +11,6 @@ from sspec.services.ask_service import (
     convert_ask_to_md,
     create_ask_template,
     execute_ask_prompt,
-    extract_ask_name_from_filename,
     find_ask_matches,
     normalize_ask_name,
     save_ask_answer,
@@ -48,19 +47,6 @@ class TestNormalizeAskName:
         name, _ = normalize_ask_name('a---b___c')
         assert '__' not in name
         assert name == 'a_b_c'
-
-
-# ---------------------------------------------------------------------------
-# extract_ask_name_from_filename
-# ---------------------------------------------------------------------------
-
-
-class TestExtractAskName:
-    def test_timestamped_format(self):
-        assert extract_ask_name_from_filename('260101120000_my_question') == 'my_question'
-
-    def test_plain_name(self):
-        assert extract_ask_name_from_filename('plain') == 'plain'
 
 
 # ---------------------------------------------------------------------------

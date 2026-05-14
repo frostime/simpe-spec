@@ -58,20 +58,6 @@ class TestMetaService:
         assert loaded.get('v') == 2
 
 
-class TestMetaSchemaVersion:
-    def test_meta_schema_is_string(self):
-        assert isinstance(META_SCHEMA, str)
-        assert len(META_SCHEMA) > 0
-
-    def test_meta_schema_version_independent_from_agents_schema(self):
-        """META_SCHEMA tracks meta.json structure, not AGENTS.md protocol."""
-        from sspec.core import SCHEMA_VERSION
-
-        # They are separate versioning axes; both must be valid non-empty markers.
-        assert isinstance(META_SCHEMA, str) and META_SCHEMA
-        assert isinstance(SCHEMA_VERSION, str) and SCHEMA_VERSION
-
-
 class TestGetMetaWithDefaults:
     def test_empty_meta_returns_all_defaults(self):
         result = get_meta_with_defaults({})

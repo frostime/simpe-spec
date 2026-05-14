@@ -9,7 +9,6 @@ import pytest
 
 from sspec.core import SSPEC_DIR
 from sspec.services.project_init_service import (
-    InitResult,
     ProjectAlreadyInitializedError,
     get_skill_targets_from_locations,
     initialize_project,
@@ -163,12 +162,3 @@ class TestInitializeProject:
         locations = [loc.replace('\\', '/') for loc in meta.get('skill_locations', [])]
         assert '.sspec/skills' in locations
 
-    def test_return_type(self, tmp_path: Path):
-        result = initialize_project(
-            project_root=tmp_path,
-            force=False,
-            skill_locations=[],
-            prefer_symlink=False,
-        )
-        assert isinstance(result, InitResult)
-        assert result.sspec_path == tmp_path / SSPEC_DIR

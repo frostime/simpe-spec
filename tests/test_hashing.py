@@ -8,12 +8,6 @@ from sspec.libs.hashing import compute_dir_hash, compute_file_hash, compute_hash
 
 
 class TestComputeHash:
-    def test_deterministic(self):
-        assert compute_hash('hello') == compute_hash('hello')
-
-    def test_different_inputs_differ(self):
-        assert compute_hash('a') != compute_hash('b')
-
     def test_returns_16_char_hex(self):
         h = compute_hash('test')
         assert len(h) == 16

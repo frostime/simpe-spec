@@ -13,7 +13,6 @@ from sspec.libs.md_yaml import update_frontmatter
 from sspec.services.change_service import (
     archive_change,
     create_change,
-    extract_change_name_from_dirname,
     find_change_matches,
     list_changes,
     parse_change,
@@ -83,19 +82,6 @@ def _init_git_repo(project_root: Path) -> None:
         '-m',
         'init',
     )
-
-
-# ---------------------------------------------------------------------------
-# extract_change_name_from_dirname
-# ---------------------------------------------------------------------------
-
-
-class TestExtractChangeName:
-    def test_timestamped_format(self):
-        assert extract_change_name_from_dirname('26-02-05T19-28_my-change') == 'my-change'
-
-    def test_plain_name(self):
-        assert extract_change_name_from_dirname('standalone') == 'standalone'
 
 
 # ---------------------------------------------------------------------------

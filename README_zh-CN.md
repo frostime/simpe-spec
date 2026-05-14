@@ -2,373 +2,168 @@
 
 [English](README.md)
 
-> **S**spec **S**ynthesizes **P**rograms from **E**xplicit **C**ontext.
+> AI 编码的规格驱动开发。开发者控制 Agent，状态存文件而非聊天。
 
-## sspec 是什么
+---
 
-sspec 是一套面向编码 Agent 的文档驱动工作流。
+## 核心理念
 
-它把项目上下文、请求入口、变更规格、执行计划和 scoped memory 保存在仓库里，而不是只留在聊天记录中。聊天负责推进工作，仓库文件负责保存长期状态。
+AI 编码 Agent 很强大，但不可预测。跨会话时决策丢失，未经确认就往前冲，聊天记录成为唯一的事实来源。
 
-## sspec 解决什么问题
+sspec 反转了这一点：**仓库是真相来源，而不是聊天记录**。Agent 从文件读取上下文，向文件写入决策承诺。在关键节点，Agent 停下来等你审查——在代码被写出来之前，而不是之后。
 
-如果只靠聊天推进 AI 编程，常见问题有：
+三个原则：
 
-- 跨会话时上下文和关键决策容易丢失；
-- 设计与实现的确认点不明确；
-- 项目约定需要反复重述；
-- 复杂工作容易在一条聊天线程里不断膨胀，最后难以审阅和追踪。
+- **可预测性**：你必须能在动手前预测结果。不允许未经澄清的假设存续。
+- **状态持久**：项目上下文、规格、任务和会话内存都存于仓库文件。Agent 从中恢复，不需要从聊天历史重建。
+- **硬性审查门**：设计和实现各自以强制性审查点结束。Agent 停下来。你来决策。
 
-sspec 会把工作状态明确写进仓库：
+## sspec 适合你吗？
 
-- `AGENTS.md` 定义协作协议；
-- `.sspec/project.md` 记录项目身份、技术栈、关键路径和约定；
-- `.sspec/requests/` 保存请求入口；
-- `.sspec/changes/` 保存每次变更的规格、任务、memory 和辅助材料；
-- `.sspec/spec-docs/` 保存应当跨变更保留的架构知识；
-- `.sspec/asks/` 在关键决策需要显式记录时保存结构化问答。
+**适合**，如果你：
+- 在写代码之前先审查设计
+- 希望规格和任务跟踪在文件里，而不是埋没在聊天中
+- 工作在跨会话连续性很重要的项目上
 
-继续工作时，Agent 读取的是仓库中的显式上下文，而不是从上一段聊天里重建状态。
+**不太适合**，如果你：
+- 偏好和 Agent 自由形式的对话，不需要结构
+- 不打算审查 Agent 的设计或代码
+- 工作在一次性的脚本上，单次聊天就足够
 
-## 这套方法对使用者的要求
+## 工作原理
 
-sspec 采用 human-led, agent-accelerated 的工作方式。
+### Request — 意图记录
 
-开发者需要：
+request 记录你想要什么、你观察到了什么、或者一个值得留存的想法。分三种：
 
-- 把请求写清楚，让 Agent 有明确起点；
-- 在对齐节点回答设计和范围问题；
-- 审查实现结果并识别错误；
-- 判断工作应该保留在一个 `change` 中，还是拆成多个 `change`。
+| kind | 使用场景 | Agent 行为 |
+|------|----------|-----------|
+| `directive` | 给 Agent 的明确任务 | Agent 评估规模，创建 change，开始工作 |
+| `observe` | 你注意到哪里不太对劲——UX 问题、奇怪代码、异味 | Agent 读取并记录。**不**创建 change。留给后续人工 triage。 |
+| `idea` | 值得留存的想法，未必现在做 | Agent 可作为上下文引用。除非明确要求，**不**主动行动。 |
 
-如果你不打算审查设计、不审查代码、也不判断实现是否正确，sspec 通常不适合作为工作方式。
+```bash
+sspec request new add-password-reset                # directive（默认）
+sspec request new strange-logout-bug --kind observe
+sspec request new async-refactor --kind idea
+```
 
-## 核心概念
+### Change — 原子工作单元
 
-先理解两个核心概念：`request` 和 `change`。
+change 是一次内聚、可审查的工作。存放在 `.sspec/changes/<name>/`，包含：
 
-- `request`：由开发者编写的任务入口，描述背景、约束、方向和成功标准。
-- `change`：一次内聚、可追踪的工作单元。一个 `change` 应保持在可审阅、可推理的范围内。
+| 文件 | 用途 |
+|------|------|
+| `spec.md` | 问题、方案、范围和成功标准——**这是合约** |
+| `tasks.md` | 文件级执行清单与进度 |
+| `memory.md` | 当前状态、关键决策、里程碑——**跨会话的连续性** |
+| `design.md` | （可选）接口、数据模型、架构等技术设计 |
+| `revisions/` | （可选）design gate 之后的修订 |
 
-一个 `change` 中最核心的文件是：
+### 带门的生命周期
 
-- `spec.md`：问题与方案的契约；
-- `tasks.md`：执行清单与进度；
-- `memory.md`：当前状态、持久知识和里程碑。
+```
+澄清  →  设计  →  规划  →  实现  →  审查
+          ■              ■
+```
 
-一个 `change` 中可选的文件包括：
+`■` = 硬性停止。Agent **必须**等你审查后才能继续。
 
-- `design.md`：当接口、数据模型或架构逻辑很重要时，用来承载详细技术设计；
-- `revisions/`：design gate 之后的修订；
-- `reference/`：补充说明、调研材料和辅助文件。
+- **设计门**：审查 `spec.md`（+ `design.md`）。方案合约就此固定。此后的变更记录在 `revisions/` 里。
+- **实现门**：审查代码。修复问题、调整范围，或批准完成。
 
-如果工作量超出单个 `change` 的可追踪范围，可以使用 root change 协调多个 sub-change。
+### Memory — 连续性文件
+
+`memory.md` 是 Agent 恢复工作的入口。下一会话中，Agent 先读 `memory.md`——它知道工作进展到哪、哪些文件关键、为什么做了那些决策。不需要从聊天历史重建。
+
+### Spec-docs — 长期知识
+
+架构决策、设计模式、平台约束——那些超越单次 change 的知识。存于 `.sspec/spec-docs/`，Agent 在任意 change 中均可引用。
 
 ## 目录结构
 
-`sspec project init` 会创建项目脚手架：
-
-```text
+```
 project/
-├── AGENTS.md
-├── .agents/               # 可选的宿主同步位置
+├── AGENTS.md              ← 协议（Agent 首先读这个）
+├── .agents/skills/        ← 从 .sspec/skills/ 同步
 └── .sspec/
-    ├── project.md
-    ├── requests/
-    ├── changes/
-    ├── asks/
-    ├── skills/
-    ├── spec-docs/
-    ├── howto/
-    └── tmp/
+    ├── project.md         ← 技术栈、约定、关键路径
+    ├── requests/          ← 意图记录（directive / observe / idea）
+    ├── changes/           ← 活跃与已归档变更
+    │   └── <name>/
+    │       ├── spec.md
+    │       ├── tasks.md
+    │       └── memory.md
+    ├── spec-docs/         ← 架构与设计知识
+    ├── skills/            ← Agent 技能定义
+    ├── asks/              ← 结构化问答记录
+    ├── howto/             ← 操作指南
+    └── tmp/               ← 临时草稿
 ```
-
-一个典型的变更目录如下：
-
-```text
-.sspec/changes/<ts>_<name>/
-├── spec.md
-├── tasks.md
-├── memory.md
-├── design.md        # 可选
-├── revisions/       # 可选
-└── reference/
-```
-
-主要目录说明：
-
-- `project.md`：项目身份与约定；
-- `requests/`：开发者编写的请求文件；
-- `changes/`：每次变更的工作文档；
-- `asks/`：按需记录结构化问答；
-- `skills/`：面向 Agent 的技能说明，可同步到不同宿主；
-- `spec-docs/`：长期保留的架构与项目知识；
-- `howto/`：面向具体任务的操作指南；
-- `tmp/`：临时草稿与中间材料。
-
-## 工作流
-
-sspec 的默认生命周期是：
-
-```text
-Clarify → Design → Plan → Implement → Review
-```
-
-各阶段职责：
-
-- **Clarify**：结合用户意图和代码库现实，建立一致理解；
-- **Design**：创建 `change`，编写 `spec.md`，必要时补充 `design.md`，然后与用户对齐；
-- **Plan**：把设计拆成 `tasks.md` 中的文件级任务；
-- **Implement**：执行任务、更新进度，并持续维护 `memory.md`；
-- **Review**：收集反馈、迭代修改并完成闭环。
-
-两个实用规则：
-
-- `memory.md` 是 Agent 恢复工作的连续性文件；
-- 如果已确认的范围或设计之后需要调整，就在 `revisions/NNN-*.md` 中记录，并同步更新 `tasks.md`。
 
 ## 快速开始
 
-### 1）安装
+### 1. 安装并初始化
 
 ```bash
 pip install sspec
-# 或
-uv tool install sspec
-```
-
-### 2）在项目中初始化
-
-```bash
 cd your-project
 sspec project init
 ```
 
-然后补全 `.sspec/project.md`，写清：
+然后补全 `.sspec/project.md`，写清技术栈、关键路径和编码约定。
 
-- 技术栈；
-- 关键路径；
-- 编码约定；
-- 项目级说明。
+### 2. 启动工作——两种方式
 
-### 3）创建一个 request
+**方式 A：直接告诉 Agent 你的需求。** 把需求描述清楚。有能力的 Agent 会读取 `AGENTS.md` 并遵循 sspec 协议——先澄清，创建 change，写 spec，然后在设计门停下来等你审查。
 
-```bash
-sspec request new add-password-reset
-```
-
-在生成的 request 文件中写清背景、问题、方向和成功标准。一个最小示例：
-
-```markdown
-# Request: add-password-reset
-
-## Background
-当前仅支持邮箱加密码登录。
-
-## Problem
-用户忘记密码后无法自行重置。
-
-## Initial Direction
-- 使用邮箱重置 token
-- token 必须限时且一次性
-- 不引入新的外部服务
-
-## Success Criteria
-- 用户可以请求重置邮件
-- token 会过期且不可重复使用
-- 核心流程有测试覆盖
-
-## Relational Context
-- 相关代码：`src/auth/*`
-- 现有邮件：`src/notifications/email/*`
-```
-
-### 4）把 request 交给 Agent
-
-你可以直接在聊天里给出 request 文件路径，并要求 Agent 遵循 `AGENTS.md`：
-
-```text
-请基于这个 request 工作：
-.sspec/requests/<your-request-file>.md
-
-请遵循 `AGENTS.md` 和 `.sspec/skills/`。
-先进入 `sspec-clarify`，然后创建并维护对应的 change 文档。
-在设计和实现的 gate 停下来给我 review。
-```
-
-Agent 通常会这样创建工作中的变更：
+**方式 B：手写 request 文件。** 如果你想法清晰，自己创建一个 request：
 
 ```bash
-sspec change new --from <request>
+sspec request new add-dark-mode --kind directive
 ```
 
-### 5）跟踪变更进度
+填好背景、问题、方向和成功标准。Agent 会从这里接手。
 
-可以用 CLI 查看进度和当前状态：
+### 3. 在门节点审查
+
+Agent 会在两个节点停下：
+- **设计门**：读 `spec.md`，确认方案方向，然后告诉 Agent 继续。
+- **实现门**：审查代码，要求修复或批准完成。
+
+### 4. 完成后归档
 
 ```bash
-sspec change list
-sspec change status <name>
+sspec change archive --with-request <name>
 ```
-
-如果设计需要单独的技术文档：
-
-```bash
-sspec change scaffold design <change>
-```
-
-### 6）完成后归档
-
-工作完成后，归档变更以及其关联 request：
-
-```bash
-sspec change archive --with-request [name]
-```
-
-## 关键规则与职责边界
-
-**开发者负责**
-
-- 编写 `request`，把背景、约束和成功标准说清楚；
-- 回答关键设计与范围问题；
-- 批准设计方向与实现结果；
-- 判断何时需要拆分 `change`。
-
-**Agent 负责**
-
-- 在进入设计前先澄清问题；
-- 为这项工作创建并维护 `change` 文档；
-- 提出方案，与用户对齐后再开始实现；
-- 在变更进行期间持续维护 `tasks.md` 和 `memory.md`。
-
-**工作流规则**
-
-- 从 `request` 开始，而不是只从聊天历史开始；
-- 设计和实现都要在显式 review 点停下来；
-- 长期状态写入仓库文件，而不是只留在聊天中；
-- 复杂工作应拆成可追踪的多个变更，而不是堆积在一条线程里。
 
 ## 常用命令
 
-大多数用户常用的命令如下；完整列表请运行 `sspec --help`。
-
-### Project
-
 ```bash
-sspec project init
+# Request
+sspec request new <name> [--kind directive|observe|idea]
+sspec request list
+
+# Change
+sspec change new <name> [--from <request>] [--root]
+sspec change status <name>
+sspec change list
+sspec change archive <name> --with-request
+
+# 项目
 sspec project status
 sspec project update --dry-run
-```
 
-### Request
+# 文档
+sspec doc new "Architecture Overview"
 
-```bash
-sspec request new <name>
-sspec request list
-sspec request show <name>
-sspec request find <query>
-sspec request archive [name] --with-change
-```
-
-### Change
-
-```bash
-sspec change new <name>
-sspec change new --from <request>
-sspec change new <name> --root
-sspec change new <name> --scaffold design
-sspec change scaffold design <change>
-sspec change scaffold revision <change> --title "scope-update"
-sspec change status <name>
-sspec change list --all
-sspec change validate <name>
-sspec change archive [name] --with-request
-```
-
-### Ask
-
-```bash
-sspec ask create <name>
-sspec ask prompt <ask-file>
-sspec ask list --all
-sspec ask archive [name]
-```
-
-### 规范文档、HOWTO、skills 与 tools
-
-```bash
-sspec doc list
-sspec doc new "<name>"
-sspec howto list
-sspec howto resume-change
-sspec skill list
+# 工具
 sspec tool now
 sspec tool mdtoc README.md
-sspec tool view-tree .
 ```
 
-## 进阶说明
-
-### Root change
-
-当工作量大到不适合作为一个可追踪单元时，使用 root change：
-
-```bash
-sspec change new <name> --root
-```
-
-root change 负责定义整体问题和阶段拆分；文件级设计与执行放在各个 sub-change 中。
-
-### `design.md` 与 `revisions/`
-
-当变更涉及新接口、数据模型或架构行为时，创建 `design.md`。
-
-如果后续需要调整已确认的设计或范围，就创建 revision 文件并同步更新计划：
-
-```bash
-sspec change scaffold revision <change> --title "<reason>"
-```
-
-### `memory.md`
-
-`memory.md` 是变更的连续性表面，通常包含：
-
-- `State`：当前做到哪里、下一步做什么；
-- `Key Files`：继续工作时需要优先关注的非显然文件；
-- `Knowledge`：持久的决策、约束和注意事项；
-- `Milestones`：按会话追加的一行事实记录。
-
-root change 还会使用 `Coordination` 汇总各个 sub-change 的状态。
-
-### Skills 与同步布局
-
-`.sspec/skills/` 是 skills 的源目录。`.agents/skills/` 等宿主位置由 `sspec project init` 与 `sspec project update` 从这里同步。
-
-### Builtin tools
-
-`sspec tool` 提供一组适合 Agent 工作流的命令行补充工具，包括：
-
-- `now`
-- `ask`
-- `mdtoc`
-- `view-tree`
-- `fileinfo`
-- `patch`
-- `write`
-- `treesitter`
-- `pack-zip`
-
-完整列表请运行 `sspec tool --help`。
-
-## 兼容性
-
-sspec 假定 Agent 运行环境具备以下能力：
-
-- 可以读写本地仓库文件；
-- 能遵循 `AGENTS.md` 中的指令；
-- 可以执行本地命令行命令；
-- 能加载并遵循 `.sspec/skills/` 下的技能说明。
+完整命令列表请运行 `sspec --help`。
 
 ## License
 
-AGPL-V3.0
+AGPL-3.0

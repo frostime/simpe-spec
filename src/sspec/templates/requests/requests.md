@@ -2,6 +2,7 @@
 name: {{NAME}}
 created: {{TIME}}
 status: OPEN
+kind: directive
 attach-change: null
 tldr: ""
 ---

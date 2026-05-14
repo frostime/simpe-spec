@@ -10,6 +10,8 @@ from rich.panel import Panel
 
 from sspec.core import (
     ARCHIVE_DIR,
+    REQUEST_KIND_DEFAULT,
+    REQUEST_KIND_TEMPLATE_MAP,
     RequestStatus,
     SspecNotFoundError,
     get_sspec_root,
@@ -129,7 +131,14 @@ def request() -> None:
 
 @request.command()
 @click.argument('name')
-def new(name: str) -> None:
+@click.option(
+    '--kind',
+    'kind',
+    type=click.Choice(list(REQUEST_KIND_TEMPLATE_MAP.keys()), case_sensitive=False),
+    default=REQUEST_KIND_DEFAULT,
+    help='Request kind: directive (task), observe (phenomenon), idea (memo). Default: directive.',
+)
+def new(name: str, kind: str) -> None:
     """Create a new request."""
     try:
         sspec_root = get_sspec_root()
@@ -140,19 +149,21 @@ def new(name: str) -> None:
     if not normalized:
         raise click.ClickException('Invalid request name')
 
-    template_path = get_template_dir() / 'requests' / 'requests.md'
+    template_filename = REQUEST_KIND_TEMPLATE_MAP.get(kind, 'requests.md')
+    template_path = get_template_dir() / 'requests' / template_filename
     try:
         request_path = create_request(
             sspec_root=sspec_root,
             name=normalized,
             template_path=template_path,
+            kind=kind,
         )
     except FileExistsError:
         raise click.ClickException(f"Request '{normalized}' already exists") from None
     except ValueError as e:
         raise click.ClickException(str(e)) from None
 
-    console.print(f'[green][OK][/green] Created request: {normalized}')
+    console.print(f'[green][OK][/green] Created request: {normalized} [{kind}]')
     console.print(f'  [dim]{request_path.relative_to(sspec_root.parent)}[/dim]')
     console.print()
 
@@ -261,6 +272,17 @@ def _display_request(
         if dim:
             summary = f'[dim]{summary}[/dim]'
         console.print(f'  [dim]Summary:[/dim] {summary}')
+
+    # Kind badge
+    if request.kind:
+        if dim:
+            kind_text = f'[dim]{request.kind}[/dim]'
+        else:
+            kind_color = {'directive': 'cyan', 'observe': 'yellow', 'idea': 'magenta'}.get(
+                request.kind, 'dim'
+            )
+            kind_text = f'[{kind_color}]{request.kind}[/{kind_color}]'
+        console.print(f'  [dim]Kind:[/dim] {kind_text}')
 
 
 def _print_request_list(

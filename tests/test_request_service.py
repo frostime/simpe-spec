@@ -103,6 +103,27 @@ class TestCreateRequest:
         content = path.read_text(encoding='utf-8')
         assert 'from-template' in content
 
+    def test_creates_with_kind(self, sspec_root: Path):
+        expected_heading = {
+            'directive': '# Request: test-directive',
+            'observe': '# Observe: test-observe',
+            'idea': '# Idea: test-idea',
+        }
+        for kind in ('directive', 'observe', 'idea'):
+            path = create_request(
+                sspec_root=sspec_root,
+                name=f'test-{kind}',
+                template_path=None,
+                kind=kind,
+                now=datetime(2026, 1, 15, 10, 30, 0),
+            )
+            content = path.read_text(encoding='utf-8')
+            meta, _ = parse_frontmatter(content)
+            assert meta['kind'] == kind, f'{kind} request should have kind={kind} in frontmatter'
+            assert expected_heading[kind] in content, (
+                f'{kind} request should use its kind-specific template'
+            )
+
 
 # ---------------------------------------------------------------------------
 # find_request_matches
@@ -191,6 +212,23 @@ class TestParseRequestFile:
         info = parse_request_file(f)
         assert info is not None
         assert info.status == 'OPEN'
+
+    def test_parses_kind_from_frontmatter(self, sspec_root: Path):
+        for kind in ('directive', 'observe', 'idea'):
+            f = sspec_root / 'requests' / f'{kind}-req.md'
+            f.write_text(
+                f'---\nstatus: OPEN\nkind: {kind}\n---\nBody\n', encoding='utf-8'
+            )
+            info = parse_request_file(f)
+            assert info is not None
+            assert info.kind == kind
+
+    def test_kind_empty_when_missing(self, sspec_root: Path):
+        f = sspec_root / 'requests' / 'no-kind.md'
+        f.write_text('---\nstatus: OPEN\n---\nBody\n', encoding='utf-8')
+        info = parse_request_file(f)
+        assert info is not None
+        assert info.kind == ''
 
 
 # ---------------------------------------------------------------------------

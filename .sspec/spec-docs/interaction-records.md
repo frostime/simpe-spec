@@ -23,7 +23,7 @@ replacement: ""
 
 sspec 通过两类持久记录承载人与 Agent 的互动：
 
-- `request`：开发者提交的任务入口
+- `request`：开发者意图记录（任务/现象/想法）
 - `ask`：Agent 在缺少 `question`-like 工具时使用的 fallback 对齐记录
 
 这两类记录都必须能被归档，并在归档后保持跨文件引用有效。
@@ -59,14 +59,34 @@ graph TD
 ```yaml
 created: 2026-03-07T00:00:00
 status: OPEN
+kind: directive
 attach-change: null
 tldr: ''
 ```
 
 补充规则：
 - `name` 可选；缺失时从文件名提取
+- `kind` 控制模板结构，可选值为 `directive | observe | idea`，默认 `directive`
 - `status` 读取时走 `normalize_status()`，兼容历史别名
 - `tldr` 为空时，会从正文中提取首条有效摘要
+
+### Request Kinds
+
+`kind` frontmatter 字段控制创建时选择哪个模板。不同 kind 仅影响模板结构和注释规则，不改变运行行为。
+
+| kind | 模板 | 定位 | @AGENT |
+|------|------|------|--------|
+| `directive` | `requests.md` | 人向 Agent 指派任务，期望立即行动 | 有 |
+| `observe` | `observe.md` | 记录观察到的现象/问题，方便以后讨论/triage | 无 |
+| `idea` | `idea.md` | 想法备忘，可能演化或捡起 | 无 |
+
+CLI：
+
+```bash
+sspec request new <name>                    # 默认 directive
+sspec request new <name> --kind observe     # 现象记录
+sspec request new <name> --kind idea        # 想法备忘
+```
 
 ### Linking to Change
 
@@ -179,7 +199,7 @@ why: Ask user for design confirmation
 
 ## Testing Requirements
 
-- request：名称提取、frontmatter 解析、link、archive、引用改写
+- request：名称提取、frontmatter 解析（含 `kind`）、link、archive、引用改写
 - ask：YAML 模板、预填答案、legacy `.py` 兼容、转 `.md`、archive
 - 跨模块：request/change/ask archive 后引用路径保持可追踪
 

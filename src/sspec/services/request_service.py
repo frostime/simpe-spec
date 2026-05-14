@@ -15,7 +15,10 @@ from pathlib import Path
 from sspec.core import (
     ARCHIVE_DIR,
     CHANGES_DIR,
+    REQUEST_KIND_DEFAULT,
+    REQUEST_KIND_TEMPLATE_MAP,
     RequestStatus,
+    get_template_dir,
     normalize_status,
 )
 from sspec.libs.md_yaml import parse_frontmatter, update_frontmatter
@@ -29,6 +32,7 @@ class RequestInfo:
     created: str
     attach_change: str | None
     tldr: str
+    kind: str
     path: Path
     archived: bool = False
 
@@ -169,6 +173,7 @@ def parse_request_file(path: Path, archived: bool = False) -> RequestInfo | None
         created=str(meta.get('created', '') or ''),
         attach_change=attach_change_str,
         tldr=tldr,
+        kind=str(meta.get('kind', '') or ''),
         path=path,
         archived=archived,
     )
@@ -208,9 +213,18 @@ def create_request(
     sspec_root: Path,
     name: str,
     template_path: Path | None,
+    kind: str = 'directive',
     now: datetime | None = None,
 ) -> Path:
-    """Create a new request markdown file and return its path."""
+    """Create a new request markdown file and return its path.
+
+    Args:
+        sspec_root: .sspec directory path
+        name: Request name (will be normalized to kebab-case)
+        template_path: Path to template file; if None, uses kind-specific template or fallback
+        kind: Request kind (directive/observe/idea); determines template when template_path is None
+        now: Override creation timestamp (for testing)
+    """
     requests_dir = sspec_root / 'requests'
     requests_dir.mkdir(parents=True, exist_ok=True)
 
@@ -228,27 +242,14 @@ def create_request(
     if request_path.exists():
         raise FileExistsError(f"Request '{normalized}' already exists")
 
-    if template_path and template_path.exists():
-        from sspec.core import render_template
+    if template_path is None:
+        template_filename = REQUEST_KIND_TEMPLATE_MAP.get(kind, REQUEST_KIND_DEFAULT + '.md')
+        template_path = get_template_dir() / 'requests' / template_filename
 
-        template_content = template_path.read_text(encoding='utf-8')
-        content = render_template(template_content, {'TIME': timestamp, 'NAME': normalized})
-    else:
-        content = (
-            '---\n'
-            f'created: {timestamp}\n'
-            f'status: {RequestStatus.OPEN.value}\n'
-            'attach-change: null\n'
-            "tldr: ''\n"
-            '---\n\n'
-            f'# Request: {normalized}\n\n'
-            '## What I Want\n\n'
-            '<!-- Describe what you want to accomplish -->\n\n'
-            '## Why\n\n'
-            '<!-- Why is this needed? What problem does it solve? -->\n\n'
-            '## Additional Context\n\n'
-            '<!-- Any constraints, preferences, references -->\n\n'
-        )
+    from sspec.core import render_template
+
+    template_content = template_path.read_text(encoding='utf-8')
+    content = render_template(template_content, {'TIME': timestamp, 'NAME': normalized})
 
     request_path.write_text(content, encoding='utf-8')
     return request_path

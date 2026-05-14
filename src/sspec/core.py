@@ -53,6 +53,16 @@ CHANGE_ROOT_TEMPLATE_FILES: list[str] = ['spec.md', 'tasks.md', 'memory.md']
 # Files that should never be touched during update
 PROTECTED_PATTERNS = ['changes/*', 'requests/*', 'skills/*', 'spec-docs/*']
 
+# Request kind → template filename (relative to templates/requests/)
+REQUEST_KIND_TEMPLATE_MAP: dict[str, str] = {
+    'directive': 'requests.md',
+    'observe': 'observe.md',
+    'idea': 'idea.md',
+}
+
+# Default request kind (for backward compatibility and when no --kind flag)
+REQUEST_KIND_DEFAULT = 'directive'
+
 
 class SspecError(Exception):
     """Base sspec exception."""

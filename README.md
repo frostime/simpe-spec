@@ -2,373 +2,168 @@
 
 [简体中文](README_zh-CN.md)
 
-> **S**spec **S**ynthesizes **P**rograms from **E**xplicit **C**ontext.
+> Spec-driven development for AI coding. Developer controls the agent. State lives in files, not chat.
 
-## What sspec is
+---
 
-sspec is a document-driven workflow for coding with agents.
+## The Idea
 
-It keeps project context, request entrypoints, change specs, execution plans, and scoped memory in the repository instead of leaving them only in chat. Chat moves the work forward; repository files keep the durable state.
+AI coding agents are powerful but unpredictable. They forget decisions across sessions, they run ahead without alignment, and the thread becomes the only record of what was decided and why.
 
-## What problems sspec solves
+sspec inverts this: **the repository is the source of truth, not the chat**. The agent reads files to understand context. The agent writes files to commit to decisions. At key points, the agent stops and waits for the developer to review — before code is written, not after.
 
-If you rely on chat alone for AI coding, common problems include:
+Three principles:
 
-- context and key decisions disappearing across sessions;
-- design and implementation checkpoints becoming implicit;
-- project conventions needing to be restated repeatedly;
-- complex work growing into one opaque, hard-to-review thread.
+- **Predictability**: You must be able to predict the outcome before implementation begins. No unclarified assumptions survive.
+- **Durable state**: Project context, specs, tasks, and session memory live in repository files. Agents resume from files, not from reconstructing chat history.
+- **Hard gates**: Design and implementation each end with a mandatory review point. The agent stops. You decide.
 
-sspec writes the working state into the repository:
+## Is sspec for you?
 
-- `AGENTS.md` defines the collaboration protocol;
-- `.sspec/project.md` records project identity, stack, key paths, and conventions;
-- `.sspec/requests/` stores request entrypoints;
-- `.sspec/changes/` stores per-change specs, tasks, memory, and supporting files;
-- `.sspec/spec-docs/` stores architecture knowledge that should outlive one change;
-- `.sspec/asks/` stores structured questions when important decisions need an explicit record.
+**Yes** if you:
+- review design before code is written
+- want specs and tasks tracked in files, not buried in chat
+- work on projects where continuity across sessions matters
 
-When work resumes, the agent reads repository context instead of reconstructing state from prior chat.
+**Probably not** if you:
+- prefer free-form conversation with the agent, no structure
+- do not plan to review the agent's design or code
+- work on one-shot scripts where a single chat session suffices
 
-## What this requires from the user
+## How it works
 
-sspec assumes a human-led, agent-accelerated workflow.
+### Request — intent record
 
-The developer is expected to:
+A request captures what you want, something you observed, or an idea to keep. Three kinds:
 
-- define the request clearly enough for the agent to work from it;
-- answer design and scope questions at alignment points;
-- review implementation results and catch mistakes;
-- decide when work should stay in one `change` and when it should be split.
+| kind | when to use | agent behavior |
+|------|-------------|----------------|
+| `directive` | You have a clear task for the agent | Agent assesses scale, creates a change, starts working |
+| `observe` | You noticed something off — a UX glitch, weird code, a smell | Agent reads and notes it. Does **not** create a change. For later human triage. |
+| `idea` | A thought worth keeping, maybe for later | Agent may refer to it as context. Does **not** act unless asked. |
 
-If you do not plan to review the design, review the code, or judge whether the implementation is correct, sspec is usually not a good fit.
+```bash
+sspec request new add-password-reset                # directive (default)
+sspec request new strange-logout-bug --kind observe
+sspec request new async-refactor --kind idea
+```
 
-## Core concepts
+### Change — atomic unit of work
 
-Start with two core concepts: `request` and `change`.
+A change is a cohesive, reviewable piece of work. It lives in `.sspec/changes/<name>/` and contains:
 
-- `request`: the task entrypoint written by the developer. It captures background, constraints, direction, and success criteria.
-- `change`: a cohesive, trackable unit of work. A `change` should stay small enough to review and reason about as one unit.
+| File | Purpose |
+|------|---------|
+| `spec.md` | Problem, approach, scope, and success criteria — **the contract** |
+| `tasks.md` | File-level execution checklist with progress |
+| `memory.md` | Current state, key decisions, milestones — **continuity across sessions** |
+| `design.md` | (optional) Technical design for interfaces, data models, architecture |
+| `revisions/` | (optional) Amendments after the design gate |
 
-The core files inside a `change` are:
+### Lifecycle with gates
 
-- `spec.md`: the problem and the solution contract;
-- `tasks.md`: the execution checklist and progress;
-- `memory.md`: the current state, durable knowledge, and milestones for continuity.
+```
+Clarify  →  Design  →  Plan  →  Implement  →  Review
+              ■                   ■
+```
 
-Optional files inside a `change`:
+`■` = hard stop. The agent **must** wait for your review before proceeding.
 
-- `design.md`: detailed technical design when interfaces, data models, or architecture matter;
-- `revisions/`: amendments after the design gate;
-- `reference/`: supporting notes, investigation material, and auxiliary files.
+- **Design gate**: Review `spec.md` (+ `design.md`). The solution contract is now fixed. Changes after this go into `revisions/`.
+- **Implementation gate**: Review the code. Fix issues, amend scope, or approve as done.
 
-For work that is too large for one `change`, use a root change to coordinate multiple sub-changes.
+### Memory — continuity file
+
+`memory.md` is how the agent resumes. Next session, the agent reads `memory.md` first — it knows exactly where the work stands, what files matter, and why past decisions were made. No reconstructing from chat history.
+
+### Spec-docs — long-lived knowledge
+
+Architecture decisions, design patterns, platform constraints — things that outlive any single change. Live in `.sspec/spec-docs/`, referenced by the agent across all changes.
 
 ## Folder layout
 
-`sspec project init` creates the project scaffold:
-
-```text
+```
 project/
-├── AGENTS.md
-├── .agents/               # optional synced host location
+├── AGENTS.md              ← the protocol (agent reads this first)
+├── .agents/skills/        ← synced from .sspec/skills/
 └── .sspec/
-    ├── project.md
-    ├── requests/
-    ├── changes/
-    ├── asks/
-    ├── skills/
-    ├── spec-docs/
-    ├── howto/
-    └── tmp/
+    ├── project.md         ← your stack, conventions, key paths
+    ├── requests/          ← intent records (directive / observe / idea)
+    ├── changes/           ← active and archived changes
+    │   └── <name>/
+    │       ├── spec.md
+    │       ├── tasks.md
+    │       └── memory.md
+    ├── spec-docs/         ← architecture and design knowledge
+    ├── skills/            ← agent-facing skill definitions
+    ├── asks/              ← structured Q&A records
+    ├── howto/             ← operational guides
+    └── tmp/               ← scratch space
 ```
-
-A typical change directory looks like this:
-
-```text
-.sspec/changes/<ts>_<name>/
-├── spec.md
-├── tasks.md
-├── memory.md
-├── design.md        # optional
-├── revisions/       # optional
-└── reference/
-```
-
-Main directories:
-
-- `project.md`: project identity and conventions;
-- `requests/`: request files written by the developer;
-- `changes/`: per-change working documents;
-- `asks/`: structured questions and answers when needed;
-- `skills/`: agent-facing skills synced into host-specific locations;
-- `spec-docs/`: long-lived architecture and project knowledge;
-- `howto/`: focused operational guides for specific jobs;
-- `tmp/`: scratch space for temporary notes and drafts.
-
-## Workflow
-
-sspec’s default lifecycle is:
-
-```text
-Clarify → Design → Plan → Implement → Review
-```
-
-What each stage does:
-
-- **Clarify**: build shared understanding from user intent and codebase reality;
-- **Design**: create the change, write `spec.md`, add `design.md` when needed, then align with the user;
-- **Plan**: turn the design into file-level tasks in `tasks.md`;
-- **Implement**: execute tasks, update progress, and keep `memory.md` current;
-- **Review**: collect feedback, iterate, and close the loop.
-
-Two practical rules:
-
-- `memory.md` is the continuity file agents resume from;
-- if approved scope or design needs to change later, record it in `revisions/NNN-*.md` and update `tasks.md`.
 
 ## Quick Start
 
-### 1) Install
+### 1. Install and initialize
 
 ```bash
 pip install sspec
-# or
-uv tool install sspec
-```
-
-### 2) Initialize in your project
-
-```bash
 cd your-project
 sspec project init
 ```
 
-Then fill `.sspec/project.md` with:
+Then fill `.sspec/project.md` with your stack, key paths, and conventions.
 
-- your stack;
-- key paths;
-- coding conventions;
-- project-level notes.
+### 2. Start work — two paths
 
-### 3) Create a request
+**Path A: Describe your need to the agent.** Tell the agent what you want. A capable agent reads `AGENTS.md` and follows the sspec protocol — it clarifies, creates a change, writes the spec, and stops at the design gate for your review.
 
-```bash
-sspec request new add-password-reset
-```
-
-Write background, problem, direction, and success criteria in the generated request file. A minimal example:
-
-```markdown
-# Request: add-password-reset
-
-## Background
-We currently support email and password login only.
-
-## Problem
-Users cannot reset a forgotten password on their own.
-
-## Initial Direction
-- Use email reset tokens
-- Tokens must be time-limited and single-use
-- Do not add new external services
-
-## Success Criteria
-- Users can request a reset email
-- Tokens expire and cannot be reused
-- The core flow is covered by tests
-
-## Relational Context
-- Related code: `src/auth/*`
-- Existing emails: `src/notifications/email/*`
-```
-
-### 4) Hand the request to the agent
-
-You can paste the request file path into chat and tell the agent to follow `AGENTS.md`:
-
-```text
-Please work from this request:
-.sspec/requests/<your-request-file>.md
-
-Follow `AGENTS.md` and `.sspec/skills/`.
-Start with `sspec-clarify`, then create and maintain the change docs.
-Stop at design and implementation gates for review.
-```
-
-The agent will typically create the working change with:
+**Path B: Write a request file.** If you have clear ideas, create a request:
 
 ```bash
-sspec change new --from <request>
+sspec request new add-dark-mode --kind directive
 ```
 
-### 5) Track the change
+Fill in background, problem, direction, and success criteria. The agent picks it up from there.
 
-Use the CLI to inspect progress and current state:
+### 3. Review at gates
+
+The agent stops at two points:
+- **Design gate**: read `spec.md`, confirm the approach, then tell the agent to proceed.
+- **Implementation gate**: review the code, request fixes, or approve.
+
+### 4. Archive when done
 
 ```bash
-sspec change list
-sspec change status <name>
+sspec change archive --with-request <name>
 ```
-
-When the design needs a dedicated technical document:
-
-```bash
-sspec change scaffold design <change>
-```
-
-### 6) Archive when done
-
-When the work is complete, archive the change and its linked request:
-
-```bash
-sspec change archive --with-request [name]
-```
-
-## Key rules and responsibilities
-
-**Developer responsibilities**
-
-- write the `request`, including background, constraints, and success criteria;
-- answer key design and scope questions;
-- approve the design direction and implementation result;
-- decide when a `change` should be split.
-
-**Agent responsibilities**
-
-- clarify the problem before designing;
-- create and maintain the `change` docs for the work;
-- propose a solution, align with the user, then implement;
-- keep `tasks.md` and `memory.md` current while the change is active.
-
-**Workflow rules**
-
-- start from a `request`, not from chat history alone;
-- design and implementation both stop at explicit review points;
-- long-lived state belongs in repository files, not only in chat;
-- complex work should be split into trackable changes instead of accumulating in one thread.
 
 ## Common commands
 
-These are the commands most users need. For the full list, run `sspec --help`.
-
-### Project
-
 ```bash
-sspec project init
+# Requests
+sspec request new <name> [--kind directive|observe|idea]
+sspec request list
+
+# Changes
+sspec change new <name> [--from <request>] [--root]
+sspec change status <name>
+sspec change list
+sspec change archive <name> --with-request
+
+# Project
 sspec project status
 sspec project update --dry-run
-```
 
-### Request
+# Docs
+sspec doc new "Architecture Overview"
 
-```bash
-sspec request new <name>
-sspec request list
-sspec request show <name>
-sspec request find <query>
-sspec request archive [name] --with-change
-```
-
-### Change
-
-```bash
-sspec change new <name>
-sspec change new --from <request>
-sspec change new <name> --root
-sspec change new <name> --scaffold design
-sspec change scaffold design <change>
-sspec change scaffold revision <change> --title "scope-update"
-sspec change status <name>
-sspec change list --all
-sspec change validate <name>
-sspec change archive [name] --with-request
-```
-
-### Ask
-
-```bash
-sspec ask create <name>
-sspec ask prompt <ask-file>
-sspec ask list --all
-sspec ask archive [name]
-```
-
-### Docs, HOWTOs, skills, and tools
-
-```bash
-sspec doc list
-sspec doc new "<name>"
-sspec howto list
-sspec howto resume-change
-sspec skill list
+# Tools
 sspec tool now
 sspec tool mdtoc README.md
-sspec tool view-tree .
 ```
 
-## Advanced
-
-### Root changes
-
-Use a root change when the work is too large for one trackable unit:
-
-```bash
-sspec change new <name> --root
-```
-
-A root change defines the overall problem and phase breakdown. File-level design and execution stay in the sub-changes.
-
-### `design.md` and `revisions/`
-
-Create `design.md` when the change introduces new interfaces, data models, or architectural behavior.
-
-When approved design or scope changes later, create a revision file and update the plan:
-
-```bash
-sspec change scaffold revision <change> --title "<reason>"
-```
-
-### `memory.md`
-
-`memory.md` is the continuity surface for a change. It typically carries:
-
-- `State`: where the work is now and what happens next;
-- `Key Files`: non-obvious files that matter to continuation;
-- `Knowledge`: durable decisions, constraints, and gotchas;
-- `Milestones`: one-line factual session records.
-
-Root changes also use `Coordination` to summarize sub-change status.
-
-### Skills and sync layout
-
-`.sspec/skills/` is the source directory for skills. Host-specific locations such as `.agents/skills/` are synced from it by `sspec project init` and `sspec project update`.
-
-### Builtin tools
-
-`sspec tool` provides CLI complements for agent workflows, including:
-
-- `now`
-- `ask`
-- `mdtoc`
-- `view-tree`
-- `fileinfo`
-- `patch`
-- `write`
-- `treesitter`
-- `pack-zip`
-
-Run `sspec tool --help` for the full list.
-
-## Compatibility
-
-sspec assumes an agent environment that can:
-
-- read and write local repository files;
-- follow instructions from `AGENTS.md`;
-- execute local CLI commands;
-- load and follow skills under `.sspec/skills/`.
+Run `sspec --help` for the full command list.
 
 ## License
 
-AGPL-V3.0
+AGPL-3.0

@@ -32,7 +32,7 @@ Execute the approved plan. Work through tasks.md systematically.
 
 **Do not guess on blockers.** One `@align` < one rework cycle.
 
-### Post-Gate Design Changes
+### Design Changes During Implementation
 
 Apply this test first:
 > Can the original spec/design still accurately predict the post-change code?

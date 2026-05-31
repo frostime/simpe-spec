@@ -25,8 +25,8 @@ Apply this before classifying any feedback:
 
 1. Decide whether the current change still stands on its own.
 2. If the answer is yes and the feedback is still part of the same acceptance target:
-   - If `spec.md` / `design.md` have already passed the design gate, create `revisions/NNN-description.md` first to record what changed and why, then update `tasks.md`.
-   - If still in PLANNING, update `spec.md` / `design.md` directly.
+   - If the change is in Plan/Implement/Review (spec locked), create `revisions/NNN-description.md` first to record what changed and why, then update `tasks.md`.
+   - If still in Design, update `spec.md` / `design.md` directly.
 3. If the answer is yes but the feedback is really "what to do next", stop and `@align` before opening a follow-up change.
 4. If the answer is no because the current direction is wrong, stop and `@align` before any `BLOCKED` + replacement-change action.
 5. Cross-reference (post-gate amend only):

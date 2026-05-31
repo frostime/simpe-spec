@@ -79,7 +79,7 @@ Review   (sspec-review)     DONE | fix→Implement | amend→revision | follow-u
 ```
 
 `■` = hard stop, **MUST stop & align**. `→` = output summary, COULD keep going. Failed gate → return, update, realign.
-Post-Design gate: spec.md/design.md baselines immutable. Changes → `revisions/NNN-*.md`.
+Once Plan begins: spec.md/design.md locked. Changes → `revisions/NNN-*.md`.
 memory.md: maintained throughout, not a phase. → `sspec howto write-memory`
 
 → `sspec howto handle-review-scope-change`

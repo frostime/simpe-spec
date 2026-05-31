@@ -22,8 +22,8 @@ Phase emoji: ⏳ pending | 🚧 in progress | ✅ done
 Use this section for review/feedback tasks that still belong to the current change.
 
 If accepted feedback changes scope/design:
-- **Pre-gate** (spec not yet approved): update `spec.md` / `design.md` directly, then add tasks here.
-- **Post-gate** (design baseline locked): create `revisions/NNN-*.md` FIRST, then update this section. Do NOT edit `spec.md` / `design.md`.
+- **Design phase**: update `spec.md` / `design.md` directly, then add tasks here.
+- **Plan/Implement/Review** (spec locked): create `revisions/NNN-*.md` FIRST, then update this section. Do NOT edit `spec.md` / `design.md`.
 
 The section header MUST link the corresponding revision file (relative path).
 If the work belongs in a new follow-up or replacement change, the agent MUST NOT put it here unless the user has first approved that direction via `@align`.

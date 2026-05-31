@@ -133,7 +133,9 @@ After confirmation → proceed to `sspec-plan`.
 
 ### Revision mechanism
 
-After this gate, spec.md and design.md baselines become **immutable**. Any subsequent scope or design change MUST go through the revision protocol:
+During Design: user-requested changes → edit spec.md/design.md directly, no revision.
+
+Once the change enters Plan (tasks.md created), spec.md/design.md become **immutable**. Any subsequent scope or design change MUST go through the revision protocol:
 1. Create `revisions/NNN-description.md` recording what changed and why
 2. Update tasks.md to reflect new work
 3. The original spec.md/design.md are NOT modified

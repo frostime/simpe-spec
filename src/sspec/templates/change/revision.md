@@ -5,8 +5,8 @@ trigger: ""
 ---
 
 <!-- MUST set trigger to one of: review-feedback | discovery | scope-expansion | correction
-This file records scope/design changes after the design gate.
-spec.md and design.md baselines are immutable; all post-gate evolution goes here.
+This file records scope/design changes after Plan begins (spec/design locked).
+Do NOT use revisions during Design phase — edit spec.md/design.md directly.
 File naming: revisions/NNN-description.md (incrementing number). -->
 
 # {{TITLE}}

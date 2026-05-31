@@ -3,7 +3,7 @@ name: sspec-design
 description: "Assess scale, create change, fill spec.md + design.md, align with user. Use after clarify when ready to define the solution."
 metadata:
   author: frostime
-  version: 5.0.0
+  version: 5.1.0
 ---
 
 # SSPEC Design
@@ -68,9 +68,7 @@ sspec change scaffold design <change>  # create design.md from template
 
 ### Writing design.md — Prediction Contract
 
-spec + design is a **prediction contract**: the user reads it and predicts what the code will look like. Your job is to think carefully about which dimensions to cover so the user feels in control of this change.
-
-**Guiding question**: What does the user need to predict to feel in control? Answer this for the specific change, then choose dimensions accordingly.
+spec + design is a **prediction contract**: the user reads it and predicts the resulting code. Choose the dimensions that make that prediction possible for this specific change.
 
 **Common dimensions** (examples, not checklist — pick what serves prediction):
 
@@ -84,11 +82,9 @@ spec + design is a **prediction contract**: the user reads it and predicts what 
 | Content Outline | "What's the content structure?" | Documents, templates, specs | Heading tree / outline |
 | Migration Path | "How do we get from here to there?" | Compatibility, rollback, versioning | Step list + constraints |
 
-Custom dimensions are fine — use whatever makes the prediction clearer.
+Custom dimensions are fine.
 
-**Minimum quality bar**: design.md MUST contain at least one structured artifact (code block, diagram, table, or labeled items). Pure prose design is not acceptable.
-
-**Key principle**: show, don't describe. `def process(x: Input) -> Output` beats "a function that accepts X and returns Y".
+**Minimum quality bar**: design.md MUST contain at least one structured artifact (code block, diagram, table, or labeled items). Show, don't describe — `def process(x: Input) -> Output` beats "a function that accepts X and returns Y".
 
 ### spec.md vs design.md boundary
 

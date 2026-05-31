@@ -8,9 +8,7 @@ metadata:
 
 # SSPEC Align
 
-`@align` is how agents synchronize with users at decision points — **efficiently, structurally, and with minimal friction**. The goal is 5-second scan, instant decision.
-
-**Core principle**: Every @align must answer three questions — What happened? What needs deciding? What are the options? — in structured format, not prose.
+**Core principle**: Every @align must answer three questions — What happened? What needs deciding? What are the options? — in structured format, not prose. Goal: 5-second scan, instant decision.
 
 ---
 

@@ -3,7 +3,7 @@ name: sspec-clarify
 description: "Build shared understanding through dialogue and investigation. Produces Problem Statement + direction sketch. Reusable posture, not rigid phase."
 metadata:
   author: frostime
-  version: 5.0.0
+  version: 6.0.0
 ---
 
 # SSPEC Clarify
@@ -12,14 +12,9 @@ Synthesize the user's intent and codebase reality into a shared understanding of
 
 Clarify is a **posture**, not a rigid phase. It's the recommended entry point for new work, but can be re-entered whenever understanding drifts — during Review revision, when implementation hits a contradiction, or when a new requirement surfaces.
 
+**No implementation**: this is dialogue and investigation only — do NOT write code or modify files (except notes).
+
 ---
-
-## Stance
-
-- **Socratic**: Extract the user's real intent through questions, not assumptions
-- **Grounded**: Verify against codebase reality — intent without evidence is speculation
-- **Synthesizing**: Merge subjective intent and objective reality into a coherent problem definition
-- **No implementation**: Do NOT write code or modify files (except notes)
 
 ## Workflow
 
@@ -43,9 +38,16 @@ The user's words are a starting point, not the requirement itself. Work from fir
   - **Boundary**: "This does NOT include W — correct?"
   - **Priority**: "If we could only fix one thing, which matters most?"
   - **Unknowns**: "I'm not sure about Z — does it apply here?"
-- Decompose open-ended requirements into atomic choice/confirmation questions — reduce user response cost
 
-Scale with complexity: a clear bugfix needs one confirmation, a vague feature request needs deeper probing.
+**Recursive MECE** — don't dump questions after silent thinking, and don't stop at one round. Walk the decision tree:
+
+- State your problem framing first, so the user can correct the frame — not just answer in the dark
+- Each layer's branches MUST be MECE — non-overlapping, no gaps
+- For each question, give your recommended answer — a falsifiable bet keeps user response cost low
+- Batch by dependency, not by count: independent branches ask together; dependent ones wait for the upstream answer
+- Every answered branch narrows the space and exposes its sub-branches — descend until no open branch would materially change the design
+
+Scale with complexity: a clear bugfix needs one confirmation, a vague feature request warrants the full descent.
 
 ### Step 2: Objective — Codebase Reality
 
@@ -101,14 +103,8 @@ Clarify is complete when **both sides** can articulate:
 4. Which uncertainties are resolved vs still open
 
 Before leaving Clarify:
-- If a remaining uncertainty would materially change the design, resolve it NOW
+- No open branch on the decision tree would materially change the design
 - Record assumptions and open decisions in notes
 - Do not enter Design while a design-shaping uncertainty remains implicit
 
 → Then transition to `sspec-design` phase.
-
-## When to Ask
-
-This phase IS dialogue. Asking is the default posture, not the exception. If you're unsure about intent, priority, constraint, or feasibility — ask.
-
-**Posture**: One question now beats a wrong design later.

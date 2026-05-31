@@ -8,8 +8,6 @@ metadata:
 
 # SSPEC Implement
 
-Execute the approved plan. Work through tasks.md systematically.
-
 ---
 
 ## Core Rules
@@ -25,7 +23,7 @@ Execute the approved plan. Work through tasks.md systematically.
 | Situation | Action |
 |-----------|--------|
 | Task is ambiguous | `@align` for clarification |
-| Implementation reveals design issue | See **Post-Gate Design Changes** below |
+| Implementation reveals design issue | See **Design Changes During Implementation** below |
 | Blocker encountered | Record in `memory.md`, `@align` user |
 | Multiple valid approaches | Pick the simpler one, note in memory |
 | Design assumption was wrong | Re-enter Clarify posture: "Design says X but I found Y" → re-sync with user before revising |

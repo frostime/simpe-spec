@@ -60,7 +60,7 @@ Reason: <one sentence>
 1. Re-enter Clarify posture to understand the gap
 2. `sspec change scaffold revision <change> --title "..."` — create revision file first
 3. Fill revision: Reason / Spec Impact / Design Impact / Task Impact
-4. **Cross-reference** (Fix E):
+4. **Cross-reference**:
    - Append to `spec.md` frontmatter `reference:`:
      ```yaml
      - source: ".sspec/changes/<change>/revisions/NNN-xxx.md"

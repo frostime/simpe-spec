@@ -8,8 +8,6 @@ metadata:
 
 # SSPEC Plan
 
-Turn the approved design into a concrete, file-level execution plan in tasks.md.
-
 ---
 
 ## Output Contract

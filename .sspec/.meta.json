@@ -1,19 +1,19 @@
 {
   "meta_schema": "2.1",
   "sspec_schema": "6.0",
-  "sspec_version": "2.4.2.dev1+g0235b5044.d20260531",
+  "sspec_version": "2.4.3.dev0+ga616b6a84.d20260531",
   "created_at": "2026-02-07T18:42:39.297150",
-  "updated_at": "2026-05-31T19:44:23.445396",
+  "updated_at": "2026-05-31T22:42:45.084283",
   "file_hashes": {
-    "skills/write-patch": "850929827559ba69",
+    "skills/write-patch": "8825545a5bdc8d08",
     "skills/write-spec-doc": "13bb5686b0ff98e4",
     "skills/sspec-mdtoc": "b9fdfc4a23d816e0",
-    "skills/sspec-design": "d94bf8ad6f16a810",
-    "skills/sspec-implement": "5e6bf57d5af39f82",
-    "skills/sspec-plan": "2f0d39c5ace5b83d",
-    "skills/sspec-review": "243e10ca983c6fbe",
-    "skills/sspec-align": "0b1138822f677707",
-    "skills/sspec-clarify": "143d1485d0a61737"
+    "skills/sspec-design": "0613d862ef0ad95e",
+    "skills/sspec-implement": "d85c93109a69f127",
+    "skills/sspec-plan": "66835d307810b317",
+    "skills/sspec-review": "b722b407553ee9a8",
+    "skills/sspec-align": "3c9493883f5bdbfa",
+    "skills/sspec-clarify": "7ee57dbaa87f0397"
   },
   "managed_skills": [
     "sspec-align",

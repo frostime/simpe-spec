@@ -8,39 +8,31 @@
 
 ## The Idea
 
-AI coding agents are powerful but unpredictable. They forget decisions across sessions, they run ahead without alignment, and the thread becomes the only record of what was decided and why.
+AI coding agents can generate code cheaply and abundantly, but judging whether code is correct is the most expensive operation — it happens last, and is hard to undo.
 
-sspec inverts this: **the repository is the source of truth, not the chat**. The agent reads files to understand context. The agent writes files to commit to decisions. At key points, the agent stops and waits for the developer to review — before code is written, not after.
+sspec's core strategy: move verification forward from the expensive final artifact to a cheap, faithful proxy — the spec. You can predict what the code will look like from the spec, and make your judgment before writing begins.
+
+The goal of collaboration is not for the agent to obey the user, but for both sides to converge on **intent ∧ reality**: what you genuinely want, combined with what the world actually permits.
 
 Three principles:
 
-- **Predictability**: You must be able to predict the outcome before implementation begins. No unclarified assumptions survive.
-- **Durable state**: Project context, specs, tasks, and session memory live in repository files. Agents resume from files, not from reconstructing chat history.
-- **Hard gates**: Design and implementation each end with a mandatory review point. The agent stops. You decide.
+- **Verify early**: The spec is the faithful proxy. You predict outcomes from the spec, not from the code.
+- **Externalize state**: Intent and decisions live in repository files. Agents resume from files, not from chat history.
+- **Enforce alignment**: Stop before irreversible investment. Confirm intent ∧ reality are aligned.
 
 ## Is sspec for you?
 
 **Yes** if you:
-- review design before code is written
-- want specs and tasks tracked in files, not buried in chat
-- work on projects where continuity across sessions matters
+- can judge whether code is correct, and want the agent to accelerate you rather than decide for you
+- are willing to invest time aligning direction before writing begins
 
 **Probably not** if you:
-- prefer free-form conversation with the agent, no structure
-- do not plan to review the agent's design or code
-- work on one-shot scripts where a single chat session suffices
+- cannot judge code quality and need the agent to take full responsibility
+- prefer rapid iteration without reviewing intermediate artifacts
 
 ## How it works
 
-### Request — intent record
-
-A request captures what you want, something you observed, or an idea to keep. Three kinds:
-
-| kind | when to use | agent behavior |
-|------|-------------|----------------|
-| `directive` | You have a clear task for the agent | Agent assesses scale, creates a change, starts working |
-| `observe` | You noticed something off — a UX glitch, weird code, a smell | Agent reads and notes it. Does **not** create a change. For later human triage. |
-| `idea` | A thought worth keeping, maybe for later | Agent may refer to it as context. Does **not** act unless asked. |
+### Request — user intent
 
 ```bash
 sspec request new add-password-reset                # directive (default)
@@ -60,7 +52,7 @@ A change is a cohesive, reviewable piece of work. It lives in `.sspec/changes/<n
 | `design.md` | (optional) Technical design for interfaces, data models, architecture |
 | `revisions/` | (optional) Amendments after the design gate |
 
-### Lifecycle with gates
+### Lifecycle
 
 ```
 Clarify  →  Design  →  Plan  →  Implement  →  Review
@@ -120,7 +112,7 @@ Then fill `.sspec/project.md` with your stack, key paths, and conventions.
 **Path B: Write a request file.** If you have clear ideas, create a request:
 
 ```bash
-sspec request new add-dark-mode --kind directive
+sspec request new add-dark-mode
 ```
 
 Fill in background, problem, direction, and success criteria. The agent picks it up from there.

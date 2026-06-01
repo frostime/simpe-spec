@@ -1,19 +1,18 @@
 {
   "meta_schema": "2.1",
-  "sspec_schema": "6.0",
+  "sspec_schema": "6.1",
   "sspec_version": "2.4.3.dev0+ga616b6a84.d20260531",
   "created_at": "2026-02-07T18:42:39.297150",
-  "updated_at": "2026-05-31T22:42:45.084283",
+  "updated_at": "2026-06-01T14:40:59.814714",
   "file_hashes": {
-    "skills/write-patch": "8825545a5bdc8d08",
     "skills/write-spec-doc": "13bb5686b0ff98e4",
     "skills/sspec-mdtoc": "b9fdfc4a23d816e0",
-    "skills/sspec-design": "0613d862ef0ad95e",
+    "skills/sspec-design": "30912183b53a7f90",
     "skills/sspec-implement": "d85c93109a69f127",
     "skills/sspec-plan": "66835d307810b317",
     "skills/sspec-review": "b722b407553ee9a8",
     "skills/sspec-align": "3c9493883f5bdbfa",
-    "skills/sspec-clarify": "7ee57dbaa87f0397"
+    "skills/sspec-clarify": "394a2c14528a4681"
   },
   "managed_skills": [
     "sspec-align",
@@ -23,7 +22,6 @@
     "sspec-mdtoc",
     "sspec-plan",
     "sspec-review",
-    "write-patch",
     "write-spec-doc"
   ],
   "skill_locations": [

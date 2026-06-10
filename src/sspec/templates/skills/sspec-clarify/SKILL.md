@@ -3,122 +3,133 @@ name: sspec-clarify
 description: "Build shared understanding through dialogue and investigation. Produces Problem Statement + direction sketch. Reusable posture, not rigid phase."
 metadata:
   author: frostime
-  version: 6.1.3
+  version: 6.2.0
 ---
 
 # SSPEC Clarify
 
-Clarify excavates the problem space: combine user intent + system reality until Design can be a cheap, faithful proxy the user can judge before implementation.
+Clarify excavates the problem space: align user intent with reality before Design. The output is a cheap, faithful proxy: the user can predict the likely design, patch scope, user-visible behavior, and major risks before implementation begins.
 
 Clarify is a **posture**, not a rigid phase. Re-enter it whenever understanding drifts: Review feedback, implementation contradiction, revision, or scope drift.
 
 **No implementation**: dialogue + investigation only. Do NOT modify code/files except notes.
 
-## Workflow
+## Core Model
+
+Clarify recursively resolves a MECE decision tree. Each design-shaping node is processed through:
 
 ```text
-Subjective intent ↔ Objective reality → Synthesis → Adversarial audit → Design readiness
+Subjective intent + Objective reality → Synthesis
 ```
 
-Subjective and Objective interleave. Gather whichever side is currently missing.
+| Concept | Role |
+|---|---|
+| Subjective | User-owned intent, priority, boundary, external constraint, judgment |
+| Objective | Codebase/system/docs/API/trusted-source reality the agent can inspect |
+| Synthesis | Current working model, bet, branch classification, next uncertainty |
+| Recursive MECE | How the decision tree expands: non-overlapping, no gaps, dependency-aware |
+| Socratic questioning | How the agent asks the user to inspect/correct a falsifiable bet |
 
-## Multi-round Decision-tree Clarify
+The format is flexible. Avoid performative status output. Each clarification turn must advance the tree or make clear why it is ready to exit.
 
-For non-trivial work, use visible rounds. Small obvious fixes may need one short round; vague, architectural, or high-risk requests need multiple rounds.
+## Iteration Protocol
 
-Each clarification turn MUST:
+For each unresolved design-shaping node:
 
-- Start with `Clarify Round <n>`
-- Provide enough working model for the user to judge the questions: current framing + relevant evidence + decision-tree status
-- After Round 1, prefer delta-only unless framing changed or audit is needed
-- Show decision-tree status relevant to the current question group: closed / opened / revised / classified branches
-- Group questions by dependency: independent branches together; dependent branches across rounds
-- Include the agent's recommended answer or current bet for each question group
-- Explain impact when non-obvious
+1. Identify what user-owned intent/constraint may decide it.
+2. Identify what objective facts can be investigated.
+3. Investigate facts before asking the user factual questions.
+4. Present a concise working model or delta.
+5. Ask Socratic question groups for user-owned judgments.
+6. Classify the result: blocker / assumption / deferred / irrelevant.
 
-Incomplete round: asks surface choices without enough working model or decision-tree context for the user to judge them.
+A useful turn does at least one:
 
-Decision tree inputs:
+- closes a branch
+- opens a necessary sub-branch
+- revises the framing
+- classifies uncertainty
+- surfaces a blocker
+- proves the current model is ready for Design
 
-- User intent and priorities
-- Readable system reality: code, docs, project state
-- Trusted external-source reality when relevant: official docs, standards, deprecations, common practice, or current web sources
-- User-supplied external constraints
-- Contradictions between intent, system facts, external sources, and user constraints
-
-### Branch Severity
-
-| Type | Meaning | Action |
-|---|---|---|
-| Blocker | Could change problem framing, scope, user-visible behavior, risk, or implementation direction | Resolve before Design |
-| Assumption | Safe to proceed if explicit and reviewable | Record |
-| Deferred | Intentionally out of current scope/phase | Record boundary |
-| Irrelevant | Does not affect Design | Drop |
+Incomplete clarification: surface choices without an inspectable working model, objective reality, or decision-tree consequence.
 
 ## Step 1: Subjective — User Intent
 
-User words are raw input, not the requirement itself.
+User words are raw input, not the requirement itself. Separate goal / symptom / proposed solution.
 
-Do:
-
-- Separate goal / symptom / proposed solution
-- Watch for XY problem: user may describe means rather than goal
-- Surface boundaries, priorities, unknowns, and success criteria
-- State your framing first so the user can correct it
-
-Socratic patterns:
+Socratic questioning is the core interaction model: state a falsifiable framing or recommended bet, then ask the user to confirm, correct, or refine it.
 
 | Pattern | Example |
 |---|---|
-| Restate | "My understanding is we need X, not Y — correct?" |
+| Restate | "I think the real problem is X, not Y — correct?" |
 | Boundary | "This excludes W — correct?" |
-| Priority | "If only one outcome matters, which one?" |
-| Unknown | "I am unsure whether Z applies — does it?" |
+| Priority | "If only one outcome matters, which one? My bet is ..." |
+| Unknown | "I am unsure whether Z applies. My current assumption is ..." |
+| Challenge | "If this direction is wrong, the alternative framing may be ..." |
 
-Recursive MECE:
+Rules:
 
-- Branches at each layer are non-overlapping and no-gaps
-- Each answered branch narrows the tree and may expose sub-branches
-- Continue until no open branch would materially change Design
-- Scale depth to task complexity
+- State your framing and current bet before asking the user to decide.
+- Ask question groups, not isolated trivia: group by dependency.
+- Independent branches can be asked together; dependent branches wait for upstream answers.
+- Use structured-choice tools if available; otherwise present compact numbered options. Use prose for complex or open-ended judgment.
+- Explain impact only when it changes user judgment.
 
-## Step 2: Objective — Codebase/System Reality
+## Step 2: Objective — Reality
 
-Investigate facts the user should not need to answer.
+Investigate before asking factual questions: if code, docs, commands, logs, tests, project state, or trusted external sources can answer a question, inspect them first.
 
 Read as relevant:
 
 - `project.md`, `spec-docs/`, existing change memory files
-- Architecture, integration points, existing patterns
-- Hidden constraints, edge cases, and external API/system behavior
-- Trusted external sources via available tools/skills when current outside reality matters; prefer authoritative source pages and cite them
-- Existing changes via `sspec change list` or `sspec change find <name>`
+- architecture, integration points, existing patterns
+- hidden constraints, edge cases, external API/system behavior
+- existing changes via `sspec change list` or `sspec change find <name>`
+- trusted external sources via available tools/skills when outside reality matters; prefer authoritative pages and cite them
 
-Rule: if code/docs/system state can answer a question, investigate instead of asking. Ask the user for intent, priorities, external constraints, and judgments the system cannot reveal.
+Ask the user for intent, priorities, external constraints, and judgments the system cannot reveal. If tools or sources are unavailable, state that limitation as an assumption.
 
-Feed findings into dialogue: "You said X; the system shows Y. Does that change the framing?"
+Feed findings back: "You said X; the system/source shows Y. Does that change the framing?"
 
 ## Step 3: Synthesis
 
-When intent and reality have collided enough, sketch:
+When intent and reality have collided enough, sketch a working model.
 
-1. **Problem Statement** — actual problem, not surface symptom
-2. **Direction** — approach that fits intent + reality
-3. **Open questions** — classified by Branch Severity
+**Working model** = problem framing + relevant evidence + open decision branches + agent's current bet.
 
-Evidence map:
+| Part | Content |
+|---|---|
+| Problem Statement | Actual problem, not surface symptom |
+| Direction | Approach that fits intent + reality |
+| Evidence map | User intent, system evidence, trusted external-source evidence, user constraints, assumptions |
+| Open branches | Classified as blocker / assumption / deferred / irrelevant |
 
-- User-confirmed intent
-- Codebase/system evidence
-- Trusted external-source evidence when used
-- User-supplied external constraints
-- Explicit assumptions
+Branch classification:
+
+| Type | Meaning | Action |
+|---|---|---|
+| Blocker | Could change framing, scope, user-visible behavior, risk, or implementation direction | Resolve before Design |
+| Assumption | Safe to proceed if explicit and reviewable | Record |
+| Deferred | Intentionally outside current scope/phase | Record boundary |
+| Irrelevant | Does not affect Design | Drop |
 
 Design should formalize this sketch, not discover it from scratch.
 
-## Adversarial Audit
+## Exit Readiness
 
-Before Design for non-trivial work, challenge the framing.
+For a one-confirmation Clarify, the exit gate is implicit: proceed only if no blocker is visible after basic reality inspection.
+
+For formal Clarify, enter Design only when all are true:
+
+- Problem, boundaries, direction, and open questions are articulable by both sides
+- Working model cites intent, system evidence, constraints, and assumptions
+- No blocker remains unresolved or implicit
+- Remaining questions are classified: blocker / assumption / deferred / irrelevant
+- Adversarial audit has not exposed a design-changing branch
+- Notes record assumptions and open decisions
+
+Adversarial audit probes:
 
 | Probe | Question |
 |---|---|
@@ -128,60 +139,37 @@ Before Design for non-trivial work, challenge the framing.
 | Failure forecast | What later failure would prove Clarify missed something? |
 | Boundary/term attack | Which terms, actors, states, or responsibilities are ambiguous? |
 
-If the audit opens a blocker, continue Clarify.
+Use subagent review for complex, vague, high-impact, or anchoring-prone Clarify when available. Brief it with only: working model, confirmed facts, stable file/doc pointers, and request to find missing branches, alternative framings, contradictions, or premature-exit risks. Main agent verifies claims and decides.
 
-## Optional Subagent Review
+Then transition to `sspec-design`.
 
-Use for complex, vague, high-impact, or anchoring-prone Clarify when the environment supports a subagent: an isolated secondary agent/context that receives a limited brief.
-
-Brief the subagent with only: working model, confirmed facts, stable file/doc pointers, and request to find missing branches, alternative framings, contradictions, or premature-exit risks. Subagent critiques; main agent verifies claims and decides.
-
-## Minimal Few-shot: Incomplete Clarify
-
-Schematic only; replace placeholders with task facts.
+## Minimal Few-shot
 
 Bad:
 
 ```text
-Clarify Round 1:
 Questions:
 - Which label should the result use?
 - Which optional behavior should be included?
-- Which result format should be used?
-
 User answers → Agent enters Design.
 ```
 
-Why bad: surface choices only; no working model, decision tree, adversarial check, or open-question classification.
+Why bad: surface choices only; no working model, reality check, decision-tree consequence, or adversarial pressure.
 
 Better:
 
 ```text
-Clarify Round 1:
-Model: desired outcome / proposed change / known reality / possible mismatch
-Tree: closed / opened / revised / classified branches
+Model: desired outcome / proposed change / relevant evidence / current bet
+Branches: blocker / assumption / deferred
 Questions:
 - Framing group — my bet: ...; impact: ...; confirm/correct?
 - Boundary group — my bet: ...; impact: ...; confirm/correct?
 ```
 
-## Memory Management
+## Memory
 
 - Short Clarify (≤5 exchanges): no artifact needed; carry result into Design.
 - Long Clarify (>10 exchanges or research-heavy): create notes with `sspec tmp new clarify_<topic>`; the command adds the timestamp prefix.
 - After change creation, move relevant materials to `change/reference/`.
 - Key decisions/turning points → memory.md Knowledge during Design.
 - Capture reasoning before Design; context compression can erase it.
-
-## Exit Gate
-
-Enter Design only when all are true:
-
-- Problem, boundaries, direction, and open questions are articulable by both sides
-- Working model cites intent, system evidence, constraints, and assumptions
-- No blocker remains unresolved or implicit
-- Remaining questions are classified: blocker / assumption / deferred / irrelevant
-- Adversarial audit has not exposed a design-changing branch
-- Notes record assumptions and open decisions
-
-Usually exit with `Clarify Round <n> — Audit`, then transition to `sspec-design`.

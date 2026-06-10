@@ -3,7 +3,7 @@ name: sspec-clarify
 description: "Build shared understanding through dialogue and investigation. Produces Problem Statement + direction sketch. Reusable posture, not rigid phase."
 metadata:
   author: frostime
-  version: 6.1.2
+  version: 6.1.3
 ---
 
 # SSPEC Clarify
@@ -29,7 +29,8 @@ For non-trivial work, use visible rounds. Small obvious fixes may need one short
 Each clarification turn MUST:
 
 - Start with `Clarify Round <n>`
-- Provide enough working model for the user to judge the questions; after Round 1 prefer delta-only unless framing changed or audit is needed
+- Provide enough working model for the user to judge the questions: current framing + relevant evidence + decision-tree status
+- After Round 1, prefer delta-only unless framing changed or audit is needed
 - Show decision-tree status relevant to the current question group: closed / opened / revised / classified branches
 - Group questions by dependency: independent branches together; dependent branches across rounds
 - Include the agent's recommended answer or current bet for each question group
@@ -158,7 +159,7 @@ Better:
 ```text
 Clarify Round 1:
 Model: desired outcome / proposed change / known reality / possible mismatch
-Tree: closed branches / blockers / assumptions
+Tree: closed / opened / revised / classified branches
 Questions:
 - Framing group — my bet: ...; impact: ...; confirm/correct?
 - Boundary group — my bet: ...; impact: ...; confirm/correct?

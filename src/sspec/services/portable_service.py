@@ -93,7 +93,7 @@ Unless the user explicitly asks to install or manage sspec in this project:
   <rule>
     <name>sspec</name>
     <description>Rendered sspec agent protocol from the built-in AGENTS.md template.</description>
-    <read>sspec portable read rule:sspec</read>
+    <read-cmd>sspec portable read rule:sspec</read-cmd>
   </rule>
 </rule_index>
 """.strip()
@@ -165,7 +165,7 @@ def render_portable_resource(resource: PortableResource) -> str:
         '<sspec-portable-resource>\n'
         f'<ref>{escape(resource.ref)}</ref>\n'
         f'<source>{escape(resource.source)}</source>\n'
-        f'<read_command>{escape(resource.read_command)}</read_command>\n'
+        f'<read-cmd>{escape(resource.read_command)}</read-cmd>\n'
         '<content><![CDATA[\n'
         f'{_escape_cdata(resource.content)}\n'
         ']]></content>\n'
@@ -194,7 +194,7 @@ def list_builtin_skills() -> list[PortableSkillEntry]:
             PortableSkillEntry(
                 name=name,
                 description=description,
-                location=f'builtin:{name}',
+                location=_resource_source_path(skill_file),
                 read_command=f'sspec portable read skill:{name}',
             )
         )
@@ -211,7 +211,7 @@ def _render_available_skills() -> str:
                 f'    <name>{escape(skill.name)}</name>',
                 f'    <description>{escape(skill.description)}</description>',
                 f'    <location>{escape(skill.location)}</location>',
-                f'    <read>{escape(skill.read_command)}</read>',
+                f'    <read-cmd>{escape(skill.read_command)}</read-cmd>',
                 '  </skill>',
             ]
         )

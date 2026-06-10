@@ -8,6 +8,7 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from sspec.cli import main
+from sspec.core import SCHEMA_VERSION
 
 
 def test_portable_works_without_sspec_project(tmp_path: Path, monkeypatch) -> None:
@@ -36,7 +37,7 @@ def test_portable_read_rule_works_without_sspec_project(tmp_path: Path, monkeypa
     source = _extract_source(result.output)
     assert source.is_absolute()
     assert source.parts[-3:] == ('sspec', 'templates', 'AGENTS.md')
-    assert 'SSPEC_SCHEMA::6.0' in result.output
+    assert f'SSPEC_SCHEMA::{SCHEMA_VERSION}' in result.output
     assert not (tmp_path / '.sspec').exists()
 
 

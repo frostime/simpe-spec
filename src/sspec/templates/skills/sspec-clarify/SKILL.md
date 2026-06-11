@@ -10,7 +10,13 @@ metadata:
 
 Clarify excavates the problem space: align user intent with reality before Design. The output is a cheap, faithful proxy: the user can predict the likely design, patch scope, user-visible behavior, and major risks before implementation begins.
 
-Clarify is a **posture**, not a rigid phase. Re-enter it whenever understanding drifts: Review feedback, implementation contradiction, revision, or scope drift.
+Clarify is a **posture**, not a rigid phase. Before leaving Clarify, make explicit at the minimum needed scale:
+
+- the user's actual goal, separated from symptoms and proposed implementation
+- success criteria: what finished looks like, how it can be verified, and what is out of scope
+- user-owned solution preferences, technical constraints, and non-goals that may shape Design
+
+Re-enter Clarify whenever understanding drifts: Review feedback, implementation contradiction, revision, or scope drift.
 
 **No implementation**: dialogue + investigation only. Do NOT modify code/files except notes.
 
@@ -43,14 +49,7 @@ For each unresolved design-shaping node:
 5. Ask Socratic question groups for user-owned judgments.
 6. Classify the result: blocker / assumption / deferred / irrelevant.
 
-A useful turn does at least one:
-
-- closes a branch
-- opens a necessary sub-branch
-- revises the framing
-- classifies uncertainty
-- surfaces a blocker
-- proves the current model is ready for Design
+A useful turn closes a branch, opens a necessary sub-branch, revises the framing, classifies uncertainty, surfaces a blocker, or proves the current model is ready for Design.
 
 Incomplete clarification: surface choices without an inspectable working model, objective reality, or decision-tree consequence.
 
@@ -58,7 +57,7 @@ Incomplete clarification: surface choices without an inspectable working model, 
 
 User words are raw input, not the requirement itself. Separate goal / symptom / proposed solution.
 
-Socratic questioning is the core interaction model: state a falsifiable framing or recommended bet, then ask the user to confirm, correct, or refine it.
+Socratic questioning: state a falsifiable framing or recommended bet → ask the user to confirm, correct, or refine it.
 
 | Pattern | Example |
 |---|---|
@@ -70,7 +69,6 @@ Socratic questioning is the core interaction model: state a falsifiable framing 
 
 Rules:
 
-- State your framing and current bet before asking the user to decide.
 - Ask question groups, not isolated trivia: group by dependency.
 - Independent branches can be asked together; dependent branches wait for upstream answers.
 - Use structured-choice tools if available; otherwise present compact numbered options. Use prose for complex or open-ended judgment.
@@ -78,7 +76,7 @@ Rules:
 
 ## Step 2: Objective — Reality
 
-Investigate before asking factual questions: if code, docs, commands, logs, tests, project state, or trusted external sources can answer a question, inspect them first.
+Investigate before asking factual questions: inspect code/docs/commands/logs/tests/project state/trusted sources first when they can answer.
 
 Read as relevant:
 
@@ -94,7 +92,7 @@ Feed findings back: "You said X; the system/source shows Y. Does that change the
 
 ## Step 3: Synthesis
 
-When intent and reality have collided enough, sketch a working model.
+When intent + reality are sufficient, sketch a working model.
 
 **Working model** = problem framing + relevant evidence + open decision branches + agent's current bet.
 
@@ -118,9 +116,9 @@ Design should formalize this sketch, not discover it from scratch.
 
 ## Exit Readiness
 
-For a one-confirmation Clarify, the exit gate is implicit: proceed only if no blocker is visible after basic reality inspection.
+One-confirmation Clarify: proceed only if no blocker is visible after basic reality inspection.
 
-For formal Clarify, enter Design only when all are true:
+Formal Clarify: enter Design only when all are true:
 
 - Problem, boundaries, direction, and open questions are articulable by both sides
 - Working model cites intent, system evidence, constraints, and assumptions
@@ -139,7 +137,7 @@ Adversarial audit probes:
 | Failure forecast | What later failure would prove Clarify missed something? |
 | Boundary/term attack | Which terms, actors, states, or responsibilities are ambiguous? |
 
-Use subagent review for complex, vague, high-impact, or anchoring-prone Clarify when available. Brief it with only: working model, confirmed facts, stable file/doc pointers, and request to find missing branches, alternative framings, contradictions, or premature-exit risks. Main agent verifies claims and decides.
+For complex/vague/high-impact/anchoring-prone Clarify, use subagent review when available. Brief: working model, confirmed facts, stable file/doc pointers, request to find missing branches/alternative framings/contradictions/premature-exit risks. Main agent verifies claims and decides.
 
 Then transition to `sspec-design`.
 

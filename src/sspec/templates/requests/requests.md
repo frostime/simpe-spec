@@ -35,20 +35,4 @@ This becomes the starting point for the change's spec.md Approach. -->
 ## @AGENT
 <!-- What should Agent do to implement this request -->
 Adhere to the SSPEC protocol and commence development from the current Request file, following the SSPEC Change Lifecycle.
-Next step: Read `sspec-clarify` SKILL + `sspec-design` SKILL + `sspec change new --from <this>`.
-
----
-
-<!-- ============================================================
-     MICRO-CHANGE ZONE (optional)
-     For tiny changes (≤3 files, ≤30min) that don't need a full change.
-     Remove these sections if a change is created instead.
-     ============================================================ -->
-
-<!--
-## Plan
-Quick implementation plan (what files to touch, what to do)
-
-## Done
-What was actually done + any notes for future reference
--->
+Next step: Read `sspec-clarify` SKILL and cooperate with user.

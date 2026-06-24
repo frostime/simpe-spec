@@ -39,7 +39,7 @@ should be able to predict what each section will contain.
 ## References                  — updated links to new example files
 ```
 
-**Change inventory pattern** — best for multi-item content changes (used in `### Key Change`):
+**Change inventory pattern** — best for multi-item content changes (used in `### Implementation Changes`):
 
 ```markdown
 **Change A: Refresh project.md** — Update stack description, key paths,

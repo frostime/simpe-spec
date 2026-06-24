@@ -509,12 +509,14 @@ class TestValidateChange:
             '## Proposed Solution\n\n'
             '### Approach\n'
             'Add a deterministic OAuth login flow.\n\n'
-            '### Key Change\n'
-            '**Feat A: OAuth login** — add provider callback handling.\n\n'
+            '### Behavior Contract\n'
+            '**BC-1: OAuth login is supported**\n\n'
+            '### Implementation Changes\n'
+            '**feat(auth): Add OAuth login** — add provider callback handling.\n\n'
             '### Scope Summary\n'
-            '| File | Change |\n'
-            '|------|--------|\n'
-            '| `src/auth.py` | Add OAuth login flow |\n'
+            '| File | Change | Effort |\n'
+            '|------|--------|--------|\n'
+            '| `src/auth.py` | feat(auth): add OAuth login flow | S |\n'
         )
         spec.write_text(filled, encoding='utf-8')
 

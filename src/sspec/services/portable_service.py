@@ -68,7 +68,8 @@ Unless the user explicitly asks to install or manage sspec in this project:
   Do not run it. Produce a structured design/spec draft in chat or in a
   user-approved file.
 - If sspec says to write `spec.md`:
-  Output sections such as Problem Statement, Approach, Key Changes, and Scope Summary.
+  Output sections such as Problem Statement, Approach, Behavior Contract,
+  Implementation Changes, and Scope Summary.
 - If sspec says to write `design.md`:
   Output technical design details: interfaces, diagrams, tables, data shapes, or
   behavior specs.

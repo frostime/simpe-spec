@@ -37,7 +37,10 @@ updated: ""
 - [ ] Modify `src/auth/jwt.py` — add refresh logic to `validate_token()` per spec.md
 - [ ] Modify `src/middleware/auth.py` — set `X-Refreshed-Token` header when refresh occurs
 - [ ] Add tests `tests/test_jwt_refresh.py` — cover: valid token, near-expiry refresh, expired token
-**Verification**: `pytest tests/test_jwt_refresh.py` passes; manual test confirms header appears for tokens expiring within 5 min
+**Verification**:
+- Agent: `pytest tests/test_jwt_refresh.py` passes.
+**User Check**:
+1. BC-1: Send a request with a token expiring within 5 min -> response includes `X-Refreshed-Token`.
 
 ---
 
@@ -57,7 +60,7 @@ updated: ""
 
 ## Medium tasks.md
 
-Multi-phase, references spec.md Key Change labels and design.md.
+Multi-phase, references spec.md Behavior Contract labels, implementation labels, and design.md.
 
 ```markdown
 ---
@@ -73,23 +76,29 @@ updated: ""
 ## Tasks
 
 ### Phase 1: Cache Module ⏳
-- [ ] Create `src/services/cache.py` — implement interface per design.md
+- [ ] Create `src/services/cache.py` — implement `feat(cache): Add user cache module` per spec/design
 - [ ] Add `REDIS_URL` to `.env.example` and `config.py` (with `localhost:6379` fallback)
 - [ ] Implement stampede prevention: `SET NX` lock per design.md Behavior section
 - [ ] Add TTL jitter (±10%) to `set_cached_user()`
-**Verification**: Unit tests for get/set/invalidate pass; stampede lock verified with concurrent test
+**Verification**:
+- Agent: Unit tests for get/set/invalidate pass; stampede lock verified with concurrent test.
 
 ### Phase 2: Auth Integration ⏳
 - [ ] Modify `src/services/auth.py:authenticate()` — add cache lookup per design.md call chain
 - [ ] Modify `src/services/user.py:update_user()` — call `invalidate_user_cache()` after write
 - [ ] Add fallback: if Redis unreachable, skip cache and query DB directly (try-except in cache.py)
-**Verification**: Auth flow works with Redis up/down; user update invalidates cache within 1s
+**Verification**:
+- Agent: Auth flow works with Redis up/down; user update invalidates cache within 1s.
+**User Check**:
+1. BC-1: Sign in twice as the same user with Redis available -> second auth path uses cache and returns the same user.
+2. BC-2: Stop Redis and sign in -> auth still succeeds through DB fallback.
 
 ### Phase 3: Testing ⏳
 - [ ] Create `tests/test_cache.py` — cover: hit, miss, invalidation, TTL expiry, Redis-down fallback
 - [ ] Add cache scenarios to `tests/test_auth.py` — cache hit path, cache miss path
 - [ ] Load test: verify DB QPS drops from 500 to <50 under simulated load
-**Verification**: All tests pass; load test confirms <50 QPS to DB
+**Verification**:
+- Agent: All tests pass; load test confirms <50 QPS to DB.
 
 ---
 
@@ -182,22 +191,44 @@ No caching layer exists. Target: reduce DB QPS to <50.
 Redis-based user cache to reduce DB load. Multiple app instances share one cache;
 per-key TTL prevents stale sessions.
 
-### Key Change
+### Behavior Contract
 
-**Cache A: User cache module** — New `src/services/cache.py` with get/set/invalidate
-interface. TTL 300s ±10% jitter. SET NX lock prevents cache stampede on concurrent misses.
+**BC-1: Auth reads use cache when available**
 
-**Cache B: Auth integration** — `authenticate()` checks cache before DB. `update_user()`
+Surface: `authenticate()` behavior.
+
+After:
+- Repeated auth for the same user can return from Redis cache.
+- Concurrent misses issue one DB read per key.
+
+**BC-2: Redis outage preserves auth behavior**
+
+Surface: auth flow when Redis is unavailable.
+
+After:
+- Redis connection errors are caught.
+- Auth falls back to DB and still returns the user.
+
+### Implementation Changes
+
+**feat(cache): Add user cache module** - New `src/services/cache.py` with get/set/invalidate
+interface. TTL 300s +/-10% jitter. SET NX lock prevents cache stampede on concurrent misses.
+
+Serves: BC-1.
+
+**feat(auth): Integrate cache lookup** - `authenticate()` checks cache before DB. `update_user()`
 invalidates cache after write. Redis-down fallback: skip cache, query DB directly.
+
+Serves: BC-1, BC-2.
 
 ### Scope Summary
 
-| File | Change |
-|------|--------|
-| `src/services/cache.py` | New — user cache module |
-| `src/services/auth.py` | Add cache lookup in `authenticate()` |
-| `src/services/user.py` | Add cache invalidation in `update_user()` |
-| `tests/test_cache.py` | New — cache unit tests |
+| File | Change | Effort |
+|------|--------|--------|
+| `src/services/cache.py` | feat(cache): add user cache module | M |
+| `src/services/auth.py` | feat(auth): add cache lookup in `authenticate()` | S |
+| `src/services/user.py` | feat(auth): add cache invalidation in `update_user()` | S |
+| `tests/test_cache.py` | test(cache): add cache unit tests | S |
 
 ### Design Reference
 
@@ -244,13 +275,18 @@ Redis-down: ConnectionError caught in cache.py → skip cache, query DB directly
 - [ ] Add Redis config to `config.py` with `localhost:6379` fallback
 - [ ] Implement SET NX stampede lock per design.md Behavior
 - [ ] Add TTL jitter (±10%) to `set_cached_user()`
-**Verification**: `pytest tests/test_cache.py` — get/set/invalidate/stampede/Redis-down
+**Verification**:
+- Agent: `pytest tests/test_cache.py` covers get/set/invalidate/stampede/Redis-down.
 
 ### Phase 2: Auth Integration ⏳
-- [ ] Modify `src/services/auth.py:authenticate()` — cache lookup per design.md call chain
-- [ ] Modify `src/services/user.py:update_user()` — add invalidation call (Cache B)
+- [ ] Modify `src/services/auth.py:authenticate()` — implement `feat(auth): Integrate cache lookup` per design.md call chain
+- [ ] Modify `src/services/user.py:update_user()` — add invalidation call per `feat(auth): Integrate cache lookup`
 - [ ] Add Redis-down fallback (try-except ConnectionError)
-**Verification**: Auth works with Redis up and down; update invalidates within 1s
+**Verification**:
+- Agent: Auth works with Redis up and down; update invalidates within 1s.
+**User Check**:
+1. BC-1: Authenticate the same user twice with Redis running -> second request uses cache.
+2. BC-2: Authenticate with Redis stopped -> auth still succeeds through DB fallback.
 ```
 
 ### The boundary in practice
@@ -258,6 +294,7 @@ Redis-down: ConnectionError caught in cache.py → skip cache, query DB directly
 | In spec.md / design.md | In tasks.md | Relationship |
 |------------------------|-------------|--------------|
 | `get_cached_user(user_id: str) -> User \| None` | `implement interface per design.md` | reference, not repeat |
+| `BC-1: Auth reads use cache when available` | `User Check: authenticate twice -> second request uses cache` | black-box check |
 | SET NX lock mechanism | `Implement SET NX stampede lock per design.md Behavior` | reference |
 | TTL 300s ±10% jitter | `Add TTL jitter (±10%) to set_cached_user()` | distill to action |
 | call chain diagram | `cache lookup per design.md call chain` | reference |

@@ -37,20 +37,33 @@ Add optional `tags: []` to change frontmatter. The CLI exposes `--tag <label>` o
 Why tags over a free-text `area` field: tags are multi-valued, machine-parseable,
 and consistent with the existing `type` field pattern in `core.py`.
 
-### Key Change
+### Behavior Contract
 
-**Feat A: Tag-based change filtering** — Add optional `tags: []` to change frontmatter.
+**BC-1: Changes can be tagged and filtered**
+
+Surface: `sspec change new` and `sspec change list` CLI.
+
+After:
+- `sspec change new --tag frontend` writes `tags: [frontend]` to change frontmatter.
+- `sspec change list --filter-tag frontend` shows only matching changes.
+- Invalid tag input fails before any files are written.
+
+### Implementation Changes
+
+**feat(change): Add tag-based filtering** - Add optional `tags: []` to change frontmatter.
 CLI exposes `--tag <label>` on `change new` and `--filter-tag <label>` on `change list`.
 Tag validation happens before any files are written so invalid input fails fast.
 
+Serves: BC-1.
+
 ### Scope Summary
 
-| File | Change |
-|------|--------|
-| `src/sspec/core.py` | Add `tags` field to `ChangeMeta`; `validate_tags()` helper |
-| `src/sspec/services/change_service.py` | `tags` param in `create_change()`; `filter_tag` in `list_changes()` |
-| `src/sspec/commands/change.py` | `--tag` option on `change new`; `--filter-tag` on `change list` |
-| `src/sspec/templates/change/spec.md` | Add `tags: []` to frontmatter template |
+| File | Change | Effort |
+|------|--------|--------|
+| `src/sspec/core.py` | feat(change): add `tags` field to `ChangeMeta`; `validate_tags()` helper | S |
+| `src/sspec/services/change_service.py` | feat(change): add `tags` param in `create_change()`; `filter_tag` in `list_changes()` | M |
+| `src/sspec/commands/change.py` | feat(change): add `--tag` option on `change new`; `--filter-tag` on `change list` | S |
+| `src/sspec/templates/change/spec.md` | feat(change): add `tags: []` to frontmatter template | XS |
 
 ### Design Reference
 
@@ -145,18 +158,32 @@ or malformed frontmatter. Affects any project with hand-created `.sspec/howto/` 
 Make `_build_howto_info` resilient to missing/malformed frontmatter by falling back
 to the file stem for `name` and empty string for `desc`. Log a warning instead of crashing.
 
-### Key Change
+### Behavior Contract
 
-**Fix A: Resilient frontmatter parsing** — Make `_build_howto_info` fall back to file
+**BC-1: Malformed HOWTO frontmatter does not crash listing**
+
+Surface: `sspec howto list`.
+
+Before:
+- A HOWTO with missing or malformed frontmatter can raise `KeyError` and stop the command.
+
+After:
+- The command logs a warning, uses the file stem as `name`, uses an empty `desc`, and continues listing other HOWTOs.
+
+### Implementation Changes
+
+**fix(howto): Add resilient frontmatter parsing** - Make `_build_howto_info` fall back to file
 stem for `name` and empty string for `desc` when frontmatter is missing or malformed.
 Log a warning instead of crashing. Parse failures stay local so one bad file never
 takes down the whole list command.
 
+Serves: BC-1.
+
 ### Scope Summary
 
-| File | Change |
-|------|--------|
-| `src/sspec/services/howto_service.py` | Add fallback logic in `_build_howto_info` |
+| File | Change | Effort |
+|------|--------|--------|
+| `src/sspec/services/howto_service.py` | fix(howto): add fallback logic in `_build_howto_info` | S |
 ```
 
 **design.md** — before/after output and the fix logic, shown concretely:
@@ -214,6 +241,6 @@ spec.md defines *how it should work*. tasks.md defines *what to do*. Tasks refer
 |---------|-------|
 | Why this approach | spec.md Approach |
 | What the interfaces / behavior are | design.md |
-| What each labeled item does | spec.md Key Change |
+| What each labeled item does | spec.md Implementation Changes |
 | File-level actions | tasks.md phases |
 | How to verify | tasks.md verification |

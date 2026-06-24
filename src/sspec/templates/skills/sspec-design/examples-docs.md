@@ -33,29 +33,42 @@ and `@force-end-align` create unnecessary cognitive load for agents without addi
 Keep the change lifecycle skeleton (Clarify → Design → Plan → Implement → Review)
 intact. Only rewrite the interaction layer: how agents communicate with users during the workflow.
 
-### Key Change
+### Behavior Contract
 
-**Change A: @align two levels** — Replace single mandatory-stop with report/gate split.
+**BC-1: @align has two decision levels**
 
-**Change B: Remove @force-end-align** — Delete from AGENTS.md, SKILL, and HOWTO.
+Surface: generated protocol and skill instructions.
 
-**Change C: sspec ask exits main flow** — Remove from recommended workflow; restore as
+After:
+- Agents use `report` when work can continue and `gate` when user confirmation is required.
+- `@force-end-align` is no longer part of the generated workflow.
+- `sspec tool ask` remains only as a fallback interaction tool.
+
+### Implementation Changes
+
+**refactor(protocol): Split @align into report and gate** - Replace single mandatory-stop with report/gate split.
+
+**refactor(protocol): Remove @force-end-align** - Delete from AGENTS.md, SKILL, and HOWTO.
+
+**refactor(protocol): Move sspec ask out of main flow** - Remove from recommended workflow; restore as
 `sspec tool ask` fallback only.
 
-**Change D: Strengthen micro path** — Explicit skip permission for ≤3 files, ≤30min tasks.
+**docs(protocol): Strengthen micro path** - Explicit skip permission for <=3 files, <=30min tasks.
 
-**Change E: Remove Copilot-specific HOWTOs** — Delete `force-end-align`, `use-sspec-ask`,
+**docs(protocol): Remove Copilot-specific HOWTOs** - Delete `force-end-align`, `use-sspec-ask`,
 `write-sspec-ask`.
+
+Serves: BC-1.
 
 ### Scope Summary
 
-| File | Change |
-|------|--------|
-| `src/sspec/templates/AGENTS.md` | Rewrite §3 (two-level align); remove @force-end-align; strengthen micro path |
-| `src/sspec/templates/skills/sspec-align/SKILL.md` | Rewrite: two-level system, remove channel matrix |
-| `src/sspec/templates/skills/sspec-design/SKILL.md` | Keep gate at exit, remove sspec ask references |
-| `src/sspec/templates/skills/sspec-plan/SKILL.md` | Change exit from gate to report |
-| `src/sspec/templates/skills/sspec-implement/SKILL.md` | Keep gate at exit, remove sspec ask references |
+| File | Change | Effort |
+|------|--------|--------|
+| `src/sspec/templates/AGENTS.md` | refactor(protocol): rewrite section 3; remove @force-end-align; strengthen micro path | M |
+| `src/sspec/templates/skills/sspec-align/SKILL.md` | refactor(protocol): rewrite two-level system; remove channel matrix | M |
+| `src/sspec/templates/skills/sspec-design/SKILL.md` | refactor(protocol): keep gate at exit; remove sspec ask references | S |
+| `src/sspec/templates/skills/sspec-plan/SKILL.md` | refactor(protocol): change exit from gate to report | S |
+| `src/sspec/templates/skills/sspec-implement/SKILL.md` | refactor(protocol): keep gate at exit; remove sspec ask references | S |
 | HOWTO `force-end-align` | Delete |
 | HOWTO `use-sspec-ask` | Delete |
 | HOWTO `write-sspec-ask` | Delete |
@@ -147,33 +160,46 @@ That drift causes future agents to follow stale guidance when reading `.sspec/sp
 Treat this as a bounded documentation transaction: first fix factual drift in existing docs,
 then add a small set of new spec-docs for stable contracts that currently live only in code.
 
-### Key Change
+### Behavior Contract
 
-**Fix A: Project context refresh** — Update `.sspec/project.md` so the stable identity
+**BC-1: Project docs match current repository behavior**
+
+Surface: project context and spec-docs read by future agents.
+
+After:
+- Project context reflects the actual stack, commands, and platform behavior.
+- Existing spec-docs no longer contain stale facts.
+- New spec-docs cover stable contracts that previously lived only in code.
+
+### Implementation Changes
+
+**docs(project): Refresh project context** - Update `.sspec/project.md` so the stable identity
 layer matches the actual stack, command surface, and platform behavior.
 
-**Fix B: Existing spec-doc drift repair** — Correct stale facts in `skill-installation.md`,
+**docs(spec-docs): Repair existing drift** - Correct stale facts in `skill-installation.md`,
 `builtin-tools.md`, and `testing-standards.md`.
 
-**Doc C: Change lifecycle contract** — New spec-doc for `.sspec/changes/<dir>/` structure,
+**docs(change): Add change lifecycle contract** - New spec-doc for `.sspec/changes/<dir>/` structure,
 status parsing, archive moves, and reference rewrite behavior.
 
-**Doc D: Interaction record contracts** — New spec-doc for request and ask artifacts:
+**docs(records): Add interaction record contracts** - New spec-doc for request and ask artifacts:
 creation format, linking, answer persistence, archive rewrite.
 
-**Doc E: Command registry contract** — New spec-doc for `.sspec/commands/registry.yaml`
+**docs(commands): Add command registry contract** - New spec-doc for `.sspec/commands/registry.yaml`
 and script strategy semantics.
 
-**Doc F: Root AGENTS sync contract** — New spec-doc for the managed `SSPEC:START/END`
+**docs(agents): Add root AGENTS sync contract** - New spec-doc for the managed `SSPEC:START/END`
 block ownership and update behavior.
+
+Serves: BC-1.
 
 ### Scope Summary
 
-| File | Change |
-|------|--------|
-| `.sspec/project.md` | Refresh stack, key paths, conventions |
-| `.sspec/spec-docs/skill-installation.md` | Correct workspace locations and link behavior |
-| `.sspec/spec-docs/builtin-tools.md` | Document current tool inventory |
+| File | Change | Effort |
+|------|--------|--------|
+| `.sspec/project.md` | docs(project): refresh stack, key paths, conventions | S |
+| `.sspec/spec-docs/skill-installation.md` | docs(spec-docs): correct workspace locations and link behavior | S |
+| `.sspec/spec-docs/builtin-tools.md` | docs(spec-docs): document current tool inventory | S |
 | `.sspec/spec-docs/testing-standards.md` | Remove dead modules, align expectations |
 | `.sspec/spec-docs/change-lifecycle.md` | New: change directory and status contract |
 | `.sspec/spec-docs/interaction-records.md` | New: request/ask file format contract |
@@ -181,7 +207,7 @@ block ownership and update behavior.
 | `.sspec/spec-docs/agents-sync.md` | New: root AGENTS.md managed block contract |
 ```
 
-For a pure docs change like this, design.md is typically not needed — the Key Change labels
-and Scope Summary already give the user full predictability. Create design.md only if the
+For a pure docs change like this, design.md is typically not needed — the Behavior Contract,
+Implementation Changes, and Scope Summary already give the user full predictability. Create design.md only if the
 new doc content itself has structural complexity worth showing upfront (e.g. a new spec-doc
 with a non-obvious schema).

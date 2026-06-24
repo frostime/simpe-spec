@@ -67,7 +67,9 @@ When all tasks are complete:
 
 1. Update Progress to 100%
 2. Summarize what was implemented
-3. `@align` user: "Implementation complete. Please review."
+3. Summarize agent verification results (tests, lint, build, sandbox checks)
+4. If tasks.md contains `User Check`, include the user review recipe: action + expected observable result, mapped to `BC-*`
+5. `@align` user: "Implementation complete. Please review."
 
 This is a **hard gate**. → Transition to `sspec-review` phase.
 

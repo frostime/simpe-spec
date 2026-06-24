@@ -33,15 +33,22 @@ reference:
 ### Overall Approach
 <!-- High-level strategy. Delivery order, constraints, cross-phase coordination. -->
 
+### Behavior Contract
+<!-- MUST define root-level externally observable behavior boundaries across the full change.
+Keep this phase-level: final user-visible outcome, cross-phase compatibility, and unchanged boundaries.
+File-level behavior contracts belong in sub-change specs.
+Use BC-1 / BC-2 labels when multiple behavior contracts exist.
+Do NOT write test commands or click-by-click verification here. Those belong in sub-change tasks.md Verification / User Check. -->
+
 ### Phase Overview
 <!-- MUST list phases with goals and dependencies. Each phase becomes a sub-change.
 
-Format (≤3 phases): dependency-annotated list + ASCII dependency tree
-Format (≥4 phases): dependency table
+Format (<=3 phases): dependency-annotated list + ASCII dependency tree
+Format (>=4 phases): dependency table
 
 | Phase | Goal | Depends On | Scope |
 |-------|------|-----------|-------|
-| Phase 1: <name> | measurable goal | — | subsystems/modules |
+| Phase 1: <name> | measurable goal | - | subsystems/modules |
 | Phase 2: <name> | measurable goal | Phase 1 | subsystems/modules |
 
 Coordination Notes:

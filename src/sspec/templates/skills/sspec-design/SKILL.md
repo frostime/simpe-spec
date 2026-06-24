@@ -54,8 +54,9 @@ Follow the template comment constraints (BCP 14 keywords). Key sections:
 
 - **Problem Statement**: Quantify impact. Format: "[metric] causing [impact]".
 - **Approach**: Core idea (1-3 paragraphs) + why this over alternatives.
-- **Key Change**: REQUIRED. Label each independent change item with `**Type Label: Title**` format. This is what lets the user predict *exactly what will change*.
-- **Scope Summary**: REQUIRED. File | Change table.
+- **Behavior Contract**: REQUIRED. Define externally observable behavior boundaries: surface, before/after, unchanged boundary, compatibility/error behavior when relevant. Use `BC-*` labels when multiple contracts exist.
+- **Implementation Changes**: REQUIRED. Label each independent implementation item with a unique `type(scope): title` label, such as `feat(cli): Add tag filter` or `refactor(service): Extract cache adapter`. Each item states which `BC-*` it serves.
+- **Scope Summary**: REQUIRED. File | Change | Effort table. Effort uses `XS` / `S` / `M` / `L` as a rough design-stage estimate.
 - **Design Reference**: If design.md exists, link it here.
 
 ### design.md — when to create
@@ -92,18 +93,19 @@ Custom dimensions are fine.
 |---------|-------|
 | What problem, why it matters | spec.md Problem Statement |
 | Core approach + rationale | spec.md Approach |
-| What changes, labeled items | spec.md Key Change |
-| Which files affected | spec.md Scope Summary |
-| How it works technically (interfaces, data models, behavior) | design.md |
+| Externally observable behavior boundaries | spec.md Behavior Contract |
+| Implementation items and changelog-style labels | spec.md Implementation Changes |
+| Which files affected + rough effort | spec.md Scope Summary |
+| How it works technically (interfaces, data models, algorithms) | design.md |
 
 ### spec.md vs tasks.md boundary
 
-spec.md/design.md = *how it should work* (design). tasks.md = *what to do* (execution).
-Tasks reference spec labels (e.g. "Implement Fix A per spec") and MUST NOT copy the logic description.
+spec.md/design.md = *how it should work* (design). tasks.md = *what to do* (execution) and *how to verify it*.
+Tasks reference `BC-*` behavior labels and `type(scope): title` implementation labels. They MUST NOT redefine behavior contracts or copy design logic.
 
 ### Root change
 
-Root spec.md = **overall problem scope + phase decomposition**. No file-level details — those belong in sub-change specs.
+Root spec.md = **overall problem scope + phase decomposition**. Root Behavior Contract stays phase-level and final-outcome focused. No file-level details — those belong in sub-change specs.
 
 After defining phases: `sspec change new <phase-name>` for each sub-change.
 
@@ -123,7 +125,7 @@ Ensure **bidirectional references**:
 
 **Hard gate** — the user MUST confirm before planning proceeds.
 
-Present: problem summary, approach + rationale, key design decisions, scope. Use `question-like` tool if available, otherwise present clearly and stop.
+Present: problem summary, approach + rationale, Behavior Contract, implementation labels, scope/effort, key risks. Use `question-like` tool if available, otherwise present clearly and stop.
 
 After confirmation → proceed to `sspec-plan`.
 

@@ -15,6 +15,7 @@ metadata:
 When this phase ends, tasks.md MUST contain:
 - Phases with file-level tasks (single/sub) OR milestones (root)
 - Verification criteria for each phase
+- User Check steps for phases that implement user-visible `BC-*` behavior
 - Progress section initialized
 
 ## Task Quality Standards
@@ -30,14 +31,17 @@ tasks.md references spec.md / design.md — never re-describe design.
 
 | spec.md / design.md | tasks.md |
 |---|---|
-| Defines interfaces, data model, logic | Lists file-level actions + verification |
-| Explains *how it should work* | Tells agent *what to do next* |
-| `get_cached_user(id) -> Optional[User]` | `Create cache.py — implement interface per spec` |
+| Defines behavior contracts, interfaces, data model, logic | Lists file-level actions + verification |
+| Explains *how it should work* | Tells agent *what to do next* and how to verify |
+| `BC-1: cache hit behavior` | `User Check: BC-1: sign in twice -> second request uses cache` |
+| `feat(cache): Add user cache module` | `Create cache.py — implement interface per spec` |
 
-- ✅ "Implement Fix A per spec"
+- ✅ "Implement `feat(cache): Add user cache module` per spec"
 - ✅ "Create handler following the data flow in design.md"
+- ✅ "User Check: BC-1: run command X -> observe output Y"
 - ❌ Re-listing all function signatures
 - ❌ Re-describing the algorithm
+- ❌ Defining new behavior that is not in spec.md Behavior Contract
 
 ## Single/Sub vs Root
 
@@ -50,12 +54,19 @@ Root rules: no file-level tasks; each phase has Deliverable + Sub-change link; r
 
 ## Verification
 
-Each phase MUST have explicit verification criteria:
-- What to check (test commands, expected output, manual verification)
-- How to know it's done (not "it works" but specific criteria)
+Each phase MUST have explicit verification criteria.
+
+Use this split:
+- **Verification**: agent-run checks such as test commands, build/lint, sandbox CLI runs, and expected output.
+- **User Check**: black-box review steps for user-visible `BC-*` behavior. State user action + expected observable result.
+
+Rules:
+- Behavior boundary/default/error/compatibility changes SHOULD include `User Check` unless impractical.
+- Pure internal/refactor-only changes MAY omit `User Check` when spec.md states no user-visible behavior change.
+- Do not write "it works"; name the specific passing condition.
 
 ## Exit: @align Report
 
-Present the task breakdown (phases, total tasks, key verification criteria). This is a `report`, not a hard gate — continue to `sspec-implement` unless the user interrupts.
+Present the task breakdown (phases, total tasks, key Verification/User Check criteria). This is a `report`, not a hard gate — continue to `sspec-implement` unless the user interrupts.
 
 📚 Examples: [examples.md](./examples.md)

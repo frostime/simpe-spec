@@ -16,7 +16,14 @@ Phase emoji: ⏳ pending | 🚧 in progress | ✅ done
 ### Phase 1: <name> ⏳
 - [ ] Task description `path/file.py`
 - [ ] Task description `path/file.py`
-**Verification**: <how to verify this phase>
+**Verification**:
+- Agent: <test/build/lint/CLI command and expected result>
+- Agent: <manual/sandbox check and expected result>
+**User Check**:
+1. BC-1: <user action> → <expected observable result>
+
+Verification is for agent-run checks. User Check is for black-box review steps that map to spec.md Behavior Contract labels.
+If the change is internal/refactor-only and spec.md states no user-visible behavior change, User Check MAY be omitted.
 
 ### Feedback Tasks (→ [NNN-description](./revisions/NNN-description.md))
 Use this section for review/feedback tasks that still belong to the current change.

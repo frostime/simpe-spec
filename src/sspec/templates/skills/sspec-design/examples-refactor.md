@@ -34,23 +34,34 @@ Extract auth into a service layer with clear boundaries. The monolith becomes
 three focused modules behind an `AuthService` interface. Redis caching moves
 from inline calls to a dedicated cache layer.
 
-### Key Change
+### Behavior Contract
 
-**Refactor A: Extract auth service layer** — Split monolithic `auth.py` (2,400 LOC)
+**BC-1: Auth behavior is preserved through service extraction**
+
+Surface: authentication middleware and auth service callers.
+
+After:
+- Existing login, token validation, cache invalidation, and middleware auth outcomes remain unchanged.
+- Middleware depends only on `AuthService`, with no direct JWT or cache access.
+
+### Implementation Changes
+
+**refactor(auth): Extract auth service layer** - Split monolithic `auth.py` (2,400 LOC)
 into three focused modules behind `AuthService` interface. Redis caching moves to
-dedicated `cache.py`. Middleware calls `AuthService` only — no direct JWT or cache
-access. The old `auth.py` is deleted entirely.
+dedicated `cache.py`. Middleware calls `AuthService` only. The old `auth.py` is deleted entirely.
+
+Serves: BC-1.
 
 ### Scope Summary
 
-| File | Change |
-|------|--------|
-| `src/auth/service.py` | New — `AuthService` class with `authenticate()`, `invalidate()` |
-| `src/auth/jwt.py` | New — JWT encode/decode extracted from monolith |
-| `src/auth/cache.py` | New — Redis cache layer with TTL jitter |
-| `src/middleware/auth.py` | Refactor to call `AuthService` instead of `auth.py` globals |
-| `src/auth.py` | Delete — logic moved to `src/auth/` package |
-| `tests/test_auth_service.py` | New — unit tests for AuthService (no Redis needed) |
+| File | Change | Effort |
+|------|--------|--------|
+| `src/auth/service.py` | refactor(auth): add `AuthService` class with `authenticate()`, `invalidate()` | M |
+| `src/auth/jwt.py` | refactor(auth): extract JWT encode/decode from monolith | S |
+| `src/auth/cache.py` | refactor(auth): extract Redis cache layer with TTL jitter | S |
+| `src/middleware/auth.py` | refactor(auth): call `AuthService` instead of `auth.py` globals | S |
+| `src/auth.py` | refactor(auth): delete after logic moves to `src/auth/` package | M |
+| `tests/test_auth_service.py` | test(auth): add unit tests for AuthService without Redis | S |
 
 ### Design Reference
 
@@ -140,18 +151,31 @@ dimension-specific cards requires scanning every entry. No classification mechan
 Add an optional `type` field to HOWTO frontmatter. `sspec howto list` gains `--type`
 filtering. Backward compatible — existing HOWTOs without `type` continue to work.
 
-### Key Change
+### Behavior Contract
 
-**Feat A: HOWTO type classification** — Add optional `type` field to HOWTO frontmatter.
+**BC-1: HOWTO type filtering is optional and backward compatible**
+
+Surface: HOWTO frontmatter and `sspec howto list`.
+
+After:
+- HOWTO files may declare optional `type`.
+- Existing files without `type` continue to list without edits.
+- `sspec howto list --type <value>` filters by type.
+
+### Implementation Changes
+
+**feat(howto): Add optional type classification** - Add optional `type` field to HOWTO frontmatter.
 Backward compatible: existing files without `type` default to `None` and require zero
 changes. `sspec howto list` gains `--type` filtering. No data migration needed.
 
+Serves: BC-1.
+
 ### Scope Summary
 
-| File | Change |
-|------|--------|
-| `src/sspec/services/howto_service.py` | Add `type` to `HowtoInfo`; parse in `_build_howto_info` |
-| `src/sspec/commands/howto.py` | Add `--type` filter to `list_cmd`; type column in output |
+| File | Change | Effort |
+|------|--------|--------|
+| `src/sspec/services/howto_service.py` | feat(howto): add `type` to `HowtoInfo`; parse in `_build_howto_info` | S |
+| `src/sspec/commands/howto.py` | feat(howto): add `--type` filter to `list_cmd`; type column in output | S |
 
 ### Design Reference
 
@@ -219,20 +243,32 @@ absent. No migration script needed. Rollback = ignore the field.
 ## Large Refactor Variant: When design.md grows large
 
 When a refactor spans >15 files, keep spec.md predictive and move exhaustive detail into design.md.
-The spec.md Key Change still labels every independent item — design.md carries the full technical depth.
+The spec.md Implementation Changes section labels every independent implementation item — design.md carries the full technical depth.
 
 ```markdown
-### Key Change
+### Behavior Contract
 
-**Refactor A: Tenant isolation + RBAC** — Add tenant-scoped data isolation and
+**BC-1: Tenant-scoped authorization is enforced**
+
+Surface: authenticated request handling.
+
+After:
+- Requests carry tenant context before business handlers run.
+- RBAC checks apply within the active tenant scope.
+
+### Implementation Changes
+
+**refactor(auth): Add tenant isolation and RBAC** - Add tenant-scoped data isolation and
 role-permission matrix on top of existing JWT auth.
+
+Serves: BC-1.
 
 ### Scope Summary
 
-| File | Change |
-|------|--------|
-| `src/auth/` | Add tenant-aware auth and RBAC flows |
-| `src/middleware/` | Inject tenant context before business handlers |
+| File | Change | Effort |
+|------|--------|--------|
+| `src/auth/` | refactor(auth): add tenant-aware auth and RBAC flows | L |
+| `src/middleware/` | refactor(auth): inject tenant context before business handlers | M |
 
 ### Design Reference
 

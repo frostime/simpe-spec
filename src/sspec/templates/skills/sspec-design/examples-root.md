@@ -46,6 +46,17 @@ Break the auth overhaul into three sequential phases. Each phase delivers indepe
 testable value. Phase 1 is foundational — Phases 2 and 3 depend on it and should
 not start until Phase 1 is in REVIEW or DONE.
 
+### Behavior Contract
+
+**BC-1: Auth overhaul delivers staged, measurable auth improvements**
+
+Surface: auth request path and generated sub-change plan.
+
+After:
+- Phase 1 delivers a stable `AuthService` interface and <1s auth response target.
+- Phase 2 and Phase 3 start only after Phase 1 interface stability.
+- Token refresh and RBAC can ship independently after the backend foundation is ready.
+
 ### Phase Overview
 
 - **Phase 1: Auth Backend** — Extract auth into a service layer, add JWT + Redis cache.
@@ -108,6 +119,18 @@ Address bottlenecks in priority order: DB first (foundational), then API caching
 (unlocked by DB improvements), then CDN (independent track), then auto-scaling
 (requires stable API layer). Phases 1 and 3 can proceed in parallel immediately.
 
+### Behavior Contract
+
+**BC-1: Platform performance targets are phased by bottleneck**
+
+Surface: API latency, page load, DB CPU, and scaling operations.
+
+After:
+- DB optimization targets DB CPU <40%.
+- API response cache targets p95 <200ms after DB improvements.
+- CDN + asset pipeline targets page load <2s and can run independently.
+- Auto-scaling starts only after the API layer is stable.
+
 ### Phase Overview
 
 | Phase | Goal | Depends On | Scope |
@@ -149,7 +172,7 @@ Root spec describes phases; sub-change specs describe the implementation design 
 Sub-change spec.md must:
 - Reference the root change in frontmatter (`type: root-change`)
 - Have a scoped Problem Statement (just this phase's problem, not the full root scope)
-- Have a full Proposed Solution with Key Change labels and Scope Summary
+- Have a full Proposed Solution with Behavior Contract, Implementation Changes, and Scope Summary
 
 ```markdown
 ---
@@ -178,21 +201,34 @@ Split monolith into three focused modules behind `AuthService`. Redis caching
 moves from inline calls to a dedicated cache layer. Middleware calls `AuthService`
 only — no direct JWT or cache access.
 
-### Key Change
+### Behavior Contract
 
-**Refactor A: Extract auth service** — Split monolithic `auth.py` into `AuthService`
+**BC-1: Auth backend is extracted without changing middleware outcomes**
+
+Surface: auth middleware and auth service callers.
+
+After:
+- Auth latency target is <1s.
+- Middleware calls `AuthService` only, with no direct JWT or cache access.
+- Existing login and token validation outcomes remain valid.
+
+### Implementation Changes
+
+**refactor(auth): Extract auth service** - Split monolithic `auth.py` into `AuthService`
 behind a clean interface. Redis caching moves to dedicated `cache.py`. Middleware
-calls `AuthService` only — no direct JWT or cache access.
+calls `AuthService` only.
+
+Serves: BC-1.
 
 ### Scope Summary
 
-| File | Change |
-|------|--------|
-| `src/auth/service.py` | New — `AuthService` class |
-| `src/auth/jwt.py` | New — JWT encode/decode |
-| `src/auth/cache.py` | New — Redis cache layer |
-| `src/middleware/auth.py` | Refactor to call `AuthService` |
-| `src/auth.py` | Delete — logic moved to service |
+| File | Change | Effort |
+|------|--------|--------|
+| `src/auth/service.py` | refactor(auth): add `AuthService` class | M |
+| `src/auth/jwt.py` | refactor(auth): add JWT encode/decode module | S |
+| `src/auth/cache.py` | refactor(auth): add Redis cache layer | S |
+| `src/middleware/auth.py` | refactor(auth): call `AuthService` | S |
+| `src/auth.py` | refactor(auth): delete after logic moves to service | M |
 
 ### Design Reference
 
@@ -205,6 +241,6 @@ calls `AuthService` only — no direct JWT or cache access.
 |------------------|--------------------|
 | Function/class signatures | sub-change design.md |
 | Data models per phase | sub-change design.md |
-| Per-item decisions | sub-change Key Change |
+| Per-item decisions | sub-change Implementation Changes |
 | File-level Scope Summary | sub-change Scope Summary |
 | Task lists | sub-change tasks.md |

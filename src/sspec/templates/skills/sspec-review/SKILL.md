@@ -38,8 +38,8 @@ Reason: <one sentence>
 
 | ✅ minor-fix | ❌ amend (revision required) |
 |---|---|
-| 变量 / 函数命名调整 | 新增验收条件 |
-| typo / 文案修正 | 新增验证 / 日志 / 错误分支 |
+| 变量 / 函数命名调整 | 新增验收条件 / Behavior Contract |
+| typo / 文案修正 | 新增验证 / User Check / 日志 / 错误分支 |
 | 明显 bug（无行为变更） | 新增用户可见行为 |
 | 已有验收边界内的边界修复 | 修改范围边界 |
 | | 任何让原 spec 无法完整预测最终代码的反馈 |

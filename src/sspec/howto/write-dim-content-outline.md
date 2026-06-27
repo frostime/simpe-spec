@@ -13,7 +13,7 @@ User's question: "What will the content structure be?"
 ## When to Choose
 
 - Writing or restructuring documentation, spec-docs, READMEs
-- Changing SKILL files, AGENTS.md, or protocol templates
+- Changing SKILL files, `.sspec/SSPEC.rule.md`, or protocol templates
 - Designing template structures (memory, spec, tasks)
 - Any change where the primary deliverable is text content, not code
 

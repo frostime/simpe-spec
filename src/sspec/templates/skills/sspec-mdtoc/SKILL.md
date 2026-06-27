@@ -8,7 +8,7 @@ description: "Pre-scan Markdown files before reading. Use `sspec tool mdtoc` to 
 ## When to Use
 
 Before reading ANY Markdown file you haven't seen before:
-- Long spec-docs, SKILL files, or AGENTS.md
+- Long spec-docs, SKILL files etc.
 - README or documentation files
 - Any `.md` you need to understand structurally first
 

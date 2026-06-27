@@ -1,5 +1,4 @@
-<!-- SSPEC:START -->
-# .sspec Agent Protocol
+# SSPEC Agent Protocol
 
 SSPEC_SCHEMA::7.0
 
@@ -125,6 +124,3 @@ Cross-cutting sync between user and agent — runs across all phases, outside an
 
 **HOWTO**: Mini rule. `sspec howto list` to browse; batch-read with `sspec howto read <n1> <n2>`.
 **SKILL**: Read before starting phase. Referenced file → MUST read. `sspec-*` not loaded → find under `.sspec/skills/`.
-
-**Fence nesting**: When showing content that contains ` ``` `, outer fence MUST use more backticks (e.g. `````). Always outer > inner.
-<!-- SSPEC:END -->

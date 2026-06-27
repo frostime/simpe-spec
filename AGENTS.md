@@ -131,12 +131,6 @@ SSPEC_SCHEMA::7.0
 
 `sspec` is a spec-driven development workflow. Use it for non-trivial code changes that benefit from upfront clarification, design alignment, and structured execution — especially when the outcome should be predictable before implementation begins.
 
-## Project Context
-
-Read `.sspec/project.md` before project-specific work on cold start.
-Use its Key Paths, Conventions, and Spec-Docs Index for orientation.
-Read spec-docs only when the current task matches their index entry.
-
 ## Full Rule Trigger
 
 Read `.sspec/SSPEC.rule.md` when:
@@ -148,8 +142,13 @@ Read `.sspec/SSPEC.rule.md` when:
 
 Pure code edits with no sspec workflow intent may be done directly.
 
+## Project Context
+
+Read `.sspec/project.md` before project-specific work on cold start.
+Use its Key Paths, Conventions, and Spec-Docs Index for orientation.
+Read spec-docs only when the current task matches their index entry.
+
 ## Skills
 
 After reading `.sspec/SSPEC.rule.md`, load matching `.sspec/skills/<name>/SKILL.md` before that phase/task.
-If a SKILL references relative files, read them relative to that SKILL directory.
 <!-- SSPEC:END -->

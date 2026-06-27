@@ -347,8 +347,6 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
         console.print(
             f'[cyan]Would migrate {sspec_root / ".meta.json"} to meta_schema {META_SCHEMA}[/cyan]'
         )
-    if sspec_schema_needs_update and dry_run:
-        console.print(f'[cyan]Would update sspec_schema to {SCHEMA_VERSION}[/cyan]')
 
     # -----------------------------------------------------------------
     # Phase 0.5: Keep hub managed-skill ignore list in sync
@@ -525,6 +523,8 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
             console.print(
                 f'[cyan]Would recover {recover_count} missing skill location(s)[/cyan]'
             )
+        if sspec_schema_needs_update:
+            console.print(f'[cyan]Would update sspec_schema to {SCHEMA_VERSION}[/cyan]')
         if agents_needs_update:
             console.print('[cyan]Would update root AGENTS.md block[/cyan]')
         if blockers:

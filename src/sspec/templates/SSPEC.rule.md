@@ -85,7 +85,7 @@ Status in spec.md MUST follow state machine. → `sspec howto update-change-stat
 Follow SSPEC without `sspec change new`(for mini task).
 Action: Inline change content in `.sspec/tmp/` by `sspec tmp new <topic>`. Spec+Design only.
 
-Trigger: user explicitly opts "mimi".
+Trigger: user explicitly opts "mini".
 Agent MUST NOT self-downgrade to mini — only responds to user intent.
 
 

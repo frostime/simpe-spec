@@ -16,9 +16,9 @@ Read `.sspec/SSPEC.rule.md` when:
 - task references `.sspec/requests/*`, `.sspec/changes/*`, or `.sspec/spec-docs/*`;
 - user asks to create/update project context, request, change, spec-doc, memory, or workflow state;
 - user asks to clarify/design/plan/implement/review using sspec;
-- change is non-micro: broad, architectural, API/schema/data/security/privacy/UX affecting, or hard to predict safely.
+- user intends a change of any scale (micro, single, or multi).
 
-Micro/local/reversible edits may be done directly.
+Pure code edits with no sspec workflow intent may be done directly.
 
 ## Skills
 

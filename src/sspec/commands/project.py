@@ -215,6 +215,7 @@ def init(force: bool, skill_loc: tuple[str, ...]) -> None:
     console.print('[cyan]Structure:[/cyan]')
     console.print('  .sspec/')
     console.print('  ├── project.md      # Project overview')
+    console.print('  ├── SSPEC.rule.md   # Managed sspec workflow rule')
     console.print('  ├── spec-docs/      # Project-level specification documents')
     console.print('  ├── changes/        # Active change proposals')
     console.print('  └── requests/       # Ad-hoc AI requests')

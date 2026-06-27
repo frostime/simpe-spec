@@ -48,7 +48,7 @@ After:
 
 **refactor(protocol): Split @align into report and gate** - Replace single mandatory-stop with report/gate split.
 
-**refactor(protocol): Remove @force-end-align** - Delete from AGENTS.md, SKILL, and HOWTO.
+**refactor(protocol): Remove @force-end-align** - Delete from SSPEC.rule.md, SKILL, and HOWTO.
 
 **refactor(protocol): Move sspec ask out of main flow** - Remove from recommended workflow; restore as
 `sspec tool ask` fallback only.
@@ -64,7 +64,7 @@ Serves: BC-1.
 
 | File | Change | Effort |
 |------|--------|--------|
-| `src/sspec/templates/AGENTS.md` | refactor(protocol): rewrite section 3; remove @force-end-align; strengthen micro path | M |
+| `src/sspec/templates/SSPEC.rule.md` | refactor(protocol): rewrite section 3; remove @force-end-align; strengthen micro path | M |
 | `src/sspec/templates/skills/sspec-align/SKILL.md` | refactor(protocol): rewrite two-level system; remove channel matrix | M |
 | `src/sspec/templates/skills/sspec-design/SKILL.md` | refactor(protocol): keep gate at exit; remove sspec ask references | S |
 | `src/sspec/templates/skills/sspec-plan/SKILL.md` | refactor(protocol): change exit from gate to report | S |
@@ -96,7 +96,7 @@ created: 2026-03-17T01:00:00
 
 # Design: simplify-align
 
-## AGENTS.md §3 — Revised Structure
+## SSPEC.rule.md §3 — Revised Structure
 
 ```text
 # Before: §3 Alignment

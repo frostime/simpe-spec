@@ -93,7 +93,7 @@ Unless the user explicitly asks to install or manage sspec in this project:
 <rule_index>
   <rule>
     <name>sspec</name>
-    <description>Rendered sspec agent protocol from the built-in AGENTS.md template.</description>
+    <description>Rendered sspec protocol from built-in SSPEC.rule.md.</description>
     <read-cmd>sspec portable read rule:sspec</read-cmd>
   </rule>
 </rule_index>

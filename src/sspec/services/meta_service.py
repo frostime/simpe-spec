@@ -2,7 +2,7 @@
 
 `.meta.json` is treated as a versioned config:
 - `meta_schema` is the schema marker for the meta file itself.
-- `sspec_schema` records the sspec protocol schema used by templates (AGENTS.md).
+- `sspec_schema` records the sspec protocol schema used by templates such as SSPEC.rule.md.
 """
 
 from __future__ import annotations

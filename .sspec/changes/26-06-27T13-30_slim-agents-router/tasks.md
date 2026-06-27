@@ -60,7 +60,8 @@ updated: "2026-06-27T13:38+08:00"
 2. BC-4: `sspec portable read rule:sspec` still returns full sspec protocol.
 
 ### Feedback Tasks
-- (none yet)
+- [x] Address subagent review nits — stale portable/meta wording, `Stroe` typo, init output, and stale example references.
+- [x] Add review-requested CLI coverage — init output lists `SSPEC.rule.md`, `--force` overwrites modified rule, and 6.2→7.0 preserves root `AGENTS.md` prelude/suffix.
 
 ---
 
@@ -76,6 +77,7 @@ updated: "2026-06-27T13:38+08:00"
 | Phase 4 | 7/7 | ✅ |
 
 **Recent**:
+- 2026-06-27T14:07+08:00 — Addressed subagent review nits; changed-file lint and 118 targeted tests passed.
 - 2026-06-27T13:55+08:00 — Changed-file lint, targeted tests, fresh init, and copied-baseline migration checks passed.
 - 2026-06-27T13:52+08:00 — Reinstalled editable package and synced self-hosted `AGENTS.md`, `SSPEC.rule.md`, and managed design skill.
 - 2026-06-27T13:51+08:00 — Updated README and spec-docs for router/rule split and schema 7.0 tracking.

@@ -25,6 +25,16 @@ def _init_project(tmp_path: Path) -> Path:
     return tmp_path / SSPEC_DIR
 
 
+def test_project_init_output_lists_sspec_rule(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    result = runner.invoke(main, ['project', 'init', '--skill-loc', '.sspec'])
+
+    assert result.exit_code == 0
+    assert 'SSPEC.rule.md' in result.output
+    assert (tmp_path / SSPEC_DIR / 'SSPEC.rule.md').exists()
+
+
 def test_project_update_migrates_meta_even_without_file_updates(tmp_path: Path, monkeypatch):
     sspec_root = _init_project(tmp_path)
     meta_path = sspec_root / '.meta.json'
@@ -79,7 +89,9 @@ def test_project_update_migrates_6_2_layout_to_7_0(tmp_path: Path, monkeypatch):
     meta_path.write_text(json.dumps(meta), encoding='utf-8')
     (sspec_root / 'SSPEC.rule.md').unlink()
     (tmp_path / 'AGENTS.md').write_text(
-        '<!-- SSPEC:START -->\n# .sspec Agent Protocol\n\nold full rule\n<!-- SSPEC:END -->\n',
+        '# Custom Prelude\n\n'
+        '<!-- SSPEC:START -->\n# .sspec Agent Protocol\n\nold full rule\n<!-- SSPEC:END -->\n'
+        '\nCustom suffix\n',
         encoding='utf-8',
     )
 
@@ -93,11 +105,28 @@ def test_project_update_migrates_6_2_layout_to_7_0(tmp_path: Path, monkeypatch):
     rule = (sspec_root / 'SSPEC.rule.md').read_text(encoding='utf-8')
     assert new_meta.get('sspec_schema') == SCHEMA_VERSION
     assert 'SSPEC.rule.md' in new_meta.get('file_hashes', {})
+    assert '# Custom Prelude' in agents
+    assert 'Custom suffix' in agents
     assert '# sspec Router' in agents
     assert 'old full rule' not in agents
     assert '## 2. Change Lifecycle' not in agents
     assert '## 2. Change Lifecycle' in rule
     assert re.search(r'SSPEC_SCHEMA::' + re.escape(SCHEMA_VERSION), agents)
+
+
+def test_project_update_force_overwrites_modified_sspec_rule(tmp_path: Path, monkeypatch):
+    sspec_root = _init_project(tmp_path)
+    rule = sspec_root / 'SSPEC.rule.md'
+    rule.write_text('# local edit\n', encoding='utf-8')
+
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    result = runner.invoke(main, ['project', 'update', '--force'])
+
+    assert result.exit_code == 0
+    content = rule.read_text(encoding='utf-8')
+    assert '# local edit' not in content
+    assert '## 2. Change Lifecycle' in content
 
 
 def test_project_update_reports_future_meta_schema_error(tmp_path: Path, monkeypatch):

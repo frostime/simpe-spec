@@ -103,7 +103,7 @@ Cross-cutting sync between user and agent — runs across all phases, outside an
 ## 4. Peripheral Rule
 
 **Spec-Docs**: {
-- **What**: Stroe knowledge that code alone cannot adequately convey — in-code-but-scattered (cross-module architecture, implicit contracts, deliberate trade-offs) or outside-code entirely (platform rules, API quirks, business constraints).
+- **What**: Store knowledge that code alone cannot adequately convey — in-code-but-scattered (cross-module architecture, implicit contracts, deliberate trade-offs) or outside-code entirely (platform rules, API quirks, business constraints).
 - **High bar**: if an agent could reach the same understanding from code at little cost, it does NOT qualify.
 - **Write**: Registered in `project.md` Spec-Docs Index. Write in `.sspec/spec-docs`. → Follow `write-spec-doc` SKILL
 }

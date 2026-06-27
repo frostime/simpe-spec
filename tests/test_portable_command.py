@@ -36,8 +36,9 @@ def test_portable_read_rule_works_without_sspec_project(tmp_path: Path, monkeypa
     assert '<ref>rule:sspec</ref>' in result.output
     source = _extract_source(result.output)
     assert source.is_absolute()
-    assert source.parts[-3:] == ('sspec', 'templates', 'AGENTS.md')
+    assert source.parts[-3:] == ('sspec', 'templates', 'SSPEC.rule.md')
     assert f'SSPEC_SCHEMA::{SCHEMA_VERSION}' in result.output
+    assert '## 2. Change Lifecycle' in result.output
     assert not (tmp_path / '.sspec').exists()
 
 

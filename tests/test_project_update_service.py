@@ -97,6 +97,53 @@ class TestCollectUpdateCandidates:
         assert len(candidates) > 0
         assert all(c.display_path for c in candidates)
 
+    def test_returns_candidate_for_sspec_rule(self, tmp_path: Path):
+        sspec_root = _init_project(tmp_path)
+        meta = json.loads((sspec_root / '.meta.json').read_text(encoding='utf-8'))
+
+        candidates = collect_update_candidates(
+            sspec_root=sspec_root,
+            template_dir=get_template_dir(),
+            meta=meta,
+            common_replacements=COMMON_REPLACEMENTS,
+        )
+
+        rule = next((c for c in candidates if c.display_path == 'SSPEC.rule.md'), None)
+        assert rule is not None
+        assert rule.status == 'current'
+
+    def test_missing_sspec_rule_detected(self, tmp_path: Path):
+        sspec_root = _init_project(tmp_path)
+        meta = json.loads((sspec_root / '.meta.json').read_text(encoding='utf-8'))
+        (sspec_root / 'SSPEC.rule.md').unlink()
+
+        candidates = collect_update_candidates(
+            sspec_root=sspec_root,
+            template_dir=get_template_dir(),
+            meta=meta,
+            common_replacements=COMMON_REPLACEMENTS,
+        )
+
+        rule = next((c for c in candidates if c.display_path == 'SSPEC.rule.md'), None)
+        assert rule is not None
+        assert rule.status == 'missing'
+
+    def test_modified_sspec_rule_detected(self, tmp_path: Path):
+        sspec_root = _init_project(tmp_path)
+        meta = json.loads((sspec_root / '.meta.json').read_text(encoding='utf-8'))
+        (sspec_root / 'SSPEC.rule.md').write_text('# local edit\n', encoding='utf-8')
+
+        candidates = collect_update_candidates(
+            sspec_root=sspec_root,
+            template_dir=get_template_dir(),
+            meta=meta,
+            common_replacements=COMMON_REPLACEMENTS,
+        )
+
+        rule = next((c for c in candidates if c.display_path == 'SSPEC.rule.md'), None)
+        assert rule is not None
+        assert rule.status == 'modified'
+
     def test_modified_skill_detected(self, tmp_path: Path):
         sspec_root = _init_project(tmp_path)
         meta = json.loads((sspec_root / '.meta.json').read_text(encoding='utf-8'))

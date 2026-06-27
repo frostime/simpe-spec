@@ -25,6 +25,10 @@ class TestUpdateRootAgentsBlock:
         content = agents.read_text(encoding='utf-8')
         assert '<!-- SSPEC:START -->' in content
         assert '<!-- SSPEC:END -->' in content
+        assert '# sspec Router' in content
+        assert '.sspec/project.md' in content
+        assert '.sspec/SSPEC.rule.md' in content
+        assert '## 2. Change Lifecycle' not in content
 
     def test_replaces_existing_block(self, tmp_path: Path):
         agents = tmp_path / 'AGENTS.md'

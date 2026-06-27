@@ -50,9 +50,10 @@ def test_read_rule_sspec_wraps_rendered_source() -> None:
     assert '<ref>rule:sspec</ref>' in output
     source = _extract_source(output)
     assert source.is_absolute()
-    assert source.parts[-3:] == ('sspec', 'templates', 'AGENTS.md')
+    assert source.parts[-3:] == ('sspec', 'templates', 'SSPEC.rule.md')
     assert '<read-cmd>sspec portable read rule:sspec</read-cmd>' in output
     assert f'SSPEC_SCHEMA::{SCHEMA_VERSION}' in output
+    assert '## 2. Change Lifecycle' in output
     assert '{{SCHEMA_VERSION}}' not in output
 
 

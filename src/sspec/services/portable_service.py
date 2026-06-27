@@ -93,7 +93,7 @@ Unless the user explicitly asks to install or manage sspec in this project:
 <rule_index>
   <rule>
     <name>sspec</name>
-    <description>Rendered sspec agent protocol from the built-in AGENTS.md template.</description>
+    <description>Rendered sspec protocol from built-in SSPEC.rule.md.</description>
     <read-cmd>sspec portable read rule:sspec</read-cmd>
   </rule>
 </rule_index>
@@ -246,7 +246,7 @@ def _resolve_rule(ref: str, slug: str) -> PortableResource:
     if slug != 'sspec':
         raise PortableResourceError(f'Unknown portable rule: {slug}')
 
-    resource = _templates_root().joinpath('AGENTS.md')
+    resource = _templates_root().joinpath('SSPEC.rule.md')
     content = resource.read_text(encoding='utf-8')
     rendered = render_template(content, {'SCHEMA_VERSION': SCHEMA_VERSION})
     return PortableResource(ref=ref, source=_resource_source_path(resource), content=rendered)

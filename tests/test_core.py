@@ -156,6 +156,7 @@ class TestTemplateDir:
         tdir = get_template_dir()
         assert tdir.is_dir()
         assert (tdir / 'AGENTS.md').exists()
+        assert (tdir / 'SSPEC.rule.md').exists()
         assert (tdir / 'project.md').exists()
 
     def test_list_template_skills_returns_dirs_with_skill_md(self):

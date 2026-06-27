@@ -1,6 +1,6 @@
 # Memory: slim-agents-router
 
-**Updated**: 2026-06-27T13:36+08:00
+**Updated**: 2026-06-27T13:55+08:00
 
 ## Git Baseline (Immutable)
 <!-- Captured during `sspec change new` before any change files are written.
@@ -19,7 +19,7 @@ This section records the change starting point in git and MUST NOT be edited or 
 
 ## State
 
-Design phase complete; waiting for user @align approval before planning/implementation. Current spec/design define a root `AGENTS.md` router plus managed `.sspec/SSPEC.rule.md` full workflow rule, with `sspec_schema` bumped to `7.0`.
+Implementation complete; change is in REVIEW. Root `AGENTS.md` is now a router, `.sspec/SSPEC.rule.md` is the managed full workflow rule, and `sspec_schema` is `7.0`.
 
 ## Key Files
 
@@ -44,6 +44,7 @@ Design phase complete; waiting for user @align approval before planning/implemen
 - [2026-06-27T13:34+08:00] Decision: Do not add a full `sspec_schema` Markov migration runner in this change; use existing managed-template update flow plus explicit `sspec_schema` drift persistence.
 - [2026-06-27T13:34+08:00] Insight: Existing code has schema-chain migration for `meta_schema`, but `sspec_schema` is currently only a protocol marker overwritten during project update.
 - [2026-06-27T13:36+08:00] Insight: `tmp/baseline-sspec-6.2/` was created with current code: `sspec_schema=6.2`, `meta_schema=2.1`, root `AGENTS.md` length 5557 chars, no `.sspec/SSPEC.rule.md`, 8 installed skills.
+- [2026-06-27T13:55+08:00] Insight: Final fresh-init and copied-baseline migration sandboxes both produced router `AGENTS.md` length 1188 chars, full `.sspec/SSPEC.rule.md`, `sspec_schema=7.0`, and `file_hashes['SSPEC.rule.md']`.
 - [2026-06-27T13:30+08:00] Rejected: A pure CLI-triggered rule with no root AGENTS router; it risks missed triggers in installed projects.
 
 ## Milestones
@@ -51,3 +52,4 @@ Design phase complete; waiting for user @align approval before planning/implemen
 - [2026-06-27T13:30+08:00] Created branch `refactor/slim-agents-router`, scaffolded change, and drafted spec/design for user alignment.
 - [2026-06-27T13:34+08:00] Added `sspec_schema` 7.0 migration compatibility design and deferred full protocol migration runner.
 - [2026-06-27T13:36+08:00] Created `tmp/baseline-sspec-6.2/` for future copy-based update migration checks.
+- [2026-06-27T13:55+08:00] Implemented all tasks, moved change to REVIEW, and verified changed-file lint, 116 targeted tests, fresh init, and 6.2 baseline migration.

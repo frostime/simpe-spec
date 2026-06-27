@@ -246,7 +246,7 @@ def _resolve_rule(ref: str, slug: str) -> PortableResource:
     if slug != 'sspec':
         raise PortableResourceError(f'Unknown portable rule: {slug}')
 
-    resource = _templates_root().joinpath('AGENTS.md')
+    resource = _templates_root().joinpath('SSPEC.rule.md')
     content = resource.read_text(encoding='utf-8')
     rendered = render_template(content, {'SCHEMA_VERSION': SCHEMA_VERSION})
     return PortableResource(ref=ref, source=_resource_source_path(resource), content=rendered)

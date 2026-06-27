@@ -24,7 +24,7 @@ Define the problem, design the solution, create the change. **The user MUST conf
 
 ## Step 1: Assess Scale
 
-Use `AGENTS.md` Scale Assessment. Fallback: Micro (≤3 files, ≤30min) | Multi (>15 files OR >20 tasks OR >1 week) | else Single.
+Use `.sspec/SSPEC.rule.md` Change Scale. Fallback: Micro (≤3 files, ≤30min) | Multi (>15 files OR >20 tasks OR >1 week) | else Single.
 Uncertain → default **Single**, `@align` whether to split.
 
 ## Step 2: Converge Solution

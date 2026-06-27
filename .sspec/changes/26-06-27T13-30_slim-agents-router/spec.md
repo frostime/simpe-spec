@@ -1,6 +1,6 @@
 ---
 name: slim-agents-router
-status: PLANNING
+status: REVIEW
 change-type: single
 created: 2026-06-27T13:30:14
 reference: null

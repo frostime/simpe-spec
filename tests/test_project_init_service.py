@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from sspec.core import SSPEC_DIR
+from sspec.core import SCHEMA_VERSION, SSPEC_DIR
 from sspec.services.project_init_service import (
     ProjectAlreadyInitializedError,
     get_skill_targets_from_locations,
@@ -81,6 +81,8 @@ class TestInitializeProject:
         assert 'managed_skills' in meta
         assert 'schema_version' not in meta
         assert 'meta_schema_version' not in meta
+        assert meta['sspec_schema'] == SCHEMA_VERSION
+        assert 'SSPEC.rule.md' in meta['file_hashes']
         assert 'skill_install_strategies' not in meta
 
     def test_creates_project_md(self, tmp_path: Path):
@@ -91,6 +93,19 @@ class TestInitializeProject:
             prefer_symlink=False,
         )
         assert (tmp_path / SSPEC_DIR / 'project.md').exists()
+
+    def test_creates_sspec_rule_md(self, tmp_path: Path):
+        initialize_project(
+            project_root=tmp_path,
+            force=False,
+            skill_locations=[],
+            prefer_symlink=False,
+        )
+        rule = tmp_path / SSPEC_DIR / 'SSPEC.rule.md'
+        assert rule.exists()
+        content = rule.read_text(encoding='utf-8')
+        assert f'SSPEC_SCHEMA::{SCHEMA_VERSION}' in content
+        assert '## 2. Change Lifecycle' in content
 
     def test_creates_root_agents_md(self, tmp_path: Path):
         result = initialize_project(

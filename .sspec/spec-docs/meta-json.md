@@ -52,11 +52,12 @@ The file is upgraded and maintained by:
 - Current: `2.1` (`META_SCHEMA`).
 
 2) `sspec_schema` (sspec protocol schema)
-- Meaning: the sspec protocol schema used by templates (not the meta file schema).
+- Meaning: the sspec protocol schema used by templates and agent-facing workflow layout (not the meta file schema).
 - Owned by: `src/sspec/core.py` (`SCHEMA_VERSION`).
+- Current: `7.0`.
 - Written by: `project init` and refreshed by `project update`.
 
-Design rule: these two versions are independent and must not be conflated.
+Design rule: these two versions are independent and must not be conflated. `sspec_schema` can change when templates/protocol layout changes even if `meta_schema` stays unchanged.
 
 ## Current On-Disk Model (meta_schema = 2.1)
 
@@ -65,11 +66,11 @@ Canonical keys in v2.1:
 | Key | Type | Meaning |
 |-----|------|---------|
 | `meta_schema` | string | meta file schema version, current `2.1` |
-| `sspec_schema` | string | sspec protocol schema version (e.g. `9.1`) |
+| `sspec_schema` | string | sspec protocol schema version (e.g. `7.0`) |
 | `sspec_version` | string | sspec package version used to write meta |
 | `created_at` | string | ISO datetime string |
 | `updated_at` | string | ISO datetime string |
-| `file_hashes` | object | map of tracked paths -> hash |
+| `file_hashes` | object | map of tracked managed paths -> hash, including `SSPEC.rule.md` and managed skills |
 | `managed_skills` | array | template skill names that are managed |
 | `skill_locations` | array | directories where `skills/` are installed/synced |
 
@@ -137,6 +138,7 @@ Pipeline stage:
 
 Persistence rules:
 - If `migration_needed` is true, then on non-dry-run `project update` will write back migrated meta even if no other file updates occur.
+- If stored `sspec_schema` differs from `SCHEMA_VERSION`, then on non-dry-run `project update` writes the current protocol schema even if the meta file schema did not migrate.
 - `project update` also refreshes `sspec_schema` and `meta_schema` on every meta write.
 
 These guarantees are tested by:
@@ -161,9 +163,12 @@ These guarantees are tested by:
 ```json
 {
   "meta_schema": "2.1",
-  "sspec_schema": "6.0",
-  "file_hashes": {},
-  "managed_skills": []
+  "sspec_schema": "7.0",
+  "file_hashes": {
+    "SSPEC.rule.md": "<hash>",
+    "skills/sspec-design": "<hash>"
+  },
+  "managed_skills": ["sspec-design"]
 }
 ```
 

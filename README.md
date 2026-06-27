@@ -76,10 +76,11 @@ Architecture decisions, design patterns, platform constraints — things that ou
 
 ```
 project/
-├── AGENTS.md              ← the protocol (agent reads this first)
+├── AGENTS.md              ← lightweight router (agent reads this first)
 ├── .agents/skills/        ← synced from .sspec/skills/
 └── .sspec/
     ├── project.md         ← your stack, conventions, key paths
+    ├── SSPEC.rule.md      ← managed sspec workflow rule
     ├── requests/          ← intent records (directive / observe / idea)
     ├── changes/           ← active and archived changes
     │   └── <name>/
@@ -107,7 +108,7 @@ Then fill `.sspec/project.md` with your stack, key paths, and conventions.
 
 ### 2. Start work — two paths
 
-**Path A: Describe your need to the agent.** Tell the agent what you want. A capable agent reads `AGENTS.md` and follows the sspec protocol — it clarifies, creates a change, writes the spec, and stops at the design gate for your review.
+**Path A: Describe your need to the agent.** Tell the agent what you want. A capable agent reads `AGENTS.md`, then `.sspec/project.md`, and loads `.sspec/SSPEC.rule.md` when the task needs the sspec workflow — it clarifies, creates a change, writes the spec, and stops at the design gate for your review.
 
 **Path B: Write a request file.** If you have clear ideas, create a request:
 

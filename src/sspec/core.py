@@ -18,15 +18,13 @@ REQUEST_DIR = 'requests'
 SPEC_DOCS_DIR = 'spec-docs'
 ARCHIVE_DIR = 'archive'
 
-# Schema version - increment when template structure changes
-SCHEMA_VERSION = '6.2'
+# Schema version - increment when template/protocol structure changes
+SCHEMA_VERSION = '7.0'
 
 # Files tracked for updates (relative to .sspec/)
-# NOTE: Empty by design. The .sspec/ directory contains user-managed files that should
-# not be auto-updated. The 'project update' command specifically handles updating the
-# root AGENTS.md file's SSPEC protocol block via update_root_agents_block().
-# If future templates need auto-update support, add them here.
-UPDATABLE_FILES: list[str] = []
+# User-managed files must not be listed here. Root AGENTS.md is updated separately
+# through update_root_agents_block(), preserving content outside SSPEC markers.
+UPDATABLE_FILES: list[str] = ['SSPEC.rule.md']
 
 
 # User-managed files tracked for changes but not auto-updated

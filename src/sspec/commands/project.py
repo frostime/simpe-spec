@@ -314,6 +314,7 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
     project_root = sspec_root.parent
 
     common_replacements = {'SCHEMA_VERSION': SCHEMA_VERSION, 'SCHEMA': SCHEMA_VERSION}
+    sspec_schema_needs_update = meta.get('sspec_schema') != SCHEMA_VERSION
 
     # -----------------------------------------------------------------
     # Phase 0.4: Recover missing external skill locations from meta
@@ -345,6 +346,8 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
         console.print(
             f'[cyan]Would migrate {sspec_root / ".meta.json"} to meta_schema {META_SCHEMA}[/cyan]'
         )
+    if sspec_schema_needs_update and dry_run:
+        console.print(f'[cyan]Would update sspec_schema to {SCHEMA_VERSION}[/cyan]')
 
     # -----------------------------------------------------------------
     # Phase 0.5: Keep hub managed-skill ignore list in sync
@@ -538,7 +541,7 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
         and not gitignore_updated_count
         and not recovered_locations
     ):
-        if meta_state.migration_needed or hash_backfill:
+        if meta_state.migration_needed or hash_backfill or sspec_schema_needs_update:
             meta['file_hashes'] = {**old_hashes, **hash_backfill}
             meta['managed_skills'] = sorted(d.name for d in list_template_skills())
             meta['meta_schema'] = META_SCHEMA
@@ -548,6 +551,8 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
             save_meta(sspec_root, meta)
             if meta_state.migration_needed:
                 console.print('[green]+[/green] Migrated .meta.json to latest schema')
+            if sspec_schema_needs_update:
+                console.print(f'[green]+[/green] Updated sspec_schema to {SCHEMA_VERSION}')
             if hash_backfill:
                 console.print(
                     f'[green]+[/green] Backfilled {len(hash_backfill)} hash(es) into .meta.json'
@@ -630,6 +635,7 @@ def update(dry_run: bool, force: bool, interactive: bool) -> None:
         or recovered_locations
         or agents_needs_update
         or meta_state.migration_needed
+        or sspec_schema_needs_update
         or gitignore_updated_count
     ):
         meta['file_hashes'] = new_hashes
